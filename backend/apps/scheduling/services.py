@@ -37,6 +37,10 @@ class Occurrence:
     moved_from: date | None = None  # on a "rescheduled" occurrence: its original day
     change_id: int | None = None
     can_manage: bool = False
+    # Where the class came from (FR-SCH-06): "Timetable import" or a sync source's name, and
+    # when that import was applied. None for classes entered by hand.
+    source: str | None = None
+    synced_at: datetime | None = None
 
     @property
     def is_happening(self) -> bool:
@@ -57,7 +61,8 @@ def institution_today(user) -> date:
 
 def load_meetings(qs):
     return list(
-        qs.select_related("section__offering__course", "section__offering__term", "room")
+        qs.select_related("section__offering__course", "section__offering__term", "room",
+                          "last_import__source")
         .prefetch_related(
             Prefetch(
                 "section__teacher_assignments",
@@ -101,6 +106,9 @@ def expand(meetings, start: date, end: date, tz) -> list[Occurrence]:
             teacher_ids=[a.teacher_id for a in assignments],
             status=status,
             note=note,
+            source=(meeting.last_import.source.name if meeting.last_import.source
+                    else "Timetable import") if meeting.last_import else None,
+            synced_at=meeting.last_import.applied_at if meeting.last_import else None,
         )
 
     result = []

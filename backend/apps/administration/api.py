@@ -15,8 +15,8 @@ from apps.identity.api import CorrectionOut, correction_out
 from apps.identity.models import CorrectionRequest, RoleAssignment, User
 from apps.identity.roles import is_institution_admin
 
-from . import imports, people
-from .models import ImportRun
+from . import imports, people, sources
+from .models import ImportRun, SyncSource
 from .overview import overview
 
 router = Router(tags=["manage"])
@@ -88,7 +88,9 @@ class ImportOut(Schema):
     kind: str
     status: str
     file_name: str
-    term: str
+    term: str | None
+    source: str | None
+    held_reason: str
     created_at: datetime
     created_by: str
     applied_at: datetime | None
@@ -96,6 +98,35 @@ class ImportOut(Schema):
     result: dict
     rows: list[dict] | None = None
     not_in_file: list[str] | None = None
+
+
+class SourceOut(Schema):
+    id: int
+    name: str
+    kind: str
+    url: str
+    has_auth: bool
+    purpose: str
+    schedule: str
+    auto_apply: bool
+    is_active: bool
+    owner: str
+    owner_id: int
+    last_attempt_at: datetime | None
+    last_success_at: datetime | None
+    last_error: str
+
+
+class SourceIn(Schema):
+    name: str
+    kind: str
+    url: str
+    schedule: str = "daily"
+    auto_apply: bool = False
+    purpose: str = ""
+    auth_header: str | None = None
+    owner_id: int | None = None
+    is_active: bool = True
 
 
 class AuditOut(Schema):
@@ -157,7 +188,9 @@ def _run_out(run: ImportRun, *, detail: bool) -> dict:
         "kind": run.kind,
         "status": run.status,
         "file_name": run.source_file.original_name,
-        "term": run.term.name,
+        "term": run.term.name if run.term else None,
+        "source": run.source.name if run.source else None,
+        "held_reason": run.held_reason,
         "created_at": run.created_at,
         "created_by": str(run.created_by),
         "applied_at": run.applied_at,
@@ -289,44 +322,59 @@ def revoke(request, role_id: int):
     return _call(lambda: (people.revoke_role(request.user, assignment), Status(204, None))[1])
 
 
+def _template(kind: str) -> HttpResponse:
+    response = HttpResponse(imports.kind_of(kind).template, content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{kind}-template.csv"'
+    return response
+
+
 @router.get("/imports/template.csv", auth=None, include_in_schema=False)
 def template(request):
-    response = HttpResponse(
-        ",".join(imports.TEMPLATE_HEADER) + "\nCS-301,3B,Thu,10:30,11:50,B-204,lecture,in_person\n",
-        content_type="text/csv",
-    )
-    response["Content-Disposition"] = 'attachment; filename="timetable-template.csv"'
-    return response
+    return _template(ImportRun.Kind.TIMETABLE)
+
+
+@router.get("/imports/{kind}/template.csv", auth=None, include_in_schema=False)
+def kind_template(request, kind: str):
+    if kind not in ImportRun.Kind.values:
+        raise HttpError(404, "Unknown kind of import")
+    return _template(kind)
 
 
 @router.get("/imports", response=list[ImportOut])
 def list_imports(request):
     _admin(request)
     runs = ImportRun.objects.filter(institution_id=request.user.institution_id).select_related(
-        "source_file", "term", "created_by"
-    )[:20]
+        "source_file", "term", "created_by", "source"
+    )[:30]
     return [_run_out(r, detail=False) for r in runs]
-
-
-@router.post("/imports/timetable", response={201: ImportOut, 403: ErrorOut, 422: ErrorOut})
-def upload_timetable(request, file: File[UploadedFile]):
-    _admin(request)
-    return _call(lambda: Status(201, _run_out(imports.preview(request.user, file), detail=True)))
 
 
 def _run(request, run_id: int) -> ImportRun:
     run = ImportRun.objects.filter(
         pk=run_id, institution_id=request.user.institution_id
-    ).select_related("source_file", "term", "created_by").first()
+    ).select_related("source_file", "term", "created_by", "source").first()
     if run is None:
         raise HttpError(404, "Import not found")
     return run
 
 
-@router.get("/imports/{run_id}", response=ImportOut)
-def get_import(request, run_id: int):
+# GET /imports/{key} reads a run by number; POST /imports/{key} uploads a file of that kind.
+# They share one path so the router can tell them apart by method.
+@router.get("/imports/{key}", response=ImportOut)
+def get_import(request, key: int):
     _admin(request)
-    return _run_out(_run(request, run_id), detail=True)
+    return _run_out(_run(request, key), detail=True)
+
+
+@router.post("/imports/{key}", response={201: ImportOut, 403: ErrorOut, 422: ErrorOut})
+def upload(request, key: str, file: File[UploadedFile]):
+    """Preview a CSV or Excel file of one kind: timetable, people or enrollment."""
+    _admin(request)
+    kind = key
+    if kind not in ImportRun.Kind.values:
+        raise HttpError(404, "Unknown kind of import")
+    return _call(lambda: Status(201, _run_out(imports.preview(request.user, file, kind),
+                                              detail=True)))
 
 
 @router.post("/imports/{run_id}/apply", response={200: ImportOut, 403: ErrorOut, 422: ErrorOut})
@@ -363,3 +411,62 @@ def audit_log(request, action: str = "", limit: int = 100):
         }
         for e in entries[: max(1, min(limit, 500))]
     ]
+
+
+# Sync sources -------------------------------------------------------------------------------
+
+
+def _source_out(src: SyncSource) -> dict:
+    return {
+        "id": src.pk, "name": src.name, "kind": src.kind, "url": src.url,
+        "has_auth": bool(src.auth_header), "purpose": src.purpose, "schedule": src.schedule,
+        "auto_apply": src.auto_apply, "is_active": src.is_active, "owner": str(src.owner),
+        "owner_id": src.owner_id, "last_attempt_at": src.last_attempt_at,
+        "last_success_at": src.last_success_at, "last_error": src.last_error,
+    }
+
+
+def _source(request, source_id: int) -> SyncSource:
+    src = SyncSource.objects.filter(
+        pk=source_id, institution_id=request.user.institution_id
+    ).select_related("owner").first()
+    if src is None:
+        raise HttpError(404, "Source not found")
+    return src
+
+
+@router.get("/sync-sources", response=list[SourceOut])
+def list_sources(request):
+    _admin(request)
+    return [_source_out(s) for s in SyncSource.objects.filter(
+        institution_id=request.user.institution_id).select_related("owner")]
+
+
+@router.post("/sync-sources", response={201: SourceOut, 403: ErrorOut, 422: ErrorOut})
+def add_source(request, payload: SourceIn):
+    _admin(request)
+    return _call(lambda: Status(201, _source_out(
+        sources.save_source(request.user, None, **payload.dict()))))
+
+
+@router.put("/sync-sources/{source_id}", response={200: SourceOut, 403: ErrorOut, 422: ErrorOut})
+def edit_source(request, source_id: int, payload: SourceIn):
+    _admin(request)
+    src = _source(request, source_id)
+    return _call(lambda: Status(200, _source_out(
+        sources.save_source(request.user, src, **payload.dict()))))
+
+
+@router.post("/sync-sources/{source_id}/run",
+             response={200: ImportOut, 403: ErrorOut, 422: ErrorOut})
+def run_source(request, source_id: int):
+    _admin(request)
+    src = _source(request, source_id)
+
+    def go():
+        run = sources.run_now(request.user, src)
+        if run is None:
+            src.refresh_from_db()
+            return Status(422, {"detail": src.last_error or "The sync failed."})
+        return Status(200, _run_out(run, detail=True))
+    return _call(go)

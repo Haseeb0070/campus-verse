@@ -8,7 +8,7 @@ const tabs: { href: string; label: string; coordinators?: boolean }[] = [
   { href: "/manage", label: "Overview" },
   { href: "/manage/people", label: "People" },
   { href: "/manage/academic", label: "Courses & sections", coordinators: true },
-  { href: "/manage/import", label: "Timetable import" },
+  { href: "/manage/import", label: "Imports & sync" },
   { href: "/manage/requests", label: "Requests" },
   { href: "/manage/audit", label: "Audit log" },
 ];

@@ -107,6 +107,9 @@ export interface Occurrence {
   moved_from: string | null;
   change_id: number | null;
   can_manage: boolean;
+  /** Where the class came from (an import or sync source) and when it was last synchronized. */
+  source: string | null;
+  synced_at: string | null;
 }
 
 export interface ChatMessage {

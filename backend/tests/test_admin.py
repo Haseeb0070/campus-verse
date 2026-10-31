@@ -174,7 +174,8 @@ def test_apply_writes_only_valid_rows_and_is_audited(campus, rooms):
     ))
     imports.apply(campus.admin, run)
     run.refresh_from_db()
-    assert (run.status, run.result) == ("applied", {"created": 1, "updated": 0, "skipped": 1})
+    assert (run.status, run.result) == (
+        "applied", {"created": 1, "updated": 0, "confirmed": 0, "skipped": 1})
     assert ClassMeeting.objects.count() == 1
     with pytest.raises(Exception, match="already applied"):
         imports.apply(campus.admin, run)

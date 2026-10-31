@@ -42,6 +42,7 @@ KIND_GROUP = {
     Kind.CORRECTION: "account",
     Kind.EVENT: "events",
     Kind.DIRECT_MESSAGE: "messages",
+    Kind.SYNC: "account",
 }
 
 

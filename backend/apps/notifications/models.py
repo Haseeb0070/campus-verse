@@ -20,6 +20,7 @@ class Notification(InstitutionScopedModel):
         CORRECTION = "account.correction"
         EVENT = "event.update"
         DIRECT_MESSAGE = "message.direct"
+        SYNC = "sync.update"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"

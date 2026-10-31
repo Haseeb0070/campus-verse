@@ -1,15 +1,12 @@
-"""Timetable CSV import: the first adapter of the Smart Sync engine (SRS 6.4, 11.4).
+"""The Smart Sync pipeline (SRS 6.4, 11.4): a table comes in (an upload, or a scheduled fetch
+from a SyncSource), each row is validated and matched by a stable key (never by names alone),
+and the result is a preview. Nothing changes until it's applied, the plan is re-checked at
+apply time, and records missing from a file are reported, never deleted.
 
-Rows are validated, matched to existing classes by a stable key (section + day + start time,
-never by names alone), and turned into a plan. Nothing changes until an admin applies the
-plan; rows missing from the file are reported, never deleted.
-
-CSV columns: course_code, section, day, start, end, room, kind, mode (kind and mode optional).
+Kinds: timetable (this module), people and enrollment (import_kinds.py).
 """
 
-import csv
 import hashlib
-import io
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, time
@@ -25,6 +22,7 @@ from apps.scheduling.models import ClassMeeting, Room
 
 from .models import ImportRun
 from .people import require_admin
+from .tables import finish_plan, read_table
 
 REQUIRED = ["course_code", "section", "day", "start", "end", "room"]
 TEMPLATE_HEADER = REQUIRED + ["kind", "mode"]
@@ -38,7 +36,6 @@ DAYS = {
     for name in names
 }
 DAY_LABEL = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-MAX_ROWS = 5000
 
 
 @dataclass
@@ -62,7 +59,7 @@ class PlanRow:
 
 def _parse_time(value: str) -> time:
     value = value.strip().upper()  # "2:30 pm" -> "2:30 PM" for %p
-    for fmt in ("%H:%M", "%H.%M", "%I:%M %p", "%I:%M%p"):
+    for fmt in ("%H:%M", "%H.%M", "%I:%M %p", "%I:%M%p", "%H:%M:%S"):
         try:
             return datetime.strptime(value, fmt).time()
         except ValueError:
@@ -73,29 +70,16 @@ def _parse_time(value: str) -> time:
 def current_term(institution_id: int) -> AcademicTerm:
     term = AcademicTerm.objects.filter(institution_id=institution_id, is_current=True).first()
     if term is None:
-        raise ValidationError("Mark a term as current before importing a timetable.")
+        raise ValidationError("Mark a term as current before importing.")
     return term
 
 
 def read_csv(raw: bytes) -> list[dict]:
-    try:
-        text = raw.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        raise ValidationError("Save the file as CSV UTF-8 and try again.") from None
-    reader = csv.DictReader(io.StringIO(text))
-    headers = [h.strip().lower() for h in (reader.fieldnames or [])]
-    missing = [h for h in REQUIRED if h not in headers]
-    if missing:
-        raise ValidationError(
-            f"The file is missing these columns: {', '.join(missing)}. "
-            "Download the template to see the expected layout."
-        )
-    rows = [{(k or "").strip().lower(): (v or "").strip() for k, v in r.items()} for r in reader]
-    if not rows:
-        raise ValidationError("The file has no rows.")
-    if len(rows) > MAX_ROWS:
-        raise ValidationError(f"Import up to {MAX_ROWS} rows at a time.")
-    return rows
+    """Kept for callers that only deal in CSV."""
+    return read_table(raw, "upload.csv", REQUIRED)
+
+
+# Timetable ----------------------------------------------------------------------------------
 
 
 def build_plan(institution_id: int, term: AcademicTerm, rows: list[dict]) -> dict:
@@ -193,67 +177,31 @@ def build_plan(institution_id: int, term: AcademicTerm, rows: list[dict]) -> dic
         for key, m in existing.items()
         if (key[0], key[1], f"{key[2]:%H:%M}") not in in_file
     ]
-    statuses = ("new", "update", "unchanged", "error")
-    counts = {s: sum(1 for r in plan if r.status == s) for s in statuses}
-    counts["clash"] = sum(1 for r in plan if r.clash)
-    return {
-        "rows": [asdict(r) for r in plan],
-        "summary": counts | {"rows": len(plan), "not_in_file": len(not_in_file)},
-        "not_in_file": sorted(not_in_file)[:50],
-    }
+    return finish_plan(
+        [asdict(r) | {"label": r.section,
+                      "detail": " ".join(filter(None, [r.day, r.start and f"{r.start}–{r.end}",
+                                                       r.room or (r.mode == "online" and "Online")
+                                                       or ""]))}
+         for r in plan],
+        not_in_file, extra={"clash": sum(1 for r in plan if r.clash)},
+    )
 
 
-def _signature(plan: dict) -> str:
-    actions = [
+def _timetable_signature(plan: dict) -> list:
+    return [
         (r["status"], r["section_id"], r["day"], r["start"], r["end"], r["room_id"], r["kind"],
          r["mode"], r["meeting_id"])
-        for r in plan["rows"]
-        if r["status"] in ("new", "update")
+        for r in plan["rows"] if r["status"] in ("new", "update")
     ]
-    return hashlib.sha256(json.dumps(actions, sort_keys=True).encode()).hexdigest()
 
 
-def preview(admin, upload) -> ImportRun:
-    require_admin(admin)
-    if not (upload.name or "").lower().endswith(".csv"):
-        raise ValidationError("Upload a .csv file.")
-    term = current_term(admin.institution_id)
-    stored = store_upload(admin, upload)
-    with stored.file.open("rb") as f:
-        rows = read_csv(f.read())
-    plan = build_plan(admin.institution_id, term, rows)
-    run = ImportRun.objects.create(
-        institution_id=admin.institution_id, kind=ImportRun.Kind.TIMETABLE, source_file=stored,
-        term=term, plan=plan, plan_signature=_signature(plan), created_by=admin,
-    )
-    audit.record(actor=admin, action="import.previewed", target=run, changes=plan["summary"])
-    return run
-
-
-@transaction.atomic
-def apply(admin, run: ImportRun) -> ImportRun:
-    require_admin(admin)
-    run = ImportRun.objects.select_for_update().get(pk=run.pk)
-    if run.status != ImportRun.Status.PREVIEW:
-        raise ValidationError("This import was already applied or discarded.")
-    with run.source_file.file.open("rb") as f:
-        fresh = build_plan(run.institution_id, run.term, read_csv(f.read()))
-    if _signature(fresh) != run.plan_signature:
-        raise ValidationError(
-            "The timetable changed since this preview. Upload the file again to review the "
-            "new differences."
-        )
-
+def _apply_timetable(run: ImportRun, plan: dict, actor) -> dict:
     created = updated = 0
-    for r in fresh["rows"]:
+    for r in plan["rows"]:
         if r["status"] not in ("new", "update"):
             continue
-        values = {
-            "ends_at": time.fromisoformat(r["end"]),
-            "room_id": r["room_id"],
-            "kind": r["kind"],
-            "mode": r["mode"],
-        }
+        values = {"ends_at": time.fromisoformat(r["end"]), "room_id": r["room_id"],
+                  "kind": r["kind"], "mode": r["mode"], "last_import": run}
         if r["status"] == "new":
             ClassMeeting.objects.create(
                 institution_id=run.institution_id, section_id=r["section_id"],
@@ -267,12 +215,102 @@ def apply(admin, run: ImportRun) -> ImportRun:
                 setattr(meeting, k, v)
             meeting.save()  # keeps simple-history records of every changed class
             updated += 1
+    # Classes the file confirmed as they are count as synchronized too (FR-SCH-06).
+    confirmed = [r["meeting_id"] for r in plan["rows"] if r["status"] == "unchanged"]
+    ClassMeeting.objects.filter(pk__in=confirmed).update(last_import=run)
+    return {"created": created, "updated": updated, "confirmed": len(confirmed),
+            "skipped": plan["summary"]["error"]}
 
+
+# The pipeline -------------------------------------------------------------------------------
+
+
+@dataclass
+class Kind:
+    required: list[str]
+    template: str  # header line and one example row
+    needs_term: bool
+    build: callable
+    signature: callable
+    apply: callable  # (run, plan, actor) -> result
+
+
+def kinds() -> dict[str, Kind]:
+    from . import import_kinds as k
+
+    return {
+        ImportRun.Kind.TIMETABLE: Kind(
+            REQUIRED, ",".join(TEMPLATE_HEADER)
+            + "\nCS-301,3B,Thu,10:30,11:50,B-204,lecture,in_person\n",
+            True, build_plan, _timetable_signature, _apply_timetable,
+        ),
+        ImportRun.Kind.PEOPLE: Kind(
+            k.PEOPLE_REQUIRED, k.PEOPLE_TEMPLATE, False,
+            k.build_people, k.people_signature, k.apply_people,
+        ),
+        ImportRun.Kind.ENROLLMENT: Kind(
+            k.ENROLLMENT_REQUIRED, k.ENROLLMENT_TEMPLATE, True,
+            k.build_enrollment, k.enrollment_signature, k.apply_enrollment,
+        ),
+    }
+
+
+def kind_of(name: str) -> Kind:
+    found = kinds().get(name)
+    if found is None:
+        raise ValidationError("Unknown kind of import.")
+    return found
+
+
+def _plan_for(run_or_kind: str, institution_id: int, term, raw: bytes, filename: str) -> dict:
+    k = kind_of(run_or_kind)
+    return k.build(institution_id, term, read_table(raw, filename, k.required))
+
+
+def _signature(kind: str, plan: dict) -> str:
+    actions = kind_of(kind).signature(plan)
+    return hashlib.sha256(json.dumps(actions, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def preview(admin, upload, kind: str = ImportRun.Kind.TIMETABLE, *, source=None) -> ImportRun:
+    require_admin(admin)
+    k = kind_of(kind)
+    name = (upload.name or "").lower()
+    if not name.endswith((".csv", ".xlsx")):
+        raise ValidationError("Upload a .csv or .xlsx file.")
+    term = current_term(admin.institution_id) if k.needs_term else None
+    upload.seek(0)
+    raw = upload.read()
+    upload.seek(0)
+    plan = _plan_for(kind, admin.institution_id, term, raw, name)  # check before storing
+    stored = store_upload(admin, upload)
+    run = ImportRun.objects.create(
+        institution_id=admin.institution_id, kind=kind, source_file=stored, source=source,
+        term=term, plan=plan, plan_signature=_signature(kind, plan), created_by=admin,
+    )
+    audit.record(actor=admin, action="import.previewed", target=run,
+                 changes=plan["summary"] | ({"source": source.name} if source else {}))
+    return run
+
+
+@transaction.atomic
+def apply(admin, run: ImportRun) -> ImportRun:
+    require_admin(admin)
+    run = ImportRun.objects.select_for_update().get(pk=run.pk)
+    if run.status != ImportRun.Status.PREVIEW:
+        raise ValidationError("This import was already applied or discarded.")
+    with run.source_file.file.open("rb") as f:
+        fresh = _plan_for(run.kind, run.institution_id, run.term, f.read(),
+                          run.source_file.original_name)
+    if _signature(run.kind, fresh) != run.plan_signature:
+        raise ValidationError(
+            "The data changed since this preview. Upload the file again to review the new "
+            "differences."
+        )
+    run.result = kind_of(run.kind).apply(run, fresh, admin)
     run.status = ImportRun.Status.APPLIED
     run.applied_at = timezone.now()
     run.applied_by = admin
-    run.result = {"created": created, "updated": updated,
-                  "skipped": fresh["summary"]["error"]}
     run.save()
     audit.record(actor=admin, action="import.applied", target=run, changes=run.result)
     return run

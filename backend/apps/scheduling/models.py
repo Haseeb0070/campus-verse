@@ -53,6 +53,12 @@ class ClassMeeting(InstitutionScopedModel):
     mode = models.CharField(max_length=16, choices=Mode.choices, default=Mode.IN_PERSON)
     room = models.ForeignKey(Room, null=True, blank=True, on_delete=models.SET_NULL)
     online_url = models.URLField(blank=True)
+    # The import that last confirmed this class, so timetables can say where it came from and
+    # when it was last synchronized (FR-SCH-06). Blank: entered by hand.
+    last_import = models.ForeignKey(
+        "administration.ImportRun", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="+",
+    )
     history = HistoricalRecords()
 
     class Meta:

@@ -28,6 +28,7 @@ export function ClassRow({
 
   return (
     <li
+      title={occ.source && occ.synced_at ? `From ${occ.source}, synced ${new Date(occ.synced_at).toLocaleString()}` : undefined}
       className={`flex gap-3 rounded-row p-2.5 ${highlight ? "bg-fill-strong" : ""}`}
       aria-current={highlight ? "true" : undefined}
     >

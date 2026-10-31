@@ -92,6 +92,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.notifications.tasks.send_scheduled",
         "schedule": 300.0,
     },
+    "sync-sources": {
+        "task": "apps.administration.tasks.run_due_sources",
+        "schedule": 900.0,
+    },
     "scheduled-notices": {
         "task": "apps.notices.tasks.publish_due",
         "schedule": 60.0,
@@ -162,6 +166,9 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # download endpoints.
 MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
 CAMPUSVERSE_MAX_UPLOAD_MB = env.int("MAX_UPLOAD_MB", default=20)
+# Sync sources may only be fetched from public HTTPS addresses, unless this is on (development:
+# a feed on localhost or the office network).
+CAMPUSVERSE_SYNC_ALLOW_PRIVATE = env.bool("SYNC_ALLOW_PRIVATE", default=DEBUG)
 DATA_UPLOAD_MAX_NUMBER_FILES = 10
 
 SESSION_COOKIE_HTTPONLY = True

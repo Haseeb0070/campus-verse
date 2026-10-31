@@ -32,24 +32,24 @@ export interface ManagedPerson {
 export interface ImportRow {
   line: number;
   status: "new" | "update" | "unchanged" | "error";
-  section: string;
-  day: string;
-  start: string;
-  end: string;
-  room: string;
-  kind: string;
-  mode: string;
+  /** What the row is about (a section, a person) and a short description. */
+  label: string;
+  detail: string;
   changes: Record<string, [string, string]>;
   message: string;
   clash: string;
 }
 
+export type ImportKind = "timetable" | "people" | "enrollment";
+
 export interface ImportRun {
   id: number;
-  kind: string;
+  kind: ImportKind;
   status: "preview" | "applied" | "discarded";
   file_name: string;
-  term: string;
+  term: string | null;
+  source: string | null;
+  held_reason: string;
   created_at: string;
   created_by: string;
   applied_at: string | null;
@@ -62,9 +62,26 @@ export interface ImportRun {
     clash?: number;
     not_in_file?: number;
   };
-  result: { created?: number; updated?: number; skipped?: number };
+  result: Record<string, number>;
   rows: ImportRow[] | null;
   not_in_file: string[] | null;
+}
+
+export interface SyncSource {
+  id: number;
+  name: string;
+  kind: ImportKind;
+  url: string;
+  has_auth: boolean;
+  purpose: string;
+  schedule: "manual" | "daily" | "hourly";
+  auto_apply: boolean;
+  is_active: boolean;
+  owner: string;
+  owner_id: number;
+  last_attempt_at: string | null;
+  last_success_at: string | null;
+  last_error: string;
 }
 
 export interface AuditEntry {
@@ -120,5 +137,12 @@ export function useAudit(action: string) {
   return useQuery({
     queryKey: ["manage", "audit", action],
     queryFn: () => apiFetch<AuditEntry[]>(`/api/manage/audit?action=${encodeURIComponent(action)}`),
+  });
+}
+
+export function useSyncSources() {
+  return useQuery({
+    queryKey: ["manage", "sync-sources"],
+    queryFn: () => apiFetch<SyncSource[]>("/api/manage/sync-sources"),
   });
 }

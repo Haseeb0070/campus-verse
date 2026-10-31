@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChangeClassDialog } from "@/components/change-class-dialog";
 import { ClassRow } from "@/components/class-row";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
-import { addDays, formatDay, startOfWeek, todayIn } from "@/lib/format";
+import { addDays, formatDay, relativeTime, startOfWeek, todayIn } from "@/lib/format";
 import { useMe, useTimetable } from "@/lib/queries";
 import type { Occurrence } from "@/lib/types";
 
@@ -22,6 +22,11 @@ export default function TimetablePage() {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).filter(
     (d, i) => i < 5 || byDay.has(d),
   );
+
+  // FR-SCH-06: say where imported classes came from and when they were last synchronized.
+  const latest = (week.data ?? [])
+    .filter((o) => o.source && o.synced_at)
+    .sort((a, b) => b.synced_at!.localeCompare(a.synced_at!))[0];
 
   const rangeLabel = `${formatDay(weekStart, { weekday: undefined, month: "short" })} – ${formatDay(
     addDays(weekStart, 6),
@@ -59,6 +64,13 @@ export default function TimetablePage() {
           </button>
         </div>
       </header>
+
+      {latest && (
+        <p className="-mt-2 px-1 text-footnote text-ink-2">
+          From {latest.source} · last synced {relativeTime(latest.synced_at!)}. Changes your
+          teachers make show here straight away.
+        </p>
+      )}
 
       {week.isError && (
         <p role="alert" className="glass rounded-card p-6 text-body">

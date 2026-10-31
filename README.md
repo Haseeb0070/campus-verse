@@ -106,17 +106,28 @@ overview with room clashes, people and invites, roles, **courses and sections** 
 departments, programs, courses, sections, teachers and enrollment), correction requests, the
 audit log, and **timetable import**. Department coordinators get Courses for their own departments.
 
-The import takes a CSV with these columns (download the template from the import page):
+**Imports & sync** takes CSV or Excel (.xlsx) files of three kinds; download a template for
+each from the page:
 
-```
-course_code,section,day,start,end,room,kind,mode
-CS-301,3B,Thu,10:30,11:50,B-204,lecture,in_person
-```
+| Kind | Columns | Matched by |
+|---|---|---|
+| Timetable | `course_code, section, day, start, end, room` (+ `kind, mode`) | course, section, day, start time |
+| People | `email, first_name, last_name, kind` (+ `external_id`) | your institution's ID, then email |
+| Enrollment | `course_code, section, person` (+ `role`: student or teacher) | section + person (email or ID) |
 
-Classes are matched by course, section, day and start time within the current term. You
-always get a dry-run preview first (new, updated, unchanged, errors, room clashes), and
-classes missing from the file are listed but never deleted. Invites email a one-time link to
-set a password; with `EMAIL_URL=consolemail://` the email is printed in the backend log.
+You always get a dry-run preview first (new, updated, unchanged, errors, and room clashes for
+timetables). Nothing is applied until you say so, the plan is re-checked at that moment, and
+records missing from a file are listed but never deleted or dropped. New people get an invite
+email with a one-time link to set a password; with `EMAIL_URL=consolemail://` the email is
+printed in the backend log.
+
+**Sync sources** fetch an export your institution publishes at an `https://` address, daily,
+hourly or on demand, optionally with an `Authorization` header. Every fetch becomes the same
+preview. It applies itself only if you allow it and the run looks routine (no errors, not an
+unusual number of changes or missing records); otherwise it waits for review and the source's
+owner gets a notification, as they do when a fetch fails. Sources must be public addresses
+(`SYNC_ALLOW_PRIVATE`, on by default in development, relaxes that). Timetables show where
+imported classes came from and when they were last synchronized.
 
 ## Checks
 
