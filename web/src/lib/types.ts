@@ -17,7 +17,13 @@ export interface Me {
   two_step: boolean;
   full_name: string;
   kind: "student" | "teacher" | "staff";
-  institution: { id: number; name: string; timezone: string } | null;
+  institution: {
+    id: number;
+    name: string;
+    timezone: string;
+    attendance_enabled: boolean;
+    attendance_visible_to_students: boolean;
+  } | null;
   roles: string[];
   sections: {
     id: number;

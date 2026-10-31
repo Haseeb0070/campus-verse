@@ -17,6 +17,8 @@ class InstitutionOut(Schema):
     id: int
     name: str
     timezone: str
+    attendance_enabled: bool
+    attendance_visible_to_students: bool
 
 
 class SectionOut(Schema):

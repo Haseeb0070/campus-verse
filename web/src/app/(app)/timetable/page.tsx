@@ -107,6 +107,7 @@ export default function TimetablePage() {
                     occ={occ}
                     timeZone={tz}
                     onManage={setManaging}
+                    attendance={me.data?.institution?.attendance_enabled}
                   />
                 ))}
               </ul>

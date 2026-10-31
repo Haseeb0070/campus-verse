@@ -129,6 +129,16 @@ owner gets a notification, as they do when a fetch fails. Sources must be public
 (`SYNC_ALLOW_PRIVATE`, on by default in development, relaxes that). Timetables show where
 imported classes came from and when they were last synchronized.
 
+## Attendance and progress
+
+Attendance is off until an institution admin switches it on (Manage → Courses & sections), as
+the SRS asks for it only where approved. Teachers then record it for their classes from the
+timetable or the Attendance page. For 48 hours (on the campus clock) they can change it; after
+that only department coordinators and admins can correct it, and every correction is
+audit-logged with the record's history kept. Students see their own attendance on Progress only
+if the institution allows it. Progress shows released marks and attendance, each labelled with
+where it comes from; it is not a transcript and computes no official result.
+
 ## Checks
 
 ```bash
@@ -163,6 +173,7 @@ backend/
   apps/feed/         campus feed: posts, comments, reactions, reports, moderation
   apps/resources/    course material: files and links per section, versions, archive
   apps/events/       calendar events: exams, holidays, seminars; sign-ups with a waitlist
+  apps/attendance/   attendance (only once an institution switches it on) and progress
   apps/governance/   append-only audit log
   tests/
 web/

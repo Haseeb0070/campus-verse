@@ -7,6 +7,8 @@ from apps.academic.api import router as sections_router
 from apps.administration.api import router as manage_router
 from apps.administration.structure_api import router as structure_router
 from apps.assignments.api import router as assignments_router
+from apps.attendance.api import progress_router
+from apps.attendance.api import router as attendance_router
 from apps.chat.api import router as chat_router
 from apps.events.api import router as events_router
 from apps.feed.api import router as feed_router
@@ -48,3 +50,5 @@ api.add_router("/manage", manage_router)
 api.add_router("/feed", feed_router)
 api.add_router("/resources", resources_router)
 api.add_router("/events", events_router)
+api.add_router("/attendance", attendance_router)
+api.add_router("/progress", progress_router)

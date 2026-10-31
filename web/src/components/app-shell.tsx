@@ -16,6 +16,7 @@ import {
   AssignmentsIcon,
   BellIcon,
   CalendarIcon,
+  ChecklistIcon,
   ChatIcon,
   FeedIcon,
   FlagIcon,
@@ -24,6 +25,7 @@ import {
   MoreIcon,
   NoticesIcon,
   PersonIcon,
+  ProgressIcon,
   ResourcesIcon,
   SectionsIcon,
   SignOutIcon,
@@ -138,6 +140,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ...baseNav.slice(0, 2),
     ...(teaches ? [{ href: "/sections", label: "Sections", Icon: SectionsIcon }] : []),
     ...baseNav.slice(2),
+    ...(teaches && user.institution?.attendance_enabled
+      ? [{ href: "/attendance", label: "Attendance", Icon: ChecklistIcon }]
+      : []),
+    ...(user.kind === "student" ? [{ href: "/progress", label: "Progress", Icon: ProgressIcon }] : []),
     ...(moderation?.can_moderate
       ? [{ href: "/moderation", label: "Moderation", Icon: FlagIcon }]
       : []),

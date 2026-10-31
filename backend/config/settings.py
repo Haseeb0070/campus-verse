@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "apps.feed",
     "apps.resources",
     "apps.events",
+    "apps.attendance",
     "apps.governance",
 ]
 

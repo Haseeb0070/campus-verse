@@ -9,6 +9,10 @@ class Institution(TimeStampedModel):
     slug = models.SlugField(unique=True)
     timezone = models.CharField(max_length=64, default="Asia/Karachi")
     is_active = models.BooleanField(default=True)
+    # Attendance only exists once the institution approves it (SRS 5.12), and students only
+    # see their own records if its policy allows.
+    attendance_enabled = models.BooleanField(default=False)
+    attendance_visible_to_students = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name

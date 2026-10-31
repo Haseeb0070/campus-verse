@@ -199,3 +199,17 @@ export const CalendarIcon = (p: IconProps) => (
     <circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none" />
   </Icon>
 );
+
+export const ChecklistIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 6.5l1.5 1.5L8.5 5M4 12.5l1.5 1.5 3-3M4 18.5l1.5 1.5 3-3" />
+    <path d="M11.5 7h8.5M11.5 13h8.5M11.5 19h8.5" />
+  </Icon>
+);
+
+export const ProgressIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 19.5h16" />
+    <path d="M7 16v-4M12 16V8M17 16v-6.5" />
+  </Icon>
+);

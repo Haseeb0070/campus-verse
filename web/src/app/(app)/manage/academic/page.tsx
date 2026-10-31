@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { DatePicker } from "@/components/date-picker";
 import { Select } from "@/components/select";
+import { Switch } from "@/components/switch";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { courseBg } from "@/lib/format";
+import { useMe } from "@/lib/queries";
 import { structureKey, useSections, useStructure } from "@/lib/structure";
 import type { CourseRow, Structure } from "@/lib/structure";
 import type { CourseColor } from "@/lib/types";
@@ -331,6 +333,51 @@ function TermsCard({ s }: { s: Structure }) {
   );
 }
 
+// Attendance (admins) ----------------------------------------------------------------------
+
+function AttendanceCard() {
+  const queryClient = useQueryClient();
+  const institution = useMe().data?.institution;
+  const [error, setError] = useState<string | null>(null);
+  if (!institution) return null;
+
+  async function set(enabled: boolean, visible: boolean) {
+    setError(null);
+    try {
+      await apiFetch("/api/attendance/settings", {
+        method: "PUT",
+        body: JSON.stringify({ attendance_enabled: enabled, attendance_visible_to_students: visible }),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+    } catch (err) {
+      setError(errorDetail(err, "Couldn't save. Try again."));
+    }
+  }
+
+  return (
+    <section aria-labelledby="attendance-h" className="glass flex flex-col gap-3 rounded-card p-5">
+      <h2 id="attendance-h" className="text-headline font-semibold">Attendance</h2>
+      <span className="flex items-center justify-between gap-3">
+        <span>
+          <span className="block text-body font-semibold">Teachers record attendance</span>
+          <span className="block text-footnote text-ink-2">Switch on only if your institution has approved it. Corrections after 48 hours need a coordinator or admin.</span>
+        </span>
+        <Switch checked={institution.attendance_enabled} label="Teachers record attendance"
+          onChange={(on) => set(on, institution.attendance_visible_to_students)} />
+      </span>
+      <span className="flex items-center justify-between gap-3">
+        <span>
+          <span className="block text-body font-semibold">Students see their own attendance</span>
+          <span className="block text-footnote text-ink-2">On their Progress page, labelled as recorded by teachers.</span>
+        </span>
+        <Switch checked={institution.attendance_visible_to_students} disabled={!institution.attendance_enabled}
+          label="Students see their own attendance" onChange={(on) => set(true, on)} />
+      </span>
+      {error && <p role="alert" className="text-footnote text-danger-ink">{error}</p>}
+    </section>
+  );
+}
+
 export default function AcademicPage() {
   const structure = useStructure();
   const s = structure.data;
@@ -362,6 +409,7 @@ export default function AcademicPage() {
           <CoursesCard s={s} />
           <DepartmentsCard s={s} />
           {s.is_admin && <TermsCard s={s} />}
+          {s.is_admin && <AttendanceCard />}
         </>
       )}
     </>

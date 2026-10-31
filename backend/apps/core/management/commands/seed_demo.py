@@ -43,7 +43,10 @@ class Command(BaseCommand):
 
     def seed(self):
         today = timezone.localdate()
-        inst = Institution.objects.create(name="Demo University", slug="demo")
+        inst = Institution.objects.create(
+            name="Demo University", slug="demo",
+            attendance_enabled=True, attendance_visible_to_students=True,
+        )
 
         def scoped(model, **kw):
             return model.objects.create(institution=inst, **kw)

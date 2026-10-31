@@ -28,7 +28,7 @@
   /* Status colours as text: darker in light mode so they pass 4.5:1 on their own tints. */
   --cv-success-ink: #0b6b3c;
   --cv-warning-ink: #9a5b00;
-  --cv-danger-ink: #c01d43;
+  --cv-danger-ink: #b01a3e;
 
   /* Tells the browser and OS which theme native UI should use: select popups, date and
      time pickers, number spinners, checkboxes and scrollbars. Without it, dark mode gets
@@ -60,7 +60,7 @@
     --cv-danger: #ff5468;
     --cv-success-ink: #34d27a;
     --cv-warning-ink: #f2b632;
-    --cv-danger-ink: #ff7385;
+    --cv-danger-ink: #ff8a99;
   }
 }
 
@@ -86,7 +86,7 @@
   --cv-danger: #ff5468;
   --cv-success-ink: #34d27a;
   --cv-warning-ink: #f2b632;
-  --cv-danger-ink: #ff7385;
+  --cv-danger-ink: #ff8a99;
 }
 
 @theme inline {

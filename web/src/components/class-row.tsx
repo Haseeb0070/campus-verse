@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { courseBg, formatDay, formatTime } from "@/lib/format";
 import type { Occurrence, OccurrenceStatus } from "@/lib/types";
 
@@ -15,10 +16,13 @@ export function ClassRow({
   timeZone,
   highlight = false,
   onManage,
+  attendance = false,
 }: {
   occ: Occurrence;
   timeZone?: string;
   highlight?: boolean;
+  /** Offer "Attendance" on the section's classes that have started (when it's switched on). */
+  attendance?: boolean;
   /** Shown only for classes the viewer may change (teachers of the section, admins). */
   onManage?: (occ: Occurrence) => void;
 }) {
@@ -80,6 +84,14 @@ export function ClassRow({
         >
           Join
         </a>
+      )}
+      {attendance && occ.can_manage && !off && new Date(occ.starts_at).getTime() <= Date.now() && (
+        <Link
+          href={`/attendance?section=${occ.section_id}&date=${occ.date}&meeting=${occ.meeting_id}`}
+          className="press self-center rounded-full bg-fill-strong px-3 py-1.5 text-footnote font-semibold"
+        >
+          Attendance
+        </Link>
       )}
       {onManage && occ.can_manage && (
         <button
