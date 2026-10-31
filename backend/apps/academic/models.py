@@ -73,9 +73,22 @@ class AcademicTerm(InstitutionScopedModel):
 
 
 class Course(InstitutionScopedModel):
+    class Color(models.TextChoices):
+        """Matches the course colours in the web theme; one per course, used everywhere."""
+
+        LAGOON = "lagoon"
+        TANGERINE = "tangerine"
+        ORCHID = "orchid"
+        ROSE = "rose"
+        SKY = "sky"
+        LIME = "lime"
+        GOLD = "gold"
+        SLATE = "slate"
+
     department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name="courses")
     code = models.CharField(max_length=32)  # "CS-301"
     title = models.CharField(max_length=200)
+    color = models.CharField(max_length=16, choices=Color.choices, default=Color.SLATE)
     credit_hours = models.PositiveSmallIntegerField(default=3)
     is_active = models.BooleanField(default=True)
     history = HistoricalRecords()

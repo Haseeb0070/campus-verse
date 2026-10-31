@@ -36,9 +36,22 @@ cd backend
 cp .env.example .env
 uv sync
 uv run python manage.py migrate
+uv run python manage.py seed_demo
 uv run python manage.py createsuperuser
 uv run python manage.py runserver
 ```
+
+`seed_demo` (development only) creates Demo University with courses, sections, a weekly
+timetable including a moved class and a room change, and notices. Demo accounts, all with the
+password `campusverse-demo`:
+
+| Email | Who |
+|---|---|
+| `ayesha@demo.campusverse.test` | Student in CS-301 · 3B, MATH-210, ENG-105, PHY-150 |
+| `hamza@demo.campusverse.test` | Student in CS-301 · 3B, MATH-210 |
+| `sara@demo.campusverse.test` | Student in CS-301 · 3C, ENG-105 |
+| `imran@demo.campusverse.test` | Teacher of CS-301 · 3B, 3C and CS-110 · 1A |
+| `nadia@demo.campusverse.test` | Institution admin |
 
 Web app, on http://localhost:3000 (it proxies `/api` and `/_allauth` to Django). If Django
 runs on another port, copy `web/.env.example` to `web/.env.local` and change the URLs:
@@ -80,12 +93,14 @@ backend/
   apps/academic/     institutions, departments, programs, terms, courses, sections
   apps/identity/     email-login user, scoped roles, sign-up policy
   apps/enrollment/   teacher assignments, section enrollments
+  apps/scheduling/   rooms, weekly class meetings, one-off changes, timetable API
   apps/notices/      notices, publish service, API
   apps/governance/   append-only audit log
   tests/
 web/
-  src/app/           routes and globals.css (design tokens)
-  src/components/
+  src/app/           routes: sign-in, (app)/today, timetable, notices; globals.css tokens
+  src/components/    app shell, class row, icons
+  src/lib/           API client, auth, queries, formatting
 infra/
   docker-compose.yml
   centrifugo/config.json

@@ -30,7 +30,7 @@ def campus(db):
     term = AcademicTerm.objects.create(
         institution=inst, name="Fall 2026", code="F26",
         starts_on=date(2026, 9, 1), ends_on=date(2026, 12, 31), is_current=True,
-    )
+    )  # Institution.timezone defaults to Asia/Karachi
     course = Course.objects.create(
         institution=inst, department=cs, code="CS-301", title="Data Structures"
     )
