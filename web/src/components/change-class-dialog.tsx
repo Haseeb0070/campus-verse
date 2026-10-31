@@ -6,6 +6,7 @@ import { ApiError, apiFetch } from "@/lib/api";
 import { addDays, formatDay, formatTime } from "@/lib/format";
 import { useRooms } from "@/lib/queries";
 import type { Occurrence } from "@/lib/types";
+import { DatePicker, TimeSelect, todayIso } from "./date-picker";
 import { Select } from "./select";
 
 type Action = "cancelled" | "moved" | "room_changed";
@@ -171,15 +172,15 @@ export function ChangeClassDialog({
               <div className="grid grid-cols-2 gap-3">
                 <label className="col-span-2 flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
                   New date
-                  <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className={field} />
+                  <DatePicker value={newDate} onChange={setNewDate} label="New date" min={todayIso()} className={field} />
                 </label>
                 <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
                   Starts
-                  <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className={field} />
+                  <TimeSelect value={start} onChange={setStart} label="Starts" className={field} />
                 </label>
                 <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
                   Ends
-                  <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={field} />
+                  <TimeSelect value={end} onChange={setEnd} label="Ends" className={field} />
                 </label>
               </div>
             )}

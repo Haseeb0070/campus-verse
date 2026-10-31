@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { CheckIcon, ChevronDownIcon } from "./icons";
+import { useAnchoredPopover } from "./use-anchored-popover";
 
 export interface SelectOption {
   value: string;
@@ -21,9 +22,6 @@ interface SelectProps {
   className?: string;
 }
 
-const GAP = 6;
-const MAX_HEIGHT = 288;
-
 /** A themed replacement for <select>: a glass menu in the browser's top layer (so it also works
     inside modal dialogs), keyboard-driven like a native list box, with type-to-jump. */
 export function Select({
@@ -36,20 +34,20 @@ export function Select({
   className = "",
 }: SelectProps) {
   const id = useId();
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
   const typed = useRef({ text: "", at: 0 });
-  const dismissedAt = useRef(0);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const [place, setPlace] = useState<React.CSSProperties>({});
+  const popover = useAnchoredPopover<HTMLButtonElement, HTMLUListElement>(open, () =>
+    setOpen(false),
+  );
+  const { anchorRef: buttonRef, panelRef: listRef, place } = popover;
   const selectedIndex = options.findIndex((o) => o.value === value);
   const selected = options[selectedIndex];
 
   const close = useCallback((refocus = true) => {
     setOpen(false);
     if (refocus) buttonRef.current?.focus();
-  }, []);
+  }, [buttonRef]);
 
   function show() {
     if (disabled || options.length === 0) return;
@@ -63,48 +61,9 @@ export function Select({
     close();
   }
 
-  // Place the menu under the trigger, or above it when there isn't room below.
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    const button = buttonRef.current;
-    if (!open || !list || !button) return;
-    if (!list.matches(":popover-open")) list.showPopover();
-    const rect = button.getBoundingClientRect();
-    const height = Math.min(list.scrollHeight, MAX_HEIGHT);
-    const below = window.innerHeight - rect.bottom - GAP;
-    const up = below < height && rect.top > below;
-    const left = Math.min(rect.left, window.innerWidth - Math.max(rect.width, 200) - 8);
-    setPlace({
-      left: Math.max(8, left),
-      minWidth: rect.width,
-      maxWidth: Math.max(rect.width, Math.min(420, window.innerWidth - 16)),
-      maxHeight: Math.max(120, Math.min(MAX_HEIGHT, (up ? rect.top : below) - 8)),
-      ...(up ? { bottom: window.innerHeight - rect.top + GAP } : { top: rect.bottom + GAP }),
-    });
-    list.focus({ preventScroll: true });
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) {
-      if (listRef.current?.matches(":popover-open")) listRef.current.hidePopover();
-      return;
-    }
-    // Like a native menu: it closes when the page scrolls or resizes under it.
-    const onScroll = (e: Event) => {
-      if (!listRef.current?.contains(e.target as Node)) close(false);
-    };
-    const onResize = () => close(false);
-    window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [open, close]);
-
   useEffect(() => {
     if (open) listRef.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
-  }, [open, active]);
+  }, [open, active, listRef]);
 
   function jumpTo(key: string, from: number) {
     const now = Date.now();
@@ -166,7 +125,7 @@ export function Select({
         aria-controls={`${id}-list`}
         onClick={() => {
           // A click on the trigger first light-dismisses the open menu; don't reopen it.
-          if (Date.now() - dismissedAt.current < 250) return;
+          if (popover.justDismissed()) return;
           if (open) close();
           else show();
         }}
@@ -192,13 +151,7 @@ export function Select({
         onKeyDown={onListKey}
         // Inside a <label>, a click here would otherwise "activate" the label and reopen the menu.
         onClick={(e) => e.preventDefault()}
-        onToggle={(e) => {
-          // Light dismiss (a click outside) closes the popover without telling React.
-          if ((e.nativeEvent as ToggleEvent).newState === "closed" && open) {
-            dismissedAt.current = Date.now();
-            close(false);
-          }
-        }}
+        onToggle={popover.onToggle}
         style={place}
         className="glass-thick menu-pop fixed inset-auto m-0 overflow-y-auto rounded-[14px] p-1 text-body text-ink outline-none"
       >

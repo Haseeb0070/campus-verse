@@ -9,6 +9,7 @@ import { apiFetch, errorDetail } from "@/lib/api";
 import { fileSize, toLocalInput } from "@/lib/format";
 import { useTeaching, useUploadRules } from "@/lib/queries";
 import type { Assignment } from "@/lib/types";
+import { DateTimeField } from "@/components/date-picker";
 import { Select } from "@/components/select";
 
 const types = [
@@ -148,11 +149,11 @@ export default function NewAssignmentPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={label}>
             Opens
-            <input type="datetime-local" value={opens} onChange={(e) => setOpens(e.target.value)} className={field} />
+            <DateTimeField value={opens} onChange={setOpens} label="Opens" className={field} />
           </label>
           <label className={label}>
             Due
-            <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} className={field} />
+            <DateTimeField value={due} onChange={setDue} label="Due" className={field} />
             {err("due")}
           </label>
         </div>
@@ -194,7 +195,7 @@ export default function NewAssignmentPage() {
           {allowLate && (
             <label className={`${label} sm:w-1/2`}>
               Accept late work until
-              <input type="datetime-local" value={lateUntil} onChange={(e) => setLateUntil(e.target.value)}
+              <DateTimeField value={lateUntil} onChange={setLateUntil} label="Accept late work until"
                 className={field} />
               {err("late")}
             </label>
