@@ -158,6 +158,8 @@ class Command(BaseCommand):
             note="B-204 projector repair", created_by=nadia,
         )
 
+        add_demo_assignments(s["CS-301 3B"], imran, s["MATH-210 2A"], farah)
+
         publish_notice(
             author=nadia,
             notice=Notice(title="Mid-term exam schedule published", priority="important",
@@ -178,3 +180,31 @@ class Command(BaseCommand):
                           body="Extended hours run until the end of the exam period."),
             targets=[("institution", inst.pk)],
         )
+
+
+def add_demo_assignments(ds_section, ds_teacher, math_section, math_teacher):
+    """Open work with near deadlines, so the student and teacher views have something in them."""
+    from apps.assignments.services import create_assignment
+
+    now = timezone.now()
+    create_assignment(
+        ds_teacher, section=ds_section, title="Lab 3: Linked lists",
+        instructions="Implement a singly linked list with insert, delete and reverse.\n\n"
+                     "Submit your source files (.py, .java or .cpp) or a zip. A recursive "
+                     "reverse() earns a bonus mark.",
+        available_from=now - timedelta(days=3), due_at=now + timedelta(days=2),
+        submission_type="file", max_points=20, max_attempts=2,
+    )
+    create_assignment(
+        ds_teacher, section=ds_section, title="Reading response: Big-O",
+        instructions="In 200 to 300 words, explain why binary search is O(log n).",
+        available_from=now - timedelta(days=1), due_at=now + timedelta(days=5),
+        submission_type="text", max_points=5,
+    )
+    create_assignment(
+        math_teacher, section=math_section, title="Problem set 4",
+        instructions="Questions 1 to 8 from chapter 5. Scans or typed answers are both fine.",
+        available_from=now - timedelta(days=2), due_at=now + timedelta(days=4),
+        submission_type="both", max_points=10, allow_late=True,
+        late_until=now + timedelta(days=6),
+    )

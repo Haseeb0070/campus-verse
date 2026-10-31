@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -68,3 +69,20 @@ class AudienceTarget(InstitutionScopedModel):
 
     def __str__(self):
         return f"{self.content_type.model}:{self.object_id} → {self.scope_type}:{self.scope_id}"
+
+
+class StoredFile(InstitutionScopedModel):
+    """Metadata for an uploaded file, kept apart from the bytes (SRS 7.2). The stored name is
+    random and files live outside the web root; downloads go through a permission check."""
+
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    file = models.FileField(upload_to="uploads/", max_length=300)
+    original_name = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=100)
+    size = models.PositiveBigIntegerField()
+    sha256 = models.CharField(max_length=64)
+
+    def __str__(self):
+        return self.original_name

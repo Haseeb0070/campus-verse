@@ -1,10 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { AssignmentStatusChip } from "@/components/assignment-status";
 import { ClassRow } from "@/components/class-row";
 import { PinIcon, VideoIcon } from "@/components/icons";
-import { courseBg, formatDay, formatTime, greeting, relativeTime, todayIn } from "@/lib/format";
-import { useMe, useNextClass, useNotices, useTimetable } from "@/lib/queries";
+import {
+  courseBg,
+  formatDateTime,
+  formatDay,
+  formatTime,
+  greeting,
+  relativeTime,
+  todayIn,
+} from "@/lib/format";
+import { useAssignments, useMe, useNextClass, useNotices, useTimetable } from "@/lib/queries";
 
 export default function TodayPage() {
   const me = useMe();
@@ -122,6 +131,7 @@ export default function TodayPage() {
         </section>
       </div>
 
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <section aria-labelledby="today-h" className="glass rounded-card p-6">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 id="today-h" className="text-title-2 font-bold">
@@ -145,6 +155,50 @@ export default function TodayPage() {
           ))}
         </ul>
       </section>
+
+      <DueSoon tz={tz} />
+      </div>
     </div>
+  );
+}
+
+function DueSoon({ tz }: { tz?: string }) {
+  const assignments = useAssignments();
+  const items = (assignments.data ?? [])
+    .filter((a) =>
+      a.can_manage
+        ? a.status === "published" && !a.grades_released
+        : !a.my_attempts && (a.window === "open" || a.window === "late"),
+    )
+    .slice(0, 4);
+  const teaching = assignments.data?.some((a) => a.can_manage);
+
+  return (
+    <section aria-labelledby="due-h" className="glass flex flex-col gap-1 rounded-card p-6">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h2 id="due-h" className="text-title-2 font-bold">
+          {teaching ? "To mark" : "Due soon"}
+        </h2>
+        <Link href="/assignments" className="text-footnote font-semibold text-accent-ink">
+          See all
+        </Link>
+      </div>
+      {assignments.isSuccess && items.length === 0 && (
+        <p className="text-body text-ink-2">{teaching ? "Nothing waiting." : "You're all caught up."}</p>
+      )}
+      <ul className="flex flex-col gap-1">
+        {items.map((a) => (
+          <li key={a.id}>
+            <Link href={`/assignments/${a.id}`} className="flex flex-col gap-1.5 rounded-row p-2.5 hover:bg-fill">
+              <span className="text-body font-semibold">{a.title}</span>
+              <span className="flex flex-wrap items-center gap-2 text-footnote text-ink-2">
+                {a.course_code} · {formatDateTime(a.due_at, tz)}
+                <AssignmentStatusChip assignment={a} />
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

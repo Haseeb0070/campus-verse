@@ -4,6 +4,7 @@ from ninja.decorators import decorate_view
 from ninja.security import django_auth
 
 from apps.academic.api import router as sections_router
+from apps.assignments.api import router as assignments_router
 from apps.chat.api import router as chat_router
 from apps.identity.api import router as me_router
 from apps.notices.api import router as notices_router
@@ -34,3 +35,4 @@ api.add_router("/notices", notices_router)
 api.add_router("/timetable", timetable_router)
 api.add_router("/chat", chat_router)
 api.add_router("/sections", sections_router)
+api.add_router("/assignments", assignments_router)

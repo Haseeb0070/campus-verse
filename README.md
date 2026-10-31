@@ -72,6 +72,10 @@ infra/bin/centrifugo.exe --config infra/centrifugo/config.json
 
 Chat still works without Centrifugo; it refreshes every few seconds instead of live.
 
+Uploaded files go to `backend/media/` (git-ignored, `MEDIA_ROOT` in `.env`). That folder is
+never served directly: every download goes through a permission check. `MAX_UPLOAD_MB`
+(default 20) caps file size.
+
 Background worker, once Redis is running:
 
 ```bash
@@ -106,6 +110,8 @@ backend/
   apps/scheduling/   rooms, weekly class meetings, one-off changes, timetable API
   apps/notices/      notices, publish service, API
   apps/chat/         section chats, messages, read state, moderation, realtime tokens
+  apps/assignments/  assignments, submissions (attempts, lateness), grades, release, downloads
+  apps/core/files.py upload checks: allow-listed types verified by content, size limit
   apps/governance/   append-only audit log
   tests/
 web/

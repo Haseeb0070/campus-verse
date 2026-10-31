@@ -17,7 +17,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const method = (init.method ?? "GET").toUpperCase();
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  // FormData sets its own multipart boundary; everything else we send is JSON.
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   if (method !== "GET" && method !== "HEAD") headers.set("X-CSRFToken", csrfToken());
 
   const res = await fetch(path, { ...init, method, headers, credentials: "same-origin" });
@@ -25,6 +28,14 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const body = res.headers.get("content-type")?.includes("json") ? await res.json() : null;
   if (!res.ok) throw new ApiError(res.status, body);
   return body as T;
+}
+
+/** The `detail` message from an API error body, or a fallback. */
+export function errorDetail(err: unknown, fallback: string) {
+  if (err instanceof ApiError && err.body && typeof err.body === "object" && "detail" in err.body) {
+    return String((err.body as { detail: unknown }).detail);
+  }
+  return fallback;
 }
 
 export async function ensureCsrfCookie() {

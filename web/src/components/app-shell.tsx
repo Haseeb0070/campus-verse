@@ -11,8 +11,10 @@ import { courseBg } from "@/lib/format";
 import { useMe } from "@/lib/queries";
 import { disconnectRealtime } from "@/lib/realtime";
 import {
+  AssignmentsIcon,
   ChatIcon,
   LogoMark,
+  MoreIcon,
   NoticesIcon,
   SectionsIcon,
   SignOutIcon,
@@ -23,6 +25,7 @@ import {
 const baseNav = [
   { href: "/today", label: "Today", Icon: TodayIcon },
   { href: "/timetable", label: "Timetable", Icon: TimetableIcon },
+  { href: "/assignments", label: "Assignments", Icon: AssignmentsIcon },
   { href: "/chat", label: "Chat", Icon: ChatIcon },
   { href: "/notices", label: "Notices", Icon: NoticesIcon },
 ];
@@ -46,11 +49,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [signingOut, setSigningOut] = useState(false);
   const unread = useUnreadTotal();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const unauthorized = me.error instanceof ApiError && me.error.status === 401;
   useEffect(() => {
     if (unauthorized) router.replace(`/sign-in?next=${encodeURIComponent(pathname)}`);
   }, [unauthorized, router, pathname]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMoreOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [moreOpen]);
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -93,6 +104,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ...baseNav.slice(2),
       ]
     : baseNav;
+  // Phones get four tabs; everything else sits under More.
+  const primaryHrefs = ["/today", "/timetable", "/assignments", "/chat"];
+  const primaryNav = nav.filter((n) => primaryHrefs.includes(n.href));
+  const secondaryNav = nav.filter((n) => !primaryHrefs.includes(n.href));
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const initials = `${user.first_name[0] ?? ""}${user.last_name[0] ?? ""}` || user.email[0];
 
@@ -164,31 +179,71 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="min-w-0 flex-1 px-4 pb-32 pt-8 md:px-2 md:pb-8 md:pt-3">{children}</main>
 
+      {moreOpen && (
+        <>
+          <button
+            aria-label="Close menu"
+            onClick={() => setMoreOpen(false)}
+            className="fixed inset-0 z-10 cursor-default md:hidden"
+          />
+          <div
+            id="more-menu"
+            className="glass-thick arrive fixed right-4 bottom-24 z-20 flex w-56 origin-bottom-right flex-col rounded-[22px] p-1.5 md:hidden"
+          >
+            {secondaryNav.map(({ href, label, Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMoreOpen(false)}
+                aria-current={isActive(href) ? "page" : undefined}
+                className={`press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium ${
+                  isActive(href) ? "bg-fill-strong text-accent-ink" : ""
+                }`}
+              >
+                <Icon className="size-5" />
+                {label}
+              </Link>
+            ))}
+            <button
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium text-danger"
+            >
+              <SignOutIcon className="size-5" />
+              Sign out
+            </button>
+          </div>
+        </>
+      )}
+
       <nav
         aria-label="Tabs"
-        className="glass-thick fixed inset-x-4 bottom-5 z-10 flex rounded-full p-1 md:hidden"
+        className="glass-thick fixed inset-x-4 bottom-5 z-20 flex rounded-full p-1 md:hidden"
       >
-        {nav.map(({ href, label, Icon }) => (
+        {primaryNav.map(({ href, label, Icon }) => (
           <Link
             key={href}
             href={href}
             aria-current={isActive(href) ? "page" : undefined}
-            className={`press relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold ${
+            className={`press relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold ${
               isActive(href) ? "bg-fill-strong text-accent-ink" : "text-ink-2"
             }`}
           >
             <Icon className="size-[22px]" />
-            {label}
+            <span className="max-w-full truncate">{label}</span>
             {href === "/chat" && <UnreadBadge count={unread} className="absolute top-1 left-1/2" />}
           </Link>
         ))}
         <button
-          onClick={handleSignOut}
-          disabled={signingOut}
-          className="press flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold text-ink-2"
+          onClick={() => setMoreOpen((o) => !o)}
+          aria-expanded={moreOpen}
+          aria-controls="more-menu"
+          className={`press flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold ${
+            moreOpen || secondaryNav.some((n) => isActive(n.href)) ? "bg-fill-strong text-accent-ink" : "text-ink-2"
+          }`}
         >
-          <SignOutIcon className="size-[22px]" />
-          Sign out
+          <MoreIcon className="size-[22px]" />
+          More
         </button>
       </nav>
     </div>

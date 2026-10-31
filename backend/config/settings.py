@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.scheduling",
     "apps.notices",
     "apps.chat",
+    "apps.assignments",
     "apps.governance",
 ]
 
@@ -140,7 +141,11 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_ROOT = BASE_DIR / "media"
+# Uploads are private: MEDIA_ROOT is never served directly, only through permission-checked
+# download endpoints.
+MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
+CAMPUSVERSE_MAX_UPLOAD_MB = env.int("MAX_UPLOAD_MB", default=20)
+DATA_UPLOAD_MAX_NUMBER_FILES = 10
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"

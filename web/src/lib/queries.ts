@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "./api";
 import type {
+  Assignment,
+  AssignmentRosterRow,
   Audience,
   Me,
   MyNotice,
@@ -80,6 +82,36 @@ export function useRoster(sectionId: number) {
   return useQuery({
     queryKey: ["sections", sectionId, "roster"],
     queryFn: () => apiFetch<Roster>(`/api/sections/${sectionId}/roster`),
+  });
+}
+
+export function useAssignments() {
+  return useQuery({
+    queryKey: ["assignments"],
+    queryFn: () => apiFetch<Assignment[]>("/api/assignments"),
+  });
+}
+
+export function useAssignment(id: number) {
+  return useQuery({
+    queryKey: ["assignments", id],
+    queryFn: () => apiFetch<Assignment>(`/api/assignments/${id}`),
+  });
+}
+
+export function useAssignmentRoster(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["assignments", id, "roster"],
+    queryFn: () => apiFetch<AssignmentRosterRow[]>(`/api/assignments/${id}/submissions`),
+    enabled,
+  });
+}
+
+export function useUploadRules() {
+  return useQuery({
+    queryKey: ["upload-rules"],
+    queryFn: () => apiFetch<{ accept: string; max_mb: number }>("/api/assignments/upload-rules"),
+    staleTime: Infinity,
   });
 }
 

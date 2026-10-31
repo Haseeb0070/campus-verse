@@ -136,6 +136,65 @@ export interface MessagePage {
   has_more: boolean;
 }
 
+export interface StoredFileInfo {
+  id: number;
+  name: string;
+  size: number;
+  content_type: string;
+}
+
+export interface SubmissionInfo {
+  id: number;
+  attempt: number;
+  text: string;
+  files: StoredFileInfo[];
+  submitted_at: string;
+  is_late: boolean;
+}
+
+export interface GradeInfo {
+  points: string;
+  feedback: string;
+}
+
+export type SubmissionWindow = "not_open" | "open" | "late" | "closed";
+
+export interface Assignment {
+  id: number;
+  title: string;
+  instructions: string;
+  status: "draft" | "published";
+  section_id: number;
+  section_code: string;
+  course_code: string;
+  course_title: string;
+  color: CourseColor;
+  available_from: string;
+  due_at: string;
+  submission_type: "text" | "file" | "both";
+  max_points: number;
+  allow_late: boolean;
+  late_until: string | null;
+  max_attempts: number;
+  grades_released: boolean;
+  window: SubmissionWindow;
+  can_manage: boolean;
+  attachments: StoredFileInfo[];
+  my_attempts: number | null;
+  my_submissions: SubmissionInfo[] | null;
+  my_grade: GradeInfo | null;
+  submitted_count: number | null;
+  graded_count: number | null;
+  student_count: number | null;
+}
+
+export interface AssignmentRosterRow {
+  student: Person;
+  attempts: number;
+  latest: SubmissionInfo | null;
+  grade: GradeInfo | null;
+}
+
 export interface Notice {
   id: number;
   title: string;
