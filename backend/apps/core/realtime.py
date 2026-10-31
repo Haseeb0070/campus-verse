@@ -27,6 +27,24 @@ def subscription_token(user, channel: str) -> str:
     return jwt.encode(claims, settings.CENTRIFUGO_TOKEN_SECRET, algorithm="HS256")
 
 
+def user_channel(user_id: int) -> str:
+    """Centrifugo user-limited channel: only a connection whose token `sub` is this user's ID
+    may subscribe, so no subscription token is needed."""
+    return f"user:#{user_id}"
+
+
+def broadcast(channels: list[str], data: dict) -> None:
+    if not channels:
+        return
+    response = httpx.post(
+        f"{settings.CENTRIFUGO_API_URL}/broadcast",
+        json={"channels": channels, "data": data},
+        headers={"X-API-Key": settings.CENTRIFUGO_API_KEY},
+        timeout=5,
+    )
+    response.raise_for_status()
+
+
 def publish(channel: str, data: dict, *, idempotency_key: str | None = None) -> None:
     payload = {"channel": channel, "data": data}
     if idempotency_key:

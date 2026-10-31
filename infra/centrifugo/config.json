@@ -29,6 +29,13 @@
       {
         "name": "typing",
         "allow_publish_for_subscriber": true
+      },
+      {
+        "name": "user",
+        "allow_user_limited_channels": true,
+        "history_size": 20,
+        "history_ttl": "300s",
+        "force_recovery": true
       }
     ]
   }

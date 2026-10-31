@@ -76,11 +76,25 @@ Uploaded files go to `backend/media/` (git-ignored, `MEDIA_ROOT` in `.env`). Tha
 never served directly: every download goes through a permission check. `MAX_UPLOAD_MB`
 (default 20) caps file size.
 
-Background worker, once Redis is running:
+Background worker and scheduler, once Redis is running (without Redis, tasks run inline):
 
 ```bash
 cd backend
 uv run celery -A config worker -l info
+```
+
+```bash
+cd backend
+uv run celery -A config beat -l info
+```
+
+Beat runs the assignment notifications every 5 minutes: work that has just opened, and
+reminders 24 hours before a deadline for students who haven't submitted. Without Redis, run
+the same job by hand or from a scheduler:
+
+```bash
+cd backend
+uv run python manage.py send_reminders
 ```
 
 ## Checks
@@ -112,6 +126,7 @@ backend/
   apps/chat/         section chats, messages, read state, moderation, realtime tokens
   apps/assignments/  assignments, submissions (attempts, lateness), grades, release, downloads
   apps/core/files.py upload checks: allow-listed types verified by content, size limit
+  apps/notifications/ in-app notifications: fan-out, no duplicates, live push, reminders
   apps/governance/   append-only audit log
   tests/
 web/

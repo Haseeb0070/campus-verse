@@ -53,7 +53,9 @@ def targets_of(notice: Notice) -> list[tuple[str, int]]:
 
 
 @transaction.atomic
-def publish_notice(*, author, notice: Notice, targets: list[tuple[str, int]]) -> Notice:
+def publish_notice(
+    *, author, notice: Notice, targets: list[tuple[str, int]], notify: bool = True
+) -> Notice:
     _validate(notice)
     if not targets:
         raise ValidationError("Choose who should see this notice.")
@@ -71,6 +73,10 @@ def publish_notice(*, author, notice: Notice, targets: list[tuple[str, int]]) ->
         target=notice,
         changes={"targets": [f"{t}:{i}" for t, i in targets]},
     )
+    if notify:
+        from apps.notifications.tasks import after_commit
+
+        after_commit("notice", notice.pk)
     return notice
 
 

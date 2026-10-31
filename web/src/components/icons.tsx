@@ -46,6 +46,13 @@ export const ChatIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const BellIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 16v-5a6 6 0 1 1 12 0v5l1.5 2h-15z" />
+    <path d="M10 20.5a2 2 0 0 0 4 0" />
+  </Icon>
+);
+
 export const MoreIcon = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="6" cy="12" r="1.3" fill="currentColor" />

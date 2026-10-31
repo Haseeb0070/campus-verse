@@ -12,6 +12,7 @@ from apps.core.files import check_upload, store_upload
 from apps.core.models import AudienceScope, StoredFile
 from apps.enrollment.models import SectionEnrollment
 from apps.governance import audit
+from apps.notifications.tasks import after_commit
 from apps.scheduling.services import member_section_ids
 
 from .models import Assignment, Grade, Submission
@@ -86,6 +87,9 @@ def create_assignment(user, *, section, **fields) -> Assignment:
     _validate_settings(assignment)
     assignment.save()
     audit.record(actor=user, action="assignment.created", target=assignment)
+    if assignment.status == Assignment.Status.PUBLISHED:
+        # Announced now if it's already open; otherwise the scheduled job picks it up.
+        after_commit("assignment_opened", assignment.pk)
     return assignment
 
 
@@ -193,6 +197,7 @@ def release_grades(user, assignment: Assignment) -> Assignment:
         assignment.grades_released_at = timezone.now()
         assignment.save(update_fields=["grades_released_at", "updated_at"])
         audit.record(actor=user, action="grades.released", target=assignment)
+        after_commit("grades_released", assignment.pk)
     return assignment
 
 

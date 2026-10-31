@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.notices",
     "apps.chat",
     "apps.assignments",
+    "apps.notifications",
     "apps.governance",
 ]
 
@@ -82,6 +83,12 @@ else:
 CELERY_BROKER_URL = REDIS_URL or "redis://localhost:6379/0"
 CELERY_TASK_ALWAYS_EAGER = not REDIS_URL
 CELERY_TASK_ACKS_LATE = True
+CELERY_BEAT_SCHEDULE = {
+    "assignment-notifications": {
+        "task": "apps.notifications.tasks.send_scheduled",
+        "schedule": 300.0,
+    },
+}
 
 AUTH_USER_MODEL = "identity.User"
 AUTHENTICATION_BACKENDS = [
@@ -162,4 +169,5 @@ LOGGING = {
     "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {"httpx": {"level": "WARNING"}},  # one line per Centrifugo call is just noise
 }

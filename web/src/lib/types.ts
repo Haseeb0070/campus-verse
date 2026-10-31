@@ -195,6 +195,23 @@ export interface AssignmentRosterRow {
   grade: GradeInfo | null;
 }
 
+export type NotificationKind =
+  | "notice.published"
+  | "class.changed"
+  | "assignment.opened"
+  | "assignment.due_soon"
+  | "grades.released";
+
+export interface AppNotification {
+  id: number;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  link: string;
+  created_at: string;
+  read: boolean;
+}
+
 export interface Notice {
   id: number;
   title: string;

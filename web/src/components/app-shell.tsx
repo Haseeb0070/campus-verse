@@ -10,8 +10,10 @@ import { useUnreadTotal } from "@/lib/chat";
 import { courseBg } from "@/lib/format";
 import { useMe } from "@/lib/queries";
 import { disconnectRealtime } from "@/lib/realtime";
+import { useLiveNotifications, useNotifications } from "@/lib/notifications";
 import {
   AssignmentsIcon,
+  BellIcon,
   ChatIcon,
   LogoMark,
   MoreIcon,
@@ -21,6 +23,7 @@ import {
   TimetableIcon,
   TodayIcon,
 } from "./icons";
+import { Toasts } from "./toasts";
 
 const baseNav = [
   { href: "/today", label: "Today", Icon: TodayIcon },
@@ -28,6 +31,7 @@ const baseNav = [
   { href: "/assignments", label: "Assignments", Icon: AssignmentsIcon },
   { href: "/chat", label: "Chat", Icon: ChatIcon },
   { href: "/notices", label: "Notices", Icon: NoticesIcon },
+  { href: "/notifications", label: "Notifications", Icon: BellIcon },
 ];
 
 function UnreadBadge({ count, className = "" }: { count: number; className?: string }) {
@@ -49,6 +53,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [signingOut, setSigningOut] = useState(false);
   const unread = useUnreadTotal();
+  const notificationsUnread = useNotifications().data?.unread ?? 0;
+  const { toasts, dismiss } = useLiveNotifications(me.data?.id);
+  const badgeFor = (href: string) =>
+    href === "/chat" ? unread : href === "/notifications" ? notificationsUnread : 0;
   const [moreOpen, setMoreOpen] = useState(false);
 
   const unauthorized = me.error instanceof ApiError && me.error.status === 401;
@@ -134,7 +142,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="size-5" />
                 <span className="flex-1">{label}</span>
-                {href === "/chat" && <UnreadBadge count={unread} />}
+                <UnreadBadge count={badgeFor(href)} />
               </Link>
             </li>
           ))}
@@ -201,7 +209,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <Icon className="size-5" />
-                {label}
+                <span className="flex-1">{label}</span>
+                <UnreadBadge count={badgeFor(href)} />
               </Link>
             ))}
             <button
@@ -231,21 +240,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Icon className="size-[22px]" />
             <span className="max-w-full truncate">{label}</span>
-            {href === "/chat" && <UnreadBadge count={unread} className="absolute top-1 left-1/2" />}
+            <UnreadBadge count={badgeFor(href)} className="absolute top-1 left-1/2" />
           </Link>
         ))}
         <button
           onClick={() => setMoreOpen((o) => !o)}
           aria-expanded={moreOpen}
           aria-controls="more-menu"
-          className={`press flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold ${
+          className={`press relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold ${
             moreOpen || secondaryNav.some((n) => isActive(n.href)) ? "bg-fill-strong text-accent-ink" : "text-ink-2"
           }`}
         >
           <MoreIcon className="size-[22px]" />
           More
+          <UnreadBadge
+            count={secondaryNav.reduce((sum, n) => sum + badgeFor(n.href), 0)}
+            className="absolute top-1 left-1/2"
+          />
         </button>
       </nav>
+
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

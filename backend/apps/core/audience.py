@@ -112,15 +112,21 @@ def _sections_in_scope(scope_type: str, scope_id: int, institution_id: int):
     return sections.filter(**filters[scope_type]).values("pk")
 
 
-def reach(targets: list[tuple[str, int]], institution_id: int) -> int:
-    """How many distinct people (active students and teachers) an audience covers."""
+def audience_user_ids(targets: list[tuple[str, int]], institution_id: int) -> set[int]:
+    """Exactly who an audience covers: active students and teachers of the sections in scope,
+    or every active member for an institution-wide audience. Used for reach counts and for
+    notification fan-out, so the two always agree."""
     from apps.enrollment.models import SectionEnrollment, TeacherAssignment
     from apps.identity.models import User
 
     if not targets:
-        return 0
+        return set()
     if any(scope == AudienceScope.INSTITUTION for scope, _ in targets):
-        return User.objects.filter(institution_id=institution_id, is_active=True).count()
+        return set(
+            User.objects.filter(institution_id=institution_id, is_active=True).values_list(
+                "pk", flat=True
+            )
+        )
     people: set[int] = set()
     for scope, pk in targets:
         sections = _sections_in_scope(scope, pk, institution_id)
@@ -134,7 +140,12 @@ def reach(targets: list[tuple[str, int]], institution_id: int) -> int:
                 "teacher_id", flat=True
             )
         )
-    return len(people)
+    return people
+
+
+def reach(targets: list[tuple[str, int]], institution_id: int) -> int:
+    """How many distinct people an audience covers."""
+    return len(audience_user_ids(targets, institution_id))
 
 
 def scope_label(scope_type: str, scope_id: int) -> str:

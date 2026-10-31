@@ -210,7 +210,7 @@ def conflicts(
     return found
 
 
-def _notice_text(meeting, change) -> tuple[str, str]:
+def change_text(meeting, change) -> tuple[str, str]:
     course = meeting.section.offering.course
     when = f"{change.date:%a %d %b}"
     note = f"\n\n{change.note}" if change.note else ""
@@ -304,12 +304,16 @@ def change_class(
         from apps.notices.models import Notice
         from apps.notices.services import publish_notice
 
-        title, body = _notice_text(meeting, change)
+        title, body = change_text(meeting, change)
         publish_notice(
             author=user,
             notice=Notice(title=title, body=body, priority=Notice.Priority.IMPORTANT),
             targets=[(AudienceScope.SECTION.value, meeting.section_id)],
+            notify=False,  # the class-change notification below already tells everyone
         )
+    from apps.notifications.tasks import after_commit
+
+    after_commit("class_change", change.pk)
     return change
 
 
