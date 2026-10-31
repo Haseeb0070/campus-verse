@@ -89,7 +89,7 @@ export default function SetPasswordPage() {
               <input type="password" value={confirm} autoComplete="new-password"
                 onChange={(e) => setConfirm(e.target.value)} className={field} />
             </label>
-            {error && <p role="alert" className="text-footnote text-danger">{error}</p>}
+            {error && <p role="alert" className="text-footnote text-danger-ink">{error}</p>}
             <button type="submit" disabled={busy}
               className="press mt-1 h-12 rounded-full bg-accent text-body font-semibold text-on-accent disabled:opacity-60">
               {busy ? "Saving…" : "Set password and continue"}

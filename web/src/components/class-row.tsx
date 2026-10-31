@@ -2,7 +2,7 @@ import { courseBg, formatDay, formatTime } from "@/lib/format";
 import type { Occurrence, OccurrenceStatus } from "@/lib/types";
 
 const statusChip: Partial<Record<OccurrenceStatus, { label: string; className: string }>> = {
-  cancelled: { label: "Cancelled", className: "bg-danger/12 text-danger" },
+  cancelled: { label: "Cancelled", className: "bg-danger/12 text-danger-ink" },
   moved: { label: "Moved", className: "bg-warning/18 text-ink" },
   rescheduled: { label: "Rescheduled", className: "bg-accent/12 text-accent-ink" },
   room_changed: { label: "Room changed", className: "bg-warning/18 text-ink" },

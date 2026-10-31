@@ -205,7 +205,7 @@ function StudentPanel({ a, tz }: { a: Assignment; tz?: string }) {
             </label>
           )}
           {error && (
-            <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger">
+            <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">
               {error}
             </p>
           )}
@@ -288,7 +288,7 @@ function TeacherPanel({ a, tz }: { a: Assignment; tz?: string }) {
           </button>
         )}
       </div>
-      {releaseError && <p role="alert" className="text-footnote text-danger">{releaseError}</p>}
+      {releaseError && <p role="alert" className="text-footnote text-danger-ink">{releaseError}</p>}
 
       {roster.isPending && <p className="text-body text-ink-2">Loading…</p>}
       {roster.data?.length === 0 && <p className="text-body text-ink-2">No students in this section yet.</p>}
@@ -385,7 +385,7 @@ function GradeRow({ a, row, tz }: { a: Assignment; row: AssignmentRosterRow; tz?
               {state === "saving" ? "Saving…" : state === "saved" ? "Saved" : "Save"}
             </button>
           </div>
-          {error && <p role="alert" className="text-footnote text-danger">{error}</p>}
+          {error && <p role="alert" className="text-footnote text-danger-ink">{error}</p>}
         </form>
       )}
     </li>

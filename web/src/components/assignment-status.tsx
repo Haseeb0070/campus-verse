@@ -4,7 +4,7 @@ import type { Assignment } from "@/lib/types";
 const tone = {
   good: "bg-success/15 text-ink",
   warn: "bg-warning/18 text-ink",
-  bad: "bg-danger/12 text-danger",
+  bad: "bg-danger/12 text-danger-ink",
   info: "bg-accent/12 text-accent-ink",
   muted: "bg-fill-strong text-ink-2",
 };

@@ -224,7 +224,7 @@ export function ChangeClassDialog({
         )}
 
         {(error || conflicts.length > 0) && (
-          <div role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote text-danger">
+          <div role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote text-danger-ink">
             <p className="font-semibold">{error}</p>
             {conflicts.length > 0 && (
               <ul className="mt-1 list-disc pl-5">

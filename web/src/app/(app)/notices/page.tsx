@@ -62,7 +62,7 @@ export default function NoticesPage() {
           <li key={n.id} id={`notice-${n.id}`} className="glass scroll-mt-6 rounded-card p-6">
             <article>
               {n.priority === "important" && (
-                <span className="mb-2 inline-block rounded-full bg-danger/12 px-2 py-0.5 text-caption font-semibold text-danger">
+                <span className="mb-2 inline-block rounded-full bg-danger/12 px-2 py-0.5 text-caption font-semibold text-danger-ink">
                   Important
                 </span>
               )}
@@ -123,7 +123,7 @@ function MyNoticeRow({ notice: n }: { notice: MyNotice }) {
           {audience} · {n.reach} {n.reach === 1 ? "person" : "people"}
           {n.published_at ? ` · ${relativeTime(n.published_at)}` : ` · edited ${relativeTime(n.updated_at)}`}
         </span>
-        {error && <span className="block text-footnote text-danger">{error}</span>}
+        {error && <span className="block text-footnote text-danger-ink">{error}</span>}
       </span>
       <span className="flex items-center gap-2 text-footnote font-semibold">
         {n.status === "draft" && n.targets.length > 0 && (
@@ -138,7 +138,7 @@ function MyNoticeRow({ notice: n }: { notice: MyNotice }) {
         {confirmArchive ? (
           <>
             <span className="text-ink-2">Remove from feeds?</span>
-            <button onClick={() => act("archive")} disabled={busy} className="text-danger">
+            <button onClick={() => act("archive")} disabled={busy} className="text-danger-ink">
               Archive
             </button>
             <button onClick={() => setConfirmArchive(false)}>Cancel</button>

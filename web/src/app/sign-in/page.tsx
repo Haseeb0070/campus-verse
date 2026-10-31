@@ -54,7 +54,7 @@ function SignInForm() {
 
         <form onSubmit={handleSubmit} noValidate className="glass flex flex-col gap-4 rounded-card p-6">
           {formError && (
-            <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger">
+            <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">
               {formError}
             </p>
           )}
@@ -79,7 +79,7 @@ function SignInForm() {
               className={`${inputClass} ${fieldErrors.email ? "border-danger" : "border-transparent"}`}
             />
             {fieldErrors.email && (
-              <p id="email-error" className="text-footnote text-danger">
+              <p id="email-error" className="text-footnote text-danger-ink">
                 {fieldErrors.email}
               </p>
             )}
@@ -103,7 +103,7 @@ function SignInForm() {
               className={`${inputClass} ${fieldErrors.password ? "border-danger" : "border-transparent"}`}
             />
             {fieldErrors.password && (
-              <p id="password-error" className="text-footnote text-danger">
+              <p id="password-error" className="text-footnote text-danger-ink">
                 {fieldErrors.password}
               </p>
             )}

@@ -17,18 +17,29 @@
 
   --cv-ink: #111318;
   --cv-ink-2: #5d6270;
-  --cv-ink-3: #6e7381;
+  --cv-ink-3: #5f6474;
 
   --cv-accent: #335cff;
-  --cv-accent-ink: #335cff;
+  --cv-accent-ink: #2747d6; /* text on light tints; buttons keep --cv-accent */
   --cv-on-accent: #ffffff;
   --cv-success: #22b35e;
   --cv-warning: #e8a100;
   --cv-danger: #e0244e;
+  /* Status colours as text: darker in light mode so they pass 4.5:1 on their own tints. */
+  --cv-success-ink: #0f7a45;
+  --cv-warning-ink: #9a5b00;
+  --cv-danger-ink: #c01d43;
+
+  /* Tells the browser and OS which theme native UI should use: select popups, date and
+     time pickers, number spinners, checkboxes and scrollbars. Without it, dark mode gets
+     light-on-white dropdown lists. */
+  color-scheme: light;
+  accent-color: var(--cv-accent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --cv-bg: #0b0c10;
     --cv-surface: rgb(32 34 43 / 0.86);
     --cv-surface-side: rgb(18 19 25 / 0.92);
@@ -40,17 +51,21 @@
     --cv-shadow: 0 20px 44px -18px rgb(0 0 0 / 0.65);
     --cv-divider: rgb(255 255 255 / 0.08);
     --cv-ink: #f2f4f8;
-    --cv-ink-2: #a7adbb;
-    --cv-ink-3: #8e95a6;
+    --cv-ink-2: #b8bec9;
+    --cv-ink-3: #a0a7b6;
     --cv-accent: #3d5cff;
     --cv-accent-ink: #94a6ff;
     --cv-success: #34d27a;
     --cv-warning: #f2b632;
     --cv-danger: #ff5468;
+    --cv-success-ink: #34d27a;
+    --cv-warning-ink: #f2b632;
+    --cv-danger-ink: #ff7385;
   }
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --cv-bg: #0b0c10;
   --cv-surface: rgb(32 34 43 / 0.86);
   --cv-surface-side: rgb(18 19 25 / 0.92);
@@ -62,13 +77,16 @@
   --cv-shadow: 0 20px 44px -18px rgb(0 0 0 / 0.65);
   --cv-divider: rgb(255 255 255 / 0.08);
   --cv-ink: #f2f4f8;
-  --cv-ink-2: #a7adbb;
-  --cv-ink-3: #8e95a6;
+  --cv-ink-2: #b8bec9;
+  --cv-ink-3: #a0a7b6;
   --cv-accent: #3d5cff;
   --cv-accent-ink: #94a6ff;
   --cv-success: #34d27a;
   --cv-warning: #f2b632;
   --cv-danger: #ff5468;
+  --cv-success-ink: #34d27a;
+  --cv-warning-ink: #f2b632;
+  --cv-danger-ink: #ff7385;
 }
 
 @theme inline {
@@ -86,6 +104,9 @@
   --color-success: var(--cv-success);
   --color-warning: var(--cv-warning);
   --color-danger: var(--cv-danger);
+  --color-success-ink: var(--cv-success-ink);
+  --color-warning-ink: var(--cv-warning-ink);
+  --color-danger-ink: var(--cv-danger-ink);
 
   /* Course colours: one per course, used everywhere that course appears. */
   --color-course-lagoon: #12a4a6;
@@ -216,6 +237,19 @@
   :root {
     --cv-rim: var(--cv-ink-3);
   }
+}
+
+/* Belt and braces for browsers that ignore color-scheme on the option list. */
+select option,
+select optgroup {
+  background-color: var(--cv-bg);
+  color: var(--cv-ink);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--cv-ink-3);
+  opacity: 1;
 }
 
 body {

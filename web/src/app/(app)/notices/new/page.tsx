@@ -99,7 +99,7 @@ export default function NewNoticePage() {
         className="glass flex flex-col gap-5 rounded-card p-6"
       >
         {formError && (
-          <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger">
+          <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">
             {formError}
           </p>
         )}
@@ -122,7 +122,7 @@ export default function NewNoticePage() {
             className={`${inputClass} h-12 font-semibold ${errors.title ? "border-danger" : "border-transparent"}`}
           />
           {errors.title && (
-            <p id="title-error" className="text-footnote text-danger">
+            <p id="title-error" className="text-footnote text-danger-ink">
               {errors.title}
             </p>
           )}
@@ -147,7 +147,7 @@ export default function NewNoticePage() {
             className={`${inputClass} resize-y py-3 ${errors.body ? "border-danger" : "border-transparent"}`}
           />
           {errors.body && (
-            <p id="body-error" className="text-footnote text-danger">
+            <p id="body-error" className="text-footnote text-danger-ink">
               {errors.body}
             </p>
           )}
@@ -191,7 +191,7 @@ export default function NewNoticePage() {
                 ? `${reach.data.people} ${reach.data.people === 1 ? "person" : "people"} will see this.`
                 : "Counting…"}
           </p>
-          {errors.targets && <p className="text-footnote text-danger">{errors.targets}</p>}
+          {errors.targets && <p className="text-footnote text-danger-ink">{errors.targets}</p>}
         </fieldset>
 
         <label className="flex items-center gap-3 text-body">

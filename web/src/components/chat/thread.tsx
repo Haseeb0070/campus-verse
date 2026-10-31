@@ -292,7 +292,7 @@ function MessageRow({
         </div>
         <span className="mt-0.5 flex items-center gap-2 px-1 text-caption text-ink-3">
           {m.failed ? (
-            <span className="text-danger">
+            <span className="text-danger-ink">
               Not sent ·{" "}
               <button onClick={onRetry} className="font-semibold underline">
                 Retry
@@ -307,7 +307,7 @@ function MessageRow({
             (confirming ? (
               <span className="flex items-center gap-1.5">
                 Delete for everyone?
-                <button onClick={onDelete} className="font-semibold text-danger">
+                <button onClick={onDelete} className="font-semibold text-danger-ink">
                   Delete
                 </button>
                 <button onClick={onCancelDelete} className="font-semibold">
@@ -317,7 +317,7 @@ function MessageRow({
             ) : (
               <button
                 onClick={onAskDelete}
-                className="font-semibold opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
+                className="font-semibold opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
               >
                 Delete
               </button>

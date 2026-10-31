@@ -115,7 +115,7 @@ export default function TodayPage() {
               <li key={n.id} className="rounded-row p-2.5 hover:bg-fill">
                 <Link href={`/notices#notice-${n.id}`} className="block">
                   {n.priority === "important" && (
-                    <span className="mb-1 inline-block rounded-full bg-danger/12 px-2 py-0.5 text-caption font-semibold text-danger">
+                    <span className="mb-1 inline-block rounded-full bg-danger/12 px-2 py-0.5 text-caption font-semibold text-danger-ink">
                       Important
                     </span>
                   )}

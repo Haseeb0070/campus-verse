@@ -94,7 +94,7 @@ export default function NewAssignmentPage() {
     "h-11 w-full rounded-control border border-transparent bg-fill px-3 text-body outline-none focus:border-accent";
   const label = "flex flex-col gap-1.5 text-footnote font-semibold text-ink-2";
   const err = (k: string) =>
-    errors[k] && <span className="text-footnote font-normal text-danger">{errors[k]}</span>;
+    errors[k] && <span className="text-footnote font-normal text-danger-ink">{errors[k]}</span>;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
@@ -114,7 +114,7 @@ export default function NewAssignmentPage() {
         className="glass flex flex-col gap-5 rounded-card p-6"
       >
         {formError && (
-          <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger">
+          <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">
             {formError}
           </p>
         )}

@@ -11,7 +11,7 @@ const statusChip: Record<ImportRow["status"], { label: string; cls: string }> = 
   new: { label: "New", cls: "bg-success/15 text-ink" },
   update: { label: "Update", cls: "bg-accent/12 text-accent-ink" },
   unchanged: { label: "Unchanged", cls: "bg-fill-strong text-ink-2" },
-  error: { label: "Error", cls: "bg-danger/12 text-danger" },
+  error: { label: "Error", cls: "bg-danger/12 text-danger-ink" },
 };
 
 type Filter = "changes" | "problems" | "all";
@@ -93,7 +93,7 @@ export default function ImportPage() {
             {busy === "upload" ? "Checking…" : "Preview import"}
           </button>
         </div>
-        {error && <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger">{error}</p>}
+        {error && <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">{error}</p>}
       </form>
 
       {run.data && <RunView run={run.data} tz={tz} busy={busy} onAct={act} />}
@@ -145,11 +145,11 @@ function RunView({ run, tz, busy, onAct }: {
 
   const tiles: [string, number | undefined, string][] = [
     ["Rows read", s.rows, "text-ink"],
-    ["New", s.new, "text-success"],
+    ["New", s.new, "text-success-ink"],
     ["Updates", s.update, "text-accent-ink"],
     ["Unchanged", s.unchanged, "text-ink-2"],
-    ["Errors", s.error, "text-danger"],
-    ["Room clashes", s.clash, "text-warning"],
+    ["Errors", s.error, "text-danger-ink"],
+    ["Room clashes", s.clash, "text-warning-ink"],
   ];
 
   return (

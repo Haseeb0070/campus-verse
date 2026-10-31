@@ -141,7 +141,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
           <input value={last} onChange={(e) => setLast(e.target.value)} className={field} />
         </label>
       </div>
-      {error && <p role="alert" className="text-footnote text-danger">{error}</p>}
+      {error && <p role="alert" className="text-footnote text-danger-ink">{error}</p>}
       <div className="flex justify-end gap-3">
         <button type="button" onClick={onDone} className="press h-11 rounded-full bg-fill-strong px-5 text-body font-semibold">
           Cancel
@@ -178,7 +178,7 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
   }
 
   const status = !p.is_active
-    ? { text: "Deactivated", cls: "bg-danger/12 text-danger" }
+    ? { text: "Deactivated", cls: "bg-danger/12 text-danger-ink" }
     : p.invited
       ? { text: "Invited", cls: "bg-warning/18 text-ink" }
       : null;
@@ -227,7 +227,7 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
           </button>
           {p.id !== me?.id &&
             (p.is_active ? (
-              <button onClick={() => setMode("deactivate")} className="press rounded-full px-3 py-1.5 text-danger hover:bg-danger/10">
+              <button onClick={() => setMode("deactivate")} className="press rounded-full px-3 py-1.5 text-danger-ink hover:bg-danger/10">
                 Deactivate
               </button>
             ) : (
@@ -287,8 +287,8 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
         </form>
       )}
 
-      {error && <p role="alert" className="mt-2 text-footnote text-danger">{error}</p>}
-      {notice && <p role="status" className="mt-2 text-footnote text-success">{notice}</p>}
+      {error && <p role="alert" className="mt-2 text-footnote text-danger-ink">{error}</p>}
+      {notice && <p role="status" className="mt-2 text-footnote text-success-ink">{notice}</p>}
     </li>
   );
 }
