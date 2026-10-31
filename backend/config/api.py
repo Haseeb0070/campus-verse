@@ -17,6 +17,7 @@ from apps.notices.api import router as notices_router
 from apps.notifications.api import router as notifications_router
 from apps.resources.api import router as resources_router
 from apps.scheduling.api import router as timetable_router
+from apps.search.api import router as search_router
 
 api = NinjaAPI(
     title="CampusVerse API",
@@ -52,3 +53,4 @@ api.add_router("/resources", resources_router)
 api.add_router("/events", events_router)
 api.add_router("/attendance", attendance_router)
 api.add_router("/progress", progress_router)
+api.add_router("/search", search_router)

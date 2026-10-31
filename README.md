@@ -174,6 +174,7 @@ backend/
   apps/resources/    course material: files and links per section, versions, archive
   apps/events/       calendar events: exams, holidays, seminars; sign-ups with a waitlist
   apps/attendance/   attendance (only once an institution switches it on) and progress
+  apps/search/       search across notices, courses, resources, posts, events, work
   apps/governance/   append-only audit log
   tests/
 web/

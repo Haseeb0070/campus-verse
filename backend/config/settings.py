@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "apps.resources",
     "apps.events",
     "apps.attendance",
+    "apps.search",
     "apps.governance",
 ]
 

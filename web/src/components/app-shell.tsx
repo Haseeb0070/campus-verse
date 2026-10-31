@@ -27,6 +27,7 @@ import {
   PersonIcon,
   ProgressIcon,
   ResourcesIcon,
+  SearchIcon,
   SectionsIcon,
   SignOutIcon,
   TimetableIcon,
@@ -93,6 +94,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (unauthorized) router.replace(`/sign-in?next=${encodeURIComponent(pathname)}`);
   }, [unauthorized, router, pathname]);
+
+  // Search from anywhere: Ctrl/Cmd+K, or "/" when not typing in a field.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = (e.target as HTMLElement)?.closest?.("input, textarea, [contenteditable=true]");
+      if ((e.key === "k" && (e.ctrlKey || e.metaKey)) || (e.key === "/" && !typing)) {
+        e.preventDefault();
+        router.push("/search");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [router]);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -170,6 +184,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <LogoMark className="size-[34px]" />
           <span className="text-headline font-semibold">CampusVerse</span>
         </div>
+
+        <Link
+          href="/search"
+          aria-label="Search (Ctrl K)"
+          className="press -mt-1 flex h-10 items-center gap-2.5 rounded-control bg-fill px-3 text-body text-ink-2 hover:bg-fill-strong"
+        >
+          <SearchIcon className="size-[18px]" />
+          <span className="flex-1">Search</span>
+          <kbd className="rounded-md bg-fill-strong px-1.5 py-px font-sans text-caption font-semibold text-ink">Ctrl K</kbd>
+        </Link>
 
         <ul className="flex flex-col gap-0.5">
           {nav.map(({ href, label, Icon }) => (
@@ -261,6 +285,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <UnreadBadge count={badgeFor(href)} label={badgeLabel(href)} />
               </Link>
             ))}
+            <Link
+              href="/search"
+              onClick={() => setMoreOpen(false)}
+              aria-current={isActive("/search") ? "page" : undefined}
+              className={`press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium ${
+                isActive("/search") ? "bg-fill-strong text-accent-ink" : ""
+              }`}
+            >
+              <SearchIcon className="size-5" />
+              <span className="flex-1">Search</span>
+            </Link>
             <Link
               href="/profile"
               onClick={() => setMoreOpen(false)}

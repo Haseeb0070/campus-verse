@@ -213,3 +213,10 @@ export const ProgressIcon = (p: IconProps) => (
     <path d="M7 16v-4M12 16V8M17 16v-6.5" />
   </Icon>
 );
+
+export const SearchIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="10.5" cy="10.5" r="6" />
+    <path d="M15 15l5 5" />
+  </Icon>
+);
