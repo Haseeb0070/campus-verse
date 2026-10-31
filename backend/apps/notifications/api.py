@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from ninja import Router, Schema
+from django.core.exceptions import ValidationError
+from ninja import Router, Schema, Status
 
-from . import services
+from . import preferences, services
 from .models import Notification
 
 router = Router(tags=["notifications"])
@@ -35,9 +36,40 @@ class ReadOut(Schema):
     updated: int
 
 
+class PreferenceOut(Schema):
+    key: str
+    label: str
+    detail: str
+    locked: bool
+    in_app: bool
+    email: bool
+
+
+class PreferenceIn(Schema):
+    changes: dict[str, dict[str, bool]]
+
+
+class ErrorOut(Schema):
+    detail: str
+
+
+@router.get("/preferences", response=list[PreferenceOut])
+def get_preferences(request):
+    return preferences.preferences_of(request.user)
+
+
+@router.patch("/preferences", response={200: list[PreferenceOut], 422: ErrorOut})
+def set_preferences(request, payload: PreferenceIn):
+    try:
+        return Status(200, preferences.update_preferences(request.user, payload.changes))
+    except ValidationError as err:
+        return Status(422, {"detail": err.messages[0]})
+
+
 @router.get("", response=NotificationList)
 def list_notifications(request, limit: int = 30, unread_only: bool = False):
-    mine = Notification.objects.filter(recipient=request.user)
+    # Notifications switched off for the app stay on record (and may be emailed), unlisted here.
+    mine = Notification.objects.filter(recipient=request.user, in_app=True)
     items = mine.filter(read_at__isnull=True) if unread_only else mine
     return {
         "items": list(items[: max(1, min(limit, 100))]),

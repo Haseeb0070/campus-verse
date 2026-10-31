@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AssignmentsIcon,
@@ -57,14 +58,22 @@ export default function NotificationsPage() {
           </p>
           <h1 className="mt-1 text-large-title font-bold">Notifications</h1>
         </div>
-        {unread > 0 && (
-          <button
-            onClick={() => markRead()}
-            className="press h-10 rounded-full bg-fill-strong px-4 text-footnote font-semibold"
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/profile#notifications"
+            className="press inline-flex h-10 items-center rounded-full px-4 text-footnote font-semibold text-accent-ink hover:bg-fill"
           >
-            Mark all as read
-          </button>
-        )}
+            Settings
+          </Link>
+          {unread > 0 && (
+            <button
+              onClick={() => markRead()}
+              className="press h-10 rounded-full bg-fill-strong px-4 text-footnote font-semibold"
+            >
+              Mark all as read
+            </button>
+          )}
+        </div>
       </header>
 
       {notifications.isPending && <p className="text-body text-ink-2">Loading…</p>}

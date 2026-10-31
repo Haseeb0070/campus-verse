@@ -33,6 +33,11 @@ class Notification(InstitutionScopedModel):
         max_length=120, help_text="Same event, same person: never notified twice"
     )
     read_at = models.DateTimeField(null=True, blank=True)
+    # The row is always kept as the record (and for de-duplication); these say how it reaches
+    # the person, from their preferences at the time it was created.
+    in_app = models.BooleanField(default=True)
+    email_wanted = models.BooleanField(default=False)
+    emailed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at", "-id"]
@@ -45,3 +50,17 @@ class Notification(InstitutionScopedModel):
 
     def __str__(self):
         return f"{self.kind} → {self.recipient_id}"
+
+
+class NotificationPreference(models.Model):
+    """Per-person channel choices by notification group. Only changes from the defaults in
+    preferences.GROUPS are stored, so new groups get sensible defaults automatically."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notification_preference"
+    )
+    choices = models.JSONField(default=dict, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Notification preferences for {self.user_id}"

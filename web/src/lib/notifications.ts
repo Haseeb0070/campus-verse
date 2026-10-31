@@ -97,3 +97,19 @@ export function useLiveNotifications(userId: number | undefined) {
 
   return { toasts, dismiss };
 }
+
+export interface NotificationPreference {
+  key: string;
+  label: string;
+  detail: string;
+  locked: boolean;
+  in_app: boolean;
+  email: boolean;
+}
+
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: ["notifications", "preferences"],
+    queryFn: () => apiFetch<NotificationPreference[]>("/api/notifications/preferences"),
+  });
+}

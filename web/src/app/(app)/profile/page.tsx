@@ -3,8 +3,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Select } from "@/components/select";
+import { Switch } from "@/components/switch";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { courseBg, relativeTime } from "@/lib/format";
+import { useNotificationPreferences } from "@/lib/notifications";
+import type { NotificationPreference } from "@/lib/notifications";
 import { changePassword, topicLabels, useMyCorrections } from "@/lib/profile";
 import type { Correction, CorrectionTopic } from "@/lib/profile";
 import { useMe } from "@/lib/queries";
@@ -142,6 +145,69 @@ function PasswordCard() {
   );
 }
 
+function NotificationsCard() {
+  const queryClient = useQueryClient();
+  const prefs = useNotificationPreferences();
+  const [error, setError] = useState<string | null>(null);
+  const queryKey = ["notifications", "preferences"];
+
+  async function set(key: string, channel: "in_app" | "email", on: boolean) {
+    const before = queryClient.getQueryData<NotificationPreference[]>(queryKey);
+    queryClient.setQueryData<NotificationPreference[]>(queryKey, (list) =>
+      list?.map((p) => (p.key === key ? { ...p, [channel]: on } : p)),
+    );
+    setError(null);
+    try {
+      const saved = await apiFetch<NotificationPreference[]>("/api/notifications/preferences", {
+        method: "PATCH",
+        body: JSON.stringify({ changes: { [key]: { [channel]: on } } }),
+      });
+      queryClient.setQueryData(queryKey, saved);
+    } catch (err) {
+      queryClient.setQueryData(queryKey, before);
+      setError(errorDetail(err, "Couldn't save that. Try again."));
+    }
+  }
+
+  return (
+    <section id="notifications" aria-labelledby="notif-h" className="glass scroll-mt-6 rounded-card p-5">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 id="notif-h" className="text-headline font-semibold">Notifications</h2>
+          <p className="text-footnote text-ink-2">Choose what reaches you, and where. Changes save right away.</p>
+        </div>
+        <div aria-hidden="true" className="hidden gap-4 pr-1 text-caption font-semibold text-ink-2 sm:flex">
+          <span className="w-11 text-center">In app</span>
+          <span className="w-11 text-center">Email</span>
+        </div>
+      </div>
+      {error && <p role="alert" className="mt-3 text-footnote text-danger-ink">{error}</p>}
+      <ul className="mt-3 divide-y divide-[var(--cv-divider)]">
+        {prefs.data?.map((p) => (
+          <li key={p.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+            <span className="min-w-0 flex-1 basis-56">
+              <span className="block text-body font-semibold">{p.label}</span>
+              <span className="block text-footnote text-ink-2">{p.detail}</span>
+            </span>
+            <span className="flex items-center gap-4">
+              <span className="flex flex-col items-center gap-1">
+                <Switch checked={p.in_app} disabled={p.locked} label={`${p.label} in the app`}
+                  onChange={(on) => set(p.key, "in_app", on)} />
+                <span className="text-caption text-ink-2 sm:hidden">In app</span>
+              </span>
+              <span className="flex flex-col items-center gap-1">
+                <Switch checked={p.email} label={`${p.label} by email`}
+                  onChange={(on) => set(p.key, "email", on)} />
+                <span className="text-caption text-ink-2 sm:hidden">Email</span>
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 const statusChip: Record<Correction["status"], { text: string; cls: string }> = {
   open: { text: "Waiting", cls: "bg-fill-strong text-ink-2" },
   resolved: { text: "Fixed", cls: "bg-success/12 text-success-ink" },
@@ -258,6 +324,7 @@ export default function ProfilePage() {
 
       <NameCard me={me} />
       <PasswordCard />
+      <NotificationsCard />
 
       {me.sections.length > 0 && (
         <section aria-labelledby="courses-h" className="glass rounded-card p-3">

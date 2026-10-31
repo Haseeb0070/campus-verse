@@ -24,9 +24,13 @@ def notify(
     body: str = "",
     link: str = "",
     actor_id: int | None = None,
+    group: str | None = None,
 ) -> int:
-    """Create one notification per recipient (never for the actor) and push it live. Safe to
-    run again for the same event: the (recipient, dedupe_key) constraint means no duplicates."""
+    """Record one notification per recipient (never for the actor), then deliver it the ways
+    each person chose: live in the app, by email, or both. Safe to run again for the same event:
+    the (recipient, dedupe_key) constraint means no duplicates and no second email."""
+    from .preferences import channels, group_for
+
     wanted = set(recipients) - {actor_id}
     if not wanted:
         return 0
@@ -35,7 +39,10 @@ def notify(
             "recipient_id", flat=True
         )
     )
-    new = sorted(wanted - already)
+    new_ids = wanted - already
+    if not new_ids:
+        return 0
+    how = channels(new_ids, group or group_for(kind))
     Notification.objects.bulk_create(
         [
             Notification(
@@ -47,11 +54,18 @@ def notify(
                 link=link,
                 actor_id=actor_id,
                 dedupe_key=dedupe_key,
+                in_app=how[uid][0],
+                email_wanted=how[uid][1],
             )
-            for uid in new
+            for uid in sorted(new_ids)
         ],
         ignore_conflicts=True,  # a concurrent retry may have won the race; that's fine
     )
+    new = sorted(uid for uid in new_ids if how[uid][0])
+    if any(email for _, email in how.values()):
+        from .tasks import after_commit_email
+
+        after_commit_email(dedupe_key, sorted(uid for uid in new_ids if how[uid][1]))
     if new:
         payload = {
             "type": "notification.created",
@@ -68,7 +82,7 @@ def notify(
                 logger.warning("Live delivery of %s failed", dedupe_key, exc_info=True)
 
         transaction.on_commit(push)
-    return len(new)
+    return len(new_ids)
 
 
 def _local(dt, institution) -> str:
@@ -96,6 +110,7 @@ def notice_published(notice_id: int) -> int:
         link=f"/notices#notice-{notice.pk}",
         actor_id=notice.author_id,
         dedupe_key=f"notice:{notice.pk}",
+        group="important" if notice.priority == "important" else "notices",
     )
 
 

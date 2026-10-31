@@ -26,3 +26,15 @@ def send_scheduled() -> dict[str, int]:
 def after_commit(event: str, object_id: int) -> None:
     """Queue fan-out only once the triggering change is safely saved."""
     transaction.on_commit(lambda: fan_out.delay(event, object_id))
+
+
+@shared_task(acks_late=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=5)
+def send_emails(dedupe_key: str, user_ids: list[int]) -> int:
+    from .emails import send_for
+
+    return send_for(dedupe_key, user_ids)
+
+
+def after_commit_email(dedupe_key: str, user_ids: list[int]) -> None:
+    if user_ids:
+        transaction.on_commit(lambda: send_emails.delay(dedupe_key, user_ids))
