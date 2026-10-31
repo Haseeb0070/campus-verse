@@ -40,6 +40,18 @@ export const NoticesIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const ChatIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 12a8 8 0 1 1 3.5 6.6L4 20l1.3-3.6A8 8 0 0 1 4 12z" />
+  </Icon>
+);
+
+export const SendIcon = (p: IconProps) => (
+  <Icon strokeWidth={2.2} {...p}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Icon>
+);
+
 export const SignOutIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M14 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h9" />

@@ -11,7 +11,13 @@ TOKEN_TTL = 60 * 15
 
 
 def connection_token(user) -> str:
-    claims = {"sub": str(user.pk), "exp": int(time.time()) + TOKEN_TTL}
+    # `info` is attached by Centrifugo to anything this client publishes (e.g. typing
+    # signals), so other people see a name the server vouched for, not one the client made up.
+    claims = {
+        "sub": str(user.pk),
+        "exp": int(time.time()) + TOKEN_TTL,
+        "info": {"name": user.get_full_name() or user.email},
+    }
     return jwt.encode(claims, settings.CENTRIFUGO_TOKEN_SECRET, algorithm="HS256")
 
 

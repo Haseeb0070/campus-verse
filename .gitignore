@@ -15,6 +15,9 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 
+# Locally downloaded tools (e.g. the Centrifugo binary)
+infra/bin/
+
 # Env and secrets
 .env
 .env.*

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from ninja import Query, Router, Schema
+from ninja import Query, Router, Schema, Status
 from ninja.errors import HttpError
 
 from .services import institution_today, next_occurrence, occurrences
@@ -46,4 +46,4 @@ def timetable(request, query: Query[TimetableQuery]):
 @router.get("/next", response={200: OccurrenceOut, 204: None})
 def upcoming(request):
     occ = next_occurrence(request.user)
-    return (200, occ) if occ else (204, None)
+    return Status(200, occ) if occ else Status(204, None)

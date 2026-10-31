@@ -6,15 +6,30 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { signOut } from "@/lib/auth";
+import { useUnreadTotal } from "@/lib/chat";
 import { courseBg } from "@/lib/format";
 import { useMe } from "@/lib/queries";
-import { LogoMark, NoticesIcon, SignOutIcon, TimetableIcon, TodayIcon } from "./icons";
+import { disconnectRealtime } from "@/lib/realtime";
+import { ChatIcon, LogoMark, NoticesIcon, SignOutIcon, TimetableIcon, TodayIcon } from "./icons";
 
 const nav = [
   { href: "/today", label: "Today", Icon: TodayIcon },
   { href: "/timetable", label: "Timetable", Icon: TimetableIcon },
+  { href: "/chat", label: "Chat", Icon: ChatIcon },
   { href: "/notices", label: "Notices", Icon: NoticesIcon },
 ];
+
+function UnreadBadge({ count, className = "" }: { count: number; className?: string }) {
+  if (!count) return null;
+  return (
+    <span
+      className={`grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-caption font-semibold text-on-accent ${className}`}
+    >
+      <span className="sr-only">{count} unread</span>
+      <span aria-hidden="true">{count > 99 ? "99+" : count}</span>
+    </span>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const me = useMe();
@@ -22,6 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const [signingOut, setSigningOut] = useState(false);
+  const unread = useUnreadTotal();
 
   const unauthorized = me.error instanceof ApiError && me.error.status === 401;
   useEffect(() => {
@@ -33,6 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     try {
       await signOut();
     } finally {
+      disconnectRealtime();
       queryClient.clear();
       router.replace("/sign-in");
     }
@@ -85,7 +102,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <Icon className="size-5" />
-                {label}
+                <span className="flex-1">{label}</span>
+                {href === "/chat" && <UnreadBadge count={unread} />}
               </Link>
             </li>
           ))}
@@ -139,12 +157,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             key={href}
             href={href}
             aria-current={isActive(href) ? "page" : undefined}
-            className={`press flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold ${
+            className={`press relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold ${
               isActive(href) ? "bg-fill-strong text-accent-ink" : "text-ink-2"
             }`}
           >
             <Icon className="size-[22px]" />
             {label}
+            {href === "/chat" && <UnreadBadge count={unread} className="absolute top-1 left-1/2" />}
           </Link>
         ))}
         <button

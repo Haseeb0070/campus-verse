@@ -50,6 +50,37 @@ export interface Occurrence {
   moved_from: string | null;
 }
 
+export interface ChatMessage {
+  id: number;
+  conversation_id: number;
+  client_id: string;
+  body: string;
+  deleted: boolean;
+  created_at: string;
+  sender: { id: number; name: string; initials: string; is_teacher: boolean };
+  /** Client-only: optimistic state while sending. */
+  pending?: boolean;
+  failed?: boolean;
+}
+
+export interface Conversation {
+  id: number;
+  kind: "section" | "group" | "direct";
+  title: string;
+  course_title: string | null;
+  section_code: string | null;
+  color: CourseColor | null;
+  unread: number;
+  is_moderator: boolean;
+  last_message: ChatMessage | null;
+  last_message_at: string | null;
+}
+
+export interface MessagePage {
+  messages: ChatMessage[];
+  has_more: boolean;
+}
+
 export interface Notice {
   id: number;
   title: string;

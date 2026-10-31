@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "apps.enrollment",
     "apps.scheduling",
     "apps.notices",
+    "apps.chat",
     "apps.governance",
 ]
 
@@ -125,6 +126,11 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="CampusVerse <no-reply@lo
 CENTRIFUGO_API_URL = env("CENTRIFUGO_API_URL", default="http://localhost:8001/api")
 CENTRIFUGO_API_KEY = env("CENTRIFUGO_API_KEY", default="")
 CENTRIFUGO_TOKEN_SECRET = env("CENTRIFUGO_TOKEN_SECRET", default="")
+if not DEBUG and 0 < len(CENTRIFUGO_TOKEN_SECRET) < 32:
+    raise environ.ImproperlyConfigured("CENTRIFUGO_TOKEN_SECRET must be at least 32 characters.")
+CENTRIFUGO_WS_URL = env(
+    "CENTRIFUGO_WS_URL", default="ws://localhost:8001/connection/websocket"
+)
 
 LANGUAGE_CODE = "en"
 LANGUAGES = [("en", "English"), ("ur", "Urdu")]

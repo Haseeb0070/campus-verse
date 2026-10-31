@@ -5,6 +5,7 @@ os.environ.setdefault("SECRET_KEY", "test-only-secret")
 os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault("SECURE_SSL_REDIRECT", "false")
 os.environ["REDIS_URL"] = ""
+os.environ["CENTRIFUGO_TOKEN_SECRET"] = "test-token-secret-for-pytest-only-0123456789"
 
 from .settings import *  # noqa: E402, F403
 

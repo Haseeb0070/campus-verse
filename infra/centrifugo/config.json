@@ -1,7 +1,10 @@
 {
+  "http_server": {
+    "port": 8001
+  },
   "client": {
     "token": {
-      "hmac_secret_key": "dev-centrifugo-token-secret"
+      "hmac_secret_key": "dev-centrifugo-token-secret-change-me-0123456789"
     },
     "allowed_origins": ["http://localhost:3000"]
   },
@@ -18,17 +21,14 @@
       {
         "name": "chat",
         "presence": true,
-        "join_leave": true,
-        "force_push_join_leave": true,
+        "allow_presence_for_subscriber": true,
         "history_size": 100,
         "history_ttl": "600s",
         "force_recovery": true
       },
       {
-        "name": "user",
-        "history_size": 50,
-        "history_ttl": "600s",
-        "force_recovery": true
+        "name": "typing",
+        "allow_publish_for_subscriber": true
       }
     ]
   }

@@ -62,6 +62,16 @@ npm install
 npm run dev
 ```
 
+Live chat needs Centrifugo on port 8001. Docker Compose starts it; without Docker, download
+the Windows build from the [Centrifugo releases](https://github.com/centrifugal/centrifugo/releases)
+into `infra/bin/` (git ignores it) and run:
+
+```bash
+infra/bin/centrifugo.exe --config infra/centrifugo/config.json
+```
+
+Chat still works without Centrifugo; it refreshes every few seconds instead of live.
+
 Background worker, once Redis is running:
 
 ```bash
@@ -95,12 +105,13 @@ backend/
   apps/enrollment/   teacher assignments, section enrollments
   apps/scheduling/   rooms, weekly class meetings, one-off changes, timetable API
   apps/notices/      notices, publish service, API
+  apps/chat/         section chats, messages, read state, moderation, realtime tokens
   apps/governance/   append-only audit log
   tests/
 web/
-  src/app/           routes: sign-in, (app)/today, timetable, notices; globals.css tokens
-  src/components/    app shell, class row, icons
-  src/lib/           API client, auth, queries, formatting
+  src/app/           routes: sign-in, (app)/today, timetable, chat, notices; globals.css
+  src/components/    app shell, chat list and thread, class row, icons
+  src/lib/           API client, auth, queries, chat + realtime hooks, formatting
 infra/
   docker-compose.yml
   centrifugo/config.json
