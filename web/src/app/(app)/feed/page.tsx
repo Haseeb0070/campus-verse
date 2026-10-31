@@ -6,6 +6,7 @@ import { PostCard } from "@/components/post-card";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { useFeed, useFeedAudiences } from "@/lib/feed";
 import { fileSize } from "@/lib/format";
+import { Select } from "@/components/select";
 
 export default function FeedPage() {
   const audiences = useFeedAudiences();
@@ -118,12 +119,9 @@ function Composer() {
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-footnote font-semibold text-ink-2">
           Post to
-          <select value={chosen} onChange={(e) => setTarget(e.target.value)}
-            className="h-9 rounded-full border-0 bg-fill-strong px-3 text-footnote font-semibold text-ink outline-none">
-            {audiences.data?.map((a) => (
-              <option key={a.key} value={a.key}>{a.label}{a.detail ? ` · ${a.detail}` : ""}</option>
-            ))}
-          </select>
+          <Select value={chosen} onChange={setTarget} label="Post to"
+            className="h-9 max-w-64 rounded-full bg-fill-strong px-3 text-footnote font-semibold text-ink"
+            options={(audiences.data ?? []).map((a) => ({ value: a.key, label: a.label, detail: a.detail }))} />
         </label>
         <label className="press inline-flex h-9 cursor-pointer items-center rounded-full bg-fill-strong px-3 text-footnote font-semibold">
           Add photo or PDF

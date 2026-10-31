@@ -6,6 +6,7 @@ import { apiFetch, errorDetail } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 import { type ManagedPerson, roleLabel, useDepartments, usePeople } from "@/lib/manage";
 import { useMe } from "@/lib/queries";
+import { Select } from "@/components/select";
 
 const kinds = [
   { value: "", label: "Everyone" },
@@ -126,11 +127,11 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         </label>
         <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
           They are a
-          <select value={kind} onChange={(e) => setKind(e.target.value)} className={field}>
-            <option value="student">Student</option>
-            <option value="teacher">Teacher</option>
-            <option value="staff">Staff member</option>
-          </select>
+          <Select value={kind} onChange={setKind} label="They are a" className={field} options={[
+            { value: "student", label: "Student" },
+            { value: "teacher", label: "Teacher" },
+            { value: "staff", label: "Staff member" },
+          ]} />
         </label>
         <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
           First name
@@ -264,21 +265,18 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
         >
           <label className="flex flex-col gap-1 text-footnote font-semibold text-ink-2">
             Role
-            <select value={role} onChange={(e) => setRole(e.target.value)} className={`${field} w-56 bg-[var(--cv-bg)]`}>
-              <option value="department_coordinator">Department coordinator</option>
-              <option value="moderator">Moderator</option>
-              <option value="institution_admin">Institution admin</option>
-            </select>
+            <Select value={role} onChange={setRole} label="Role" className={`${field} w-56 bg-[var(--cv-bg)]`} options={[
+              { value: "department_coordinator", label: "Department coordinator" },
+              { value: "moderator", label: "Moderator" },
+              { value: "institution_admin", label: "Institution admin" },
+            ]} />
           </label>
           {role === "department_coordinator" && (
             <label className="flex flex-col gap-1 text-footnote font-semibold text-ink-2">
               Department
-              <select value={dept} onChange={(e) => setDept(e.target.value)} className={`${field} w-56 bg-[var(--cv-bg)]`}>
-                <option value="">Choose a department</option>
-                {departments.data?.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
+              <Select value={dept} onChange={setDept} label="Department" placeholder="Choose a department"
+                className={`${field} w-56 bg-[var(--cv-bg)]`}
+                options={(departments.data ?? []).map((d) => ({ value: String(d.id), label: d.name }))} />
             </label>
           )}
           <button type="submit" className="press h-11 rounded-full bg-accent px-5 text-body font-semibold text-on-accent">

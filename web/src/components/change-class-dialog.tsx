@@ -6,6 +6,7 @@ import { ApiError, apiFetch } from "@/lib/api";
 import { addDays, formatDay, formatTime } from "@/lib/format";
 import { useRooms } from "@/lib/queries";
 import type { Occurrence } from "@/lib/types";
+import { Select } from "./select";
 
 type Action = "cancelled" | "moved" | "room_changed";
 
@@ -186,17 +187,11 @@ export function ChangeClassDialog({
             {action === "room_changed" && (
               <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
                 New room
-                <select value={roomId} onChange={(e) => setRoomId(e.target.value)} className={field}>
-                  <option value="">Choose a room</option>
-                  {rooms.data
-                    ?.filter((r) => r.code !== occ.room)
-                    .map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.code}
-                        {r.building && ` · ${r.building}`}
-                      </option>
-                    ))}
-                </select>
+                <Select value={roomId} onChange={setRoomId} label="New room" placeholder="Choose a room"
+                  className={field}
+                  options={(rooms.data ?? [])
+                    .filter((r) => r.code !== occ.room)
+                    .map((r) => ({ value: String(r.id), label: r.code, detail: r.building || undefined }))} />
               </label>
             )}
 

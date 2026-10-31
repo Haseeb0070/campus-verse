@@ -11,6 +11,7 @@ import { courseBg, fileSize, formatDateTime, relativeTime } from "@/lib/format";
 import { useMe } from "@/lib/queries";
 import { fileUrl, kindLabels, useResource, useShareOptions } from "@/lib/resources";
 import type { Resource, ResourceKind } from "@/lib/resources";
+import { Select } from "@/components/select";
 
 const field =
   "h-11 w-full rounded-control border border-transparent bg-[var(--cv-bg)] px-3 text-body outline-none focus:border-accent";
@@ -131,12 +132,8 @@ function EditDetails({ r, onDone }: { r: Resource; onDone: () => void }) {
         </label>
         <label className={label}>
           Type
-          <select value={kind} onChange={(e) => setKind(e.target.value as ResourceKind)}
-            className={field}>
-            {Object.entries(kindLabels).map(([value, text]) => (
-              <option key={value} value={value}>{text}</option>
-            ))}
-          </select>
+          <Select value={kind} onChange={(v) => setKind(v as ResourceKind)} label="Type" className={field}
+            options={Object.entries(kindLabels).map(([value, text]) => ({ value, label: text }))} />
         </label>
       </div>
       {r.url && (

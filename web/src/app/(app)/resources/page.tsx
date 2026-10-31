@@ -6,6 +6,7 @@ import { DocumentIcon, LinkIcon } from "@/components/icons";
 import { courseBg, fileSize, relativeTime } from "@/lib/format";
 import { fileUrl, kindLabels, useResources, useShareOptions } from "@/lib/resources";
 import type { Resource, ResourceKind } from "@/lib/resources";
+import { Select } from "@/components/select";
 
 function hostOf(url: string) {
   try {
@@ -138,13 +139,10 @@ export default function ResourcesPage() {
           )}
           <label>
             <span className="sr-only">Type</span>
-            <select value={kind} onChange={(e) => setKind(e.target.value as ResourceKind | "")}
-              className="glass h-11 rounded-full px-4 text-body font-semibold outline-none focus:ring-2 focus:ring-accent/50">
-              <option value="">All types</option>
-              {Object.entries(kindLabels).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
+            <Select value={kind} onChange={(v) => setKind(v as ResourceKind | "")} label="Type"
+              className="glass h-11 min-w-40 rounded-full px-4 text-body font-semibold"
+              options={[{ value: "", label: "All types" },
+                ...Object.entries(kindLabels).map(([value, label]) => ({ value, label }))]} />
           </label>
           <label className="min-w-[12rem] flex-1">
             <span className="sr-only">Search resources</span>

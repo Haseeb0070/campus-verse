@@ -9,6 +9,7 @@ import { apiFetch, errorDetail } from "@/lib/api";
 import { fileSize } from "@/lib/format";
 import { kindLabels, useShareOptions } from "@/lib/resources";
 import type { Resource, ResourceKind } from "@/lib/resources";
+import { Select } from "@/components/select";
 
 export default function ShareResourcePage() {
   const router = useRouter();
@@ -114,21 +115,19 @@ export default function ShareResourcePage() {
 
           <label className={label}>
             Course
-            <select
+            <Select
               value={course ? String(course.offering_id) : ""}
-              onChange={(e) => {
-                setCourseId(e.target.value);
+              onChange={(v) => {
+                setCourseId(v);
                 setPicked(null);
               }}
+              label="Course"
+              placeholder="Choose a course"
               className={field}
-            >
-              {courses.length !== 1 && <option value="">Choose a course</option>}
-              {courses.map((c) => (
-                <option key={c.offering_id} value={c.offering_id}>
-                  {c.course_code} · {c.course_title} · {c.term}
-                </option>
-              ))}
-            </select>
+              options={courses.map((c) => ({
+                value: String(c.offering_id), label: `${c.course_code} · ${c.course_title}`, detail: c.term,
+              }))}
+            />
             {err("course")}
           </label>
 

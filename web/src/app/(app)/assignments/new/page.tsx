@@ -9,6 +9,7 @@ import { apiFetch, errorDetail } from "@/lib/api";
 import { fileSize, toLocalInput } from "@/lib/format";
 import { useTeaching, useUploadRules } from "@/lib/queries";
 import type { Assignment } from "@/lib/types";
+import { Select } from "@/components/select";
 
 const types = [
   { value: "file", label: "Files" },
@@ -122,14 +123,11 @@ export default function NewAssignmentPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={label}>
             Section
-            <select value={section} onChange={(e) => setSectionId(e.target.value)} className={field}>
-              <option value="">Choose a section</option>
-              {sections.data?.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.course_code} · {s.code} · {s.course_title}
-                </option>
-              ))}
-            </select>
+            <Select value={section} onChange={setSectionId} label="Section" placeholder="Choose a section"
+              className={field}
+              options={(sections.data ?? []).map((s) => ({
+                value: String(s.id), label: `${s.course_code} · ${s.code}`, detail: s.course_title,
+              }))} />
             {err("section")}
           </label>
           <label className={label}>

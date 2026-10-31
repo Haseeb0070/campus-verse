@@ -88,6 +88,18 @@ export const AssignmentsIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const CheckIcon = (p: IconProps) => (
+  <Icon {...p} strokeWidth={2.2}>
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </Icon>
+);
+
+export const ChevronDownIcon = (p: IconProps) => (
+  <Icon {...p} strokeWidth={2}>
+    <path d="M6.5 9.5L12 15l5.5-5.5" />
+  </Icon>
+);
+
 export const ResourcesIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />
