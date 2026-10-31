@@ -87,6 +87,142 @@ def can_view(user, obj) -> bool:
     return type(obj).objects.filter(visible_q(user, type(obj)), pk=obj.pk).exists()
 
 
+def parse_target(key: str) -> tuple[str, int]:
+    """"section:12" -> ("section", 12). Raises ValueError for anything else."""
+    scope, _, raw_id = key.partition(":")
+    if scope not in AudienceScope.values or not raw_id.isdigit():
+        raise ValueError(f"Not an audience: {key!r}")
+    return scope, int(raw_id)
+
+
+def _sections_in_scope(scope_type: str, scope_id: int, institution_id: int):
+    from apps.academic.models import Section
+
+    sections = Section.objects.filter(
+        institution_id=institution_id, status=Section.Status.ACTIVE
+    )
+    filters = {
+        AudienceScope.INSTITUTION: {},
+        AudienceScope.CAMPUS: {"offering__course__department__campus_id": scope_id},
+        AudienceScope.DEPARTMENT: {"offering__course__department_id": scope_id},
+        AudienceScope.PROGRAM: {"program_id": scope_id},
+        AudienceScope.OFFERING: {"offering_id": scope_id},
+        AudienceScope.SECTION: {"pk": scope_id},
+    }
+    return sections.filter(**filters[scope_type]).values("pk")
+
+
+def reach(targets: list[tuple[str, int]], institution_id: int) -> int:
+    """How many distinct people (active students and teachers) an audience covers."""
+    from apps.enrollment.models import SectionEnrollment, TeacherAssignment
+    from apps.identity.models import User
+
+    if not targets:
+        return 0
+    if any(scope == AudienceScope.INSTITUTION for scope, _ in targets):
+        return User.objects.filter(institution_id=institution_id, is_active=True).count()
+    people: set[int] = set()
+    for scope, pk in targets:
+        sections = _sections_in_scope(scope, pk, institution_id)
+        people |= set(
+            SectionEnrollment.objects.filter(
+                section__in=sections, status=SectionEnrollment.Status.ACTIVE
+            ).values_list("student_id", flat=True)
+        )
+        people |= set(
+            TeacherAssignment.objects.filter(section__in=sections).values_list(
+                "teacher_id", flat=True
+            )
+        )
+    return len(people)
+
+
+def scope_label(scope_type: str, scope_id: int) -> str:
+    from apps.academic.models import (
+        Campus,
+        CourseOffering,
+        Department,
+        Institution,
+        Program,
+        Section,
+    )
+
+    if scope_type == AudienceScope.SECTION:
+        s = Section.objects.select_related("offering__course").filter(pk=scope_id).first()
+        return f"{s.offering.course.code} · {s.code}" if s else "Removed section"
+    if scope_type == AudienceScope.OFFERING:
+        o = CourseOffering.objects.select_related("course").filter(pk=scope_id).first()
+        return f"All {o.course.code} sections" if o else "Removed course"
+    model = {
+        AudienceScope.INSTITUTION: Institution,
+        AudienceScope.CAMPUS: Campus,
+        AudienceScope.DEPARTMENT: Department,
+        AudienceScope.PROGRAM: Program,
+    }[scope_type]
+    obj = model.objects.filter(pk=scope_id).first()
+    return str(obj) if obj else "Removed audience"
+
+
+def audience_options(user) -> list[dict]:
+    """Every audience this user may post to, grouped for a picker, with how many people each
+    reaches. Mirrors can_target: admins get the institution, departments and all sections;
+    coordinators their departments and sections in them; teachers the sections they teach."""
+    from django.db.models import Count
+    from django.db.models import Q as DQ
+
+    from apps.academic.models import Department, Section
+    from apps.enrollment.models import TeacherAssignment
+    from apps.identity.roles import coordinated_department_ids, is_institution_admin
+
+    if not user.is_authenticated or user.institution_id is None:
+        return []
+    inst = user.institution_id
+    admin = is_institution_admin(user)
+    dept_ids = (
+        set(Department.objects.filter(institution_id=inst).values_list("pk", flat=True))
+        if admin
+        else coordinated_department_ids(user)
+    )
+    options = []
+    if admin:
+        options.append({
+            "key": f"institution:{inst}", "scope_type": "institution", "scope_id": inst,
+            "label": f"Everyone at {user.institution.name}", "group": "Institution",
+            "reach": reach([("institution", inst)], inst),
+        })
+    for dept in Department.objects.filter(pk__in=dept_ids).order_by("name"):
+        options.append({
+            "key": f"department:{dept.pk}", "scope_type": "department", "scope_id": dept.pk,
+            "label": dept.name, "group": "Departments",
+            "reach": reach([("department", dept.pk)], inst),
+        })
+    taught = set(
+        TeacherAssignment.objects.filter(teacher=user).values_list("section_id", flat=True)
+    )
+    section_filter = DQ(pk__in=taught)
+    if dept_ids:
+        section_filter |= DQ(offering__course__department_id__in=dept_ids)
+    sections = (
+        Section.objects.filter(section_filter, institution_id=inst, status=Section.Status.ACTIVE)
+        .select_related("offering__course")
+        .annotate(
+            students=Count(
+                "enrollments", filter=DQ(enrollments__status="active"), distinct=True
+            ),
+            teachers=Count("teacher_assignments", distinct=True),
+        )
+        .order_by("offering__course__code", "code")
+    )
+    for s in sections:
+        options.append({
+            "key": f"section:{s.pk}", "scope_type": "section", "scope_id": s.pk,
+            "label": f"{s.offering.course.code} · {s.code}", "group": "Sections",
+            "detail": s.offering.course.title,
+            "reach": s.students + s.teachers,
+        })
+    return options
+
+
 def _scope_owner(scope_type: str, scope_id: int) -> tuple[int, int | None] | None:
     """(institution_id, department_id) for a scope, or None if it doesn't exist."""
     from apps.academic.models import (

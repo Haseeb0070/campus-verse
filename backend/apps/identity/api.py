@@ -19,6 +19,7 @@ class SectionOut(Schema):
     course_title: str
     color: str
     term: str
+    teaching: bool
 
 
 class MeOut(Schema):
@@ -36,6 +37,7 @@ class MeOut(Schema):
 @router.get("", response=MeOut)
 def me(request):
     user = request.user
+    taught = set(user.teaching.values_list("section_id", flat=True))
     sections = (
         Section.objects.filter(pk__in=member_section_ids(user))
         .select_related("offering__course", "offering__term")
@@ -58,6 +60,7 @@ def me(request):
                 "course_title": s.offering.course.title,
                 "color": s.offering.course.color,
                 "term": s.offering.term.name,
+                "teaching": s.pk in taught,
             }
             for s in sections
         ],

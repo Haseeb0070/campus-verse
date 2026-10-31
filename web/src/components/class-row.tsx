@@ -14,10 +14,13 @@ export function ClassRow({
   occ,
   timeZone,
   highlight = false,
+  onManage,
 }: {
   occ: Occurrence;
   timeZone?: string;
   highlight?: boolean;
+  /** Shown only for classes the viewer may change (teachers of the section, admins). */
+  onManage?: (occ: Occurrence) => void;
 }) {
   const chip = statusChip[occ.status];
   const off = occ.status === "cancelled" || occ.status === "moved";
@@ -76,6 +79,15 @@ export function ClassRow({
         >
           Join
         </a>
+      )}
+      {onManage && occ.can_manage && (
+        <button
+          onClick={() => onManage(occ)}
+          aria-label={`Change ${occ.course_title} ${occ.section_code} on ${occ.date}`}
+          className="press self-center rounded-full bg-fill-strong px-3 py-1.5 text-footnote font-semibold"
+        >
+          Change
+        </button>
       )}
     </li>
   );

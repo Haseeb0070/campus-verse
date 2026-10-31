@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ChangeClassDialog } from "@/components/change-class-dialog";
 import { ClassRow } from "@/components/class-row";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { addDays, formatDay, startOfWeek, todayIn } from "@/lib/format";
@@ -13,6 +14,7 @@ export default function TimetablePage() {
   const today = todayIn(tz);
   const thisWeek = startOfWeek(today);
   const [weekStart, setWeekStart] = useState(thisWeek);
+  const [managing, setManaging] = useState<Occurrence | null>(null);
   const week = useTimetable(weekStart, 7);
 
   const byDay = new Map<string, Occurrence[]>();
@@ -88,13 +90,27 @@ export default function TimetablePage() {
             ) : (
               <ul className="flex flex-col gap-1">
                 {items.map((occ) => (
-                  <ClassRow key={`${occ.meeting_id}-${occ.status}`} occ={occ} timeZone={tz} />
+                  <ClassRow
+                    key={`${occ.meeting_id}-${occ.status}`}
+                    occ={occ}
+                    timeZone={tz}
+                    onManage={setManaging}
+                  />
                 ))}
               </ul>
             )}
           </section>
         );
       })}
+
+      {managing && (
+        <ChangeClassDialog
+          key={`${managing.meeting_id}-${managing.date}-${managing.status}`}
+          occ={managing}
+          timeZone={tz}
+          onClose={() => setManaging(null)}
+        />
+      )}
     </div>
   );
 }

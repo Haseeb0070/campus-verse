@@ -10,9 +10,17 @@ import { useUnreadTotal } from "@/lib/chat";
 import { courseBg } from "@/lib/format";
 import { useMe } from "@/lib/queries";
 import { disconnectRealtime } from "@/lib/realtime";
-import { ChatIcon, LogoMark, NoticesIcon, SignOutIcon, TimetableIcon, TodayIcon } from "./icons";
+import {
+  ChatIcon,
+  LogoMark,
+  NoticesIcon,
+  SectionsIcon,
+  SignOutIcon,
+  TimetableIcon,
+  TodayIcon,
+} from "./icons";
 
-const nav = [
+const baseNav = [
   { href: "/today", label: "Today", Icon: TodayIcon },
   { href: "/timetable", label: "Timetable", Icon: TimetableIcon },
   { href: "/chat", label: "Chat", Icon: ChatIcon },
@@ -77,6 +85,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const user = me.data;
   const courses = [...new Map(user.sections.map((s) => [s.course_code, s])).values()];
+  const teaches = user.sections.some((s) => s.teaching);
+  const nav = teaches
+    ? [
+        ...baseNav.slice(0, 2),
+        { href: "/sections", label: "Sections", Icon: SectionsIcon },
+        ...baseNav.slice(2),
+      ]
+    : baseNav;
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const initials = `${user.first_name[0] ?? ""}${user.last_name[0] ?? ""}` || user.email[0];
 

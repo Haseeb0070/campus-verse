@@ -35,6 +35,7 @@ class MessageOut(Schema):
 class ConversationOut(Schema):
     id: int
     kind: str
+    section_id: int | None
     title: str
     course_title: str | None
     section_code: str | None
@@ -86,6 +87,7 @@ def _summary_out(s: services.ConversationSummary, user) -> dict:
     return {
         "id": conv.pk,
         "kind": conv.kind,
+        "section_id": conv.section_id,
         "title": conv.title,
         "course_title": course.title if course else None,
         "section_code": conv.section.code if conv.section else None,

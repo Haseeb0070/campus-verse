@@ -46,6 +46,14 @@ export const ChatIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const SectionsIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="9" cy="9" r="3" />
+    <circle cx="16.5" cy="10" r="2.5" />
+    <path d="M3.5 19a5.5 5.5 0 0 1 11 0M14.5 19a4.5 4.5 0 0 1 6-4.2" />
+  </Icon>
+);
+
 export const SendIcon = (p: IconProps) => (
   <Icon strokeWidth={2.2} {...p}>
     <path d="M12 19V5M6 11l6-6 6 6" />

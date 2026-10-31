@@ -24,7 +24,59 @@ export interface Me {
     course_title: string;
     color: CourseColor;
     term: string;
+    teaching: boolean;
   }[];
+}
+
+export interface Audience {
+  key: string;
+  scope_type: string;
+  scope_id: number;
+  label: string;
+  group: "Institution" | "Departments" | "Sections";
+  detail: string;
+  reach: number;
+}
+
+export interface MyNotice {
+  id: number;
+  title: string;
+  body: string;
+  priority: "normal" | "important";
+  status: "draft" | "published" | "archived";
+  published_at: string | null;
+  updated_at: string;
+  targets: { key: string; label: string }[];
+  reach: number;
+}
+
+export interface Room {
+  id: number;
+  code: string;
+  building: string;
+}
+
+export interface SectionSummary {
+  id: number;
+  code: string;
+  course_code: string;
+  course_title: string;
+  color: CourseColor;
+  term: string;
+  students: number;
+}
+
+export interface Person {
+  id: number;
+  name: string;
+  email: string;
+  initials: string;
+}
+
+export interface Roster {
+  section: SectionSummary;
+  teachers: Person[];
+  students: Person[];
 }
 
 export type OccurrenceStatus = "scheduled" | "cancelled" | "moved" | "room_changed" | "rescheduled";
@@ -48,6 +100,8 @@ export interface Occurrence {
   note: string;
   moved_to: string | null;
   moved_from: string | null;
+  change_id: number | null;
+  can_manage: boolean;
 }
 
 export interface ChatMessage {
@@ -66,6 +120,7 @@ export interface ChatMessage {
 export interface Conversation {
   id: number;
   kind: "section" | "group" | "direct";
+  section_id: number | null;
   title: string;
   course_title: string | null;
   section_code: string | null;
