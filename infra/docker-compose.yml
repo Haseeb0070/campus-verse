@@ -1,0 +1,41 @@
+# Local development services. Run from this folder: docker compose up -d
+# Credentials here are development-only values.
+name: campusverse
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: campusverse
+      POSTGRES_USER: campusverse
+      POSTGRES_PASSWORD: campusverse
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusverse"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    command: centrifugo --config=/centrifugo/config.json
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./centrifugo:/centrifugo:ro
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  pgdata:
