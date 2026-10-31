@@ -16,6 +16,7 @@ class Notification(InstitutionScopedModel):
         GRADES_RELEASED = "grades.released"
         FEED_COMMENT = "feed.comment"
         MODERATION = "moderation.action"
+        RESOURCE = "resource.shared"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"

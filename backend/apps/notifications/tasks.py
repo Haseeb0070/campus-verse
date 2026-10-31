@@ -13,6 +13,7 @@ def fan_out(event: str, object_id: int) -> int:
         "class_change": services.class_changed,
         "assignment_opened": services.assignment_opened,
         "grades_released": services.grades_released,
+        "resource": services.resource_shared,
     }[event]
     return handler(object_id)
 

@@ -182,6 +182,34 @@ def grades_released(assignment_id: int) -> int:
     )
 
 
+def resource_shared(resource_id: int) -> int:
+    """A new resource, or a new version of one. Each version notifies once."""
+    from apps.core.audience import audience_user_ids
+    from apps.resources.models import Resource
+    from apps.resources.services import targets_of
+
+    r = (
+        Resource.objects.select_related("offering__course")
+        .filter(pk=resource_id, status=Resource.Status.ACTIVE)
+        .first()
+    )
+    if r is None:
+        return 0
+    latest = r.versions.select_related("uploaded_by").first()
+    number = latest.number if latest else 1
+    updated = number > 1
+    return notify(
+        audience_user_ids(targets_of(r), r.institution_id),
+        kind=Kind.RESOURCE,
+        institution_id=r.institution_id,
+        title=f"{'Updated' if updated else 'New'} in {r.offering.course.code}: {r.title}",
+        body=(latest.note if updated and latest.note else r.get_kind_display()),
+        link=f"/resources/{r.pk}",
+        actor_id=latest.uploaded_by_id if latest else r.created_by_id,
+        dedupe_key=f"resource:{r.pk}:v{number}",
+    )
+
+
 def send_scheduled(now=None) -> dict[str, int]:
     """Run every few minutes (Celery beat or the send_reminders command): announces work that
     has just opened, and reminds students who haven't submitted 24 hours before a deadline."""

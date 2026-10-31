@@ -23,7 +23,7 @@ never implicit thread-local magic. Cross-institution access is a bug, and tests 
 
 - The **section** is the unit of membership. Students enroll in sections, teachers are
   assigned to sections. A `CourseOffering` is one course in one term.
-- `core.AudienceTarget` attaches any content (notices now; posts, resources and events later)
+- `core.AudienceTarget` attaches any content (notices, posts and resources now; events later)
   to scopes: institution, campus, department, program, offering or section.
 - `core.audience.context_keys(user)` builds the set of scopes a user belongs to from active
   enrollments and assignments. It is cached and cleared when enrollment changes.

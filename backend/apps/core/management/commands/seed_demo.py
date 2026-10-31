@@ -160,6 +160,7 @@ class Command(BaseCommand):
 
         add_demo_assignments(s["CS-301 3B"], imran, s["MATH-210 2A"], farah)
         add_demo_posts(inst, s["CS-301 3B"], ayesha, hamza, imran, nadia)
+        add_demo_resources(s["CS-301 3B"], s["CS-301 3C"], imran, s["MATH-210 2A"], farah)
 
         publish_notice(
             author=nadia,
@@ -223,3 +224,83 @@ def add_demo_posts(institution, section, student, classmate, teacher, admin):
     question = create_post(classmate, body="Does anyone have the whiteboard notes from Thursday? "
                            "I missed the last 20 minutes.", targets=[("section", section.pk)])
     add_comment(student, question, body="I took photos, I'll post them after class.")
+
+
+def _demo_pdf(title: str, lines: list[str]) -> bytes:
+    """A small but real one-page PDF, so downloads open in any viewer."""
+    text = [f"BT /F1 20 Tf 72 740 Td ({title}) Tj ET"]
+    text += [f"BT /F1 12 Tf 72 {700 - 22 * i} Td ({line}) Tj ET" for i, line in enumerate(lines)]
+    stream = "\n".join(text).encode()
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
+        b"/Resources << /Font << /F1 5 0 R >> >> >>",
+        b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out, offsets = bytearray(b"%PDF-1.4\n"), []
+    for number, body in enumerate(objects, start=1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n" % number + body + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1)
+    out += b"".join(b"%010d 00000 n \n" % o for o in offsets)
+    out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (
+        len(objects) + 1, xref)
+    return bytes(out)
+
+
+def add_demo_resources(ds_3b, ds_3c, ds_teacher, math_section, math_teacher):
+    """Course material in each state: a replaced file, a link, starter code and an archived file."""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from apps.resources.services import create_resource, replace_file, set_archived
+
+    both = [("section", ds_3b.pk), ("section", ds_3c.pk)]
+    ds = ds_3b.offering
+
+    def pdf(name, title, lines):
+        return SimpleUploadedFile(name, _demo_pdf(title, lines), content_type="application/pdf")
+
+    trees = create_resource(
+        ds_teacher, offering=ds, targets=both, kind="slides", title="Week 5: Binary search trees",
+        description="Insertion, search and deletion, with the three deletion cases worked through.",
+        upload=pdf("week-5-bst.pdf", "Week 5: Binary search trees",
+                   ["1. What a BST guarantees", "2. Search and insert", "3. Deleting a node"]),
+    )
+    replace_file(
+        ds_teacher, trees, pdf("week-5-bst-v2.pdf", "Week 5: Binary search trees",
+                               ["1. What a BST guarantees", "2. Search and insert",
+                                "3. Deleting a node (example on slide 14 fixed)"]),
+        note="Fixed the deletion example on slide 14",
+    )
+    create_resource(
+        ds_teacher, offering=ds, targets=both, kind="reference", title="VisuAlgo: linked lists",
+        description="Step through insert and delete visually before Lab 3.",
+        url="https://visualgo.net/en/list",
+    )
+    create_resource(
+        ds_teacher, offering=ds, targets=[("section", ds_3b.pk)], kind="other",
+        title="Lab 3 starter code",
+        upload=SimpleUploadedFile(
+            "linked_list.py",
+            b"class Node:\n    def __init__(self, value):\n        self.value = value\n"
+            b"        self.next = None\n\n\nclass LinkedList:\n"
+            b'    """Fill in insert, delete and reverse."""\n\n'
+            b"    def __init__(self):\n        self.head = None\n",
+            content_type="text/x-python",
+        ),
+    )
+    old = create_resource(
+        ds_teacher, offering=ds, targets=both, kind="slides", title="Week 1 slides (old syllabus)",
+        upload=pdf("week-1.pdf", "Week 1: Course overview", ["This syllabus was replaced."]),
+    )
+    set_archived(ds_teacher, old, True)
+    create_resource(
+        math_teacher, offering=math_section.offering, targets=[("section", math_section.pk)],
+        kind="notes", title="Chapter 5 worked examples",
+        description="Every example from Tuesday's class, written out step by step.",
+        upload=pdf("chapter-5-examples.pdf", "Chapter 5: Worked examples",
+                   ["Example 5.1", "Example 5.2", "Example 5.3"]),
+    )

@@ -11,6 +11,7 @@ from apps.feed.api import router as feed_router
 from apps.identity.api import router as me_router
 from apps.notices.api import router as notices_router
 from apps.notifications.api import router as notifications_router
+from apps.resources.api import router as resources_router
 from apps.scheduling.api import router as timetable_router
 
 api = NinjaAPI(
@@ -42,3 +43,4 @@ api.add_router("/assignments", assignments_router)
 api.add_router("/notifications", notifications_router)
 api.add_router("/manage", manage_router)
 api.add_router("/feed", feed_router)
+api.add_router("/resources", resources_router)

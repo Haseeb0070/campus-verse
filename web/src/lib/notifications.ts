@@ -42,6 +42,7 @@ const affects: Record<NotificationKind, string[][]> = {
   "grades.released": [["assignments"]],
   "feed.comment": [["feed"]],
   "moderation.action": [["feed"]],
+  "resource.shared": [["resources"]],
 };
 
 export interface Toast {

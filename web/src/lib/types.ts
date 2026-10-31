@@ -202,7 +202,8 @@ export type NotificationKind =
   | "assignment.due_soon"
   | "grades.released"
   | "feed.comment"
-  | "moderation.action";
+  | "moderation.action"
+  | "resource.shared";
 
 export interface AppNotification {
   id: number;

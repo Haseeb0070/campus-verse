@@ -31,7 +31,8 @@ export function useTimetable(start: string | null, days: number) {
 export function useNextClass() {
   return useQuery({
     queryKey: ["timetable", "next"],
-    queryFn: () => apiFetch<Occurrence | undefined>("/api/timetable/next"),
+    // 204 when nothing is coming up; queries must not resolve to undefined.
+    queryFn: async () => (await apiFetch<Occurrence | undefined>("/api/timetable/next")) ?? null,
     refetchInterval: 60_000,
   });
 }

@@ -42,8 +42,8 @@ uv run python manage.py runserver
 ```
 
 `seed_demo` (development only) creates Demo University with courses, sections, a weekly
-timetable including a moved class and a room change, and notices. Demo accounts, all with the
-password `campusverse-demo`:
+timetable including a moved class and a room change, notices, assignments, feed posts and
+course resources. Demo accounts, all with the password `campusverse-demo`:
 
 | Email | Who |
 |---|---|
@@ -146,6 +146,7 @@ backend/
   apps/notifications/ in-app notifications: fan-out, no duplicates, live push, reminders
   apps/administration/ admin API: overview, people and invites, roles, timetable import, audit
   apps/feed/         campus feed: posts, comments, reactions, reports, moderation
+  apps/resources/    course material: files and links per section, versions, archive
   apps/governance/   append-only audit log
   tests/
 web/

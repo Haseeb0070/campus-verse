@@ -7,6 +7,7 @@ import {
   FeedIcon,
   FlagIcon,
   NoticesIcon,
+  ResourcesIcon,
   TimetableIcon,
 } from "@/components/icons";
 import { relativeTime } from "@/lib/format";
@@ -21,6 +22,7 @@ const icons: Record<NotificationKind, typeof BellIcon> = {
   "grades.released": AssignmentsIcon,
   "feed.comment": FeedIcon,
   "moderation.action": FlagIcon,
+  "resource.shared": ResourcesIcon,
 };
 
 function isToday(iso: string) {
