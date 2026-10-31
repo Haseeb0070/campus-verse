@@ -55,7 +55,7 @@ def institution_today(user) -> date:
     return datetime.now(ZoneInfo(user.institution.timezone)).date()
 
 
-def _meetings(qs):
+def load_meetings(qs):
     return list(
         qs.select_related("section__offering__course", "section__offering__term", "room")
         .prefetch_related(
@@ -67,7 +67,7 @@ def _meetings(qs):
     )
 
 
-def _expand(meetings, start: date, end: date, tz) -> list[Occurrence]:
+def expand(meetings, start: date, end: date, tz) -> list[Occurrence]:
     """Turn weekly meetings into dated occurrences between start and end, applying one-off
     changes. Moved classes appear twice: marked moved on the original day and as rescheduled
     on the new day."""
@@ -154,8 +154,8 @@ def occurrences(user, start: date, days: int) -> list[Occurrence]:
         return []
     tz = ZoneInfo(user.institution.timezone)
     sections = member_section_ids(user)
-    result = _expand(
-        _meetings(ClassMeeting.objects.filter(section_id__in=sections)),
+    result = expand(
+        load_meetings(ClassMeeting.objects.filter(section_id__in=sections)),
         start,
         start + timedelta(days=days - 1),
         tz,
@@ -197,7 +197,7 @@ def conflicts(
         )
     )
     found = []
-    for occ in _expand(_meetings(candidates), day, day, tz):
+    for occ in expand(load_meetings(candidates), day, day, tz):
         if occ.meeting_id == meeting.pk or not occ.is_happening:
             continue
         if not (occ.starts_at < window_end and window_start < occ.ends_at):

@@ -97,6 +97,23 @@ cd backend
 uv run python manage.py send_reminders
 ```
 
+## Admin area
+
+Institution admins get **Manage** in the web app (sign in as `nadia@demo.campusverse.test`):
+overview with room clashes, people and invites, roles, the audit log, and **timetable import**.
+
+The import takes a CSV with these columns (download the template from the import page):
+
+```
+course_code,section,day,start,end,room,kind,mode
+CS-301,3B,Thu,10:30,11:50,B-204,lecture,in_person
+```
+
+Classes are matched by course, section, day and start time within the current term. You
+always get a dry-run preview first (new, updated, unchanged, errors, room clashes), and
+classes missing from the file are listed but never deleted. Invites email a one-time link to
+set a password; with `EMAIL_URL=consolemail://` the email is printed in the backend log.
+
 ## Checks
 
 ```bash
@@ -127,6 +144,7 @@ backend/
   apps/assignments/  assignments, submissions (attempts, lateness), grades, release, downloads
   apps/core/files.py upload checks: allow-listed types verified by content, size limit
   apps/notifications/ in-app notifications: fan-out, no duplicates, live push, reminders
+  apps/administration/ admin API: overview, people and invites, roles, timetable import, audit
   apps/governance/   append-only audit log
   tests/
 web/

@@ -16,6 +16,7 @@ import {
   BellIcon,
   ChatIcon,
   LogoMark,
+  ManageIcon,
   MoreIcon,
   NoticesIcon,
   SectionsIcon,
@@ -105,13 +106,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const user = me.data;
   const courses = [...new Map(user.sections.map((s) => [s.course_code, s])).values()];
   const teaches = user.sections.some((s) => s.teaching);
-  const nav = teaches
-    ? [
-        ...baseNav.slice(0, 2),
-        { href: "/sections", label: "Sections", Icon: SectionsIcon },
-        ...baseNav.slice(2),
-      ]
-    : baseNav;
+  const isAdmin = user.roles.includes("institution_admin");
+  const nav = [
+    ...baseNav.slice(0, 2),
+    ...(teaches ? [{ href: "/sections", label: "Sections", Icon: SectionsIcon }] : []),
+    ...baseNav.slice(2),
+    ...(isAdmin ? [{ href: "/manage", label: "Manage", Icon: ManageIcon }] : []),
+  ];
   // Phones get four tabs; everything else sits under More.
   const primaryHrefs = ["/today", "/timetable", "/assignments", "/chat"];
   const primaryNav = nav.filter((n) => primaryHrefs.includes(n.href));

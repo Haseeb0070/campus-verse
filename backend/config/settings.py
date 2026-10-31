@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.chat",
     "apps.assignments",
     "apps.notifications",
+    "apps.administration",
     "apps.governance",
 ]
 
@@ -117,6 +118,8 @@ ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+# Finishing an invite (or a reset) signs you straight in instead of asking for the password again.
+ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
 ACCOUNT_RATE_LIMITS = {"login_failed": "5/5m/ip,5/5m/key"}
 CAMPUSVERSE_OPEN_SIGNUP = env("OPEN_SIGNUP")
 HEADLESS_ONLY = True
