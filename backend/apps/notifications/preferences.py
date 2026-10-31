@@ -41,6 +41,7 @@ KIND_GROUP = {
     Kind.MODERATION: "account",
     Kind.CORRECTION: "account",
     Kind.EVENT: "events",
+    Kind.DIRECT_MESSAGE: "messages",
 }
 
 

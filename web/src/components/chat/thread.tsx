@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeftIcon, SendIcon } from "@/components/icons";
-import { ApiError } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { BellIcon, ChevronLeftIcon, PaperclipIcon, SendIcon } from "@/components/icons";
+import { ApiError, apiFetch } from "@/lib/api";
 import { useChat, useConversations } from "@/lib/chat";
-import { courseBg, formatDay, formatTime } from "@/lib/format";
+import { courseBg, fileSize, formatDay, formatTime } from "@/lib/format";
 import { useMe } from "@/lib/queries";
 import type { ChatMessage } from "@/lib/types";
 
@@ -32,6 +33,10 @@ export function Thread({ conversationId }: { conversationId: number }) {
   const conversation = useConversations().data?.find((c) => c.id === conversationId);
   const chat = useChat(conversationId, me);
   const [draft, setDraft] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
   // Only messages that arrive while the chat is open animate in; history just appears.
   const [openedAt] = useState(() => Date.now());
@@ -48,9 +53,33 @@ export function Thread({ conversationId }: { conversationId: number }) {
 
   function submit() {
     const body = draft.trim();
-    if (!body) return;
+    if (!body && files.length === 0) return;
     setDraft("");
-    chat.send(body);
+    setFiles([]);
+    chat.send(body, undefined, files);
+  }
+
+  function pickFiles(list: FileList | null) {
+    const picked = Array.from(list ?? []);
+    const all = [...files, ...picked].slice(0, 4);
+    setFileError(
+      files.length + picked.length > 4
+        ? "Attach up to 4 files at a time."
+        : all.some((f) => f.size > 20 * 1024 * 1024)
+          ? "Each file can be up to 20 MB."
+          : null,
+    );
+    setFiles(all.filter((f) => f.size <= 20 * 1024 * 1024));
+    if (fileInput.current) fileInput.current.value = "";
+  }
+
+  async function toggleMute() {
+    if (!conversation) return;
+    await apiFetch(`/api/chat/conversations/${conversationId}/mute`, {
+      method: "POST",
+      body: JSON.stringify({ muted: !conversation.muted }),
+    }).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
   }
 
   if (notFound) {
@@ -82,20 +111,27 @@ export function Thread({ conversationId }: { conversationId: number }) {
         >
           <ChevronLeftIcon className="size-5" />
         </Link>
-        <span
-          className={`grid size-10 shrink-0 place-items-center rounded-[12px] text-footnote font-bold text-white ${
-            conversation?.color ? courseBg[conversation.color] : "bg-course-slate"
-          }`}
-          aria-hidden="true"
-        >
-          {conversation?.section_code ?? ""}
-        </span>
+        {conversation?.other ? (
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-fill-strong text-footnote font-semibold"
+            aria-hidden="true">
+            {conversation.other.initials}
+          </span>
+        ) : (
+          <span
+            className={`grid size-10 shrink-0 place-items-center rounded-[12px] text-footnote font-bold text-white ${
+              conversation?.color ? courseBg[conversation.color] : "bg-course-slate"
+            }`}
+            aria-hidden="true"
+          >
+            {conversation?.section_code ?? ""}
+          </span>
+        )}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-headline font-semibold">
             {conversation?.title ?? "Loading…"}
           </span>
           <span className="flex items-center gap-1.5 text-footnote text-ink-2">
-            {conversation?.course_title}
+            {conversation?.other ? `${conversation.other.detail} · private` : conversation?.course_title}
             {chat.live && chat.online !== null && (
               <>
                 <span aria-hidden="true">·</span>
@@ -106,6 +142,21 @@ export function Thread({ conversationId }: { conversationId: number }) {
             {!chat.live && <span className="text-ink-3"> · reconnecting…</span>}
           </span>
         </span>
+        {conversation && (
+          <button
+            onClick={toggleMute}
+            aria-pressed={conversation.muted}
+            title={conversation.muted ? "Unmute notifications" : "Mute notifications"}
+            className={`press relative grid size-9 shrink-0 place-items-center rounded-full hover:bg-fill ${
+              conversation.muted ? "text-ink-3" : "text-ink-2"}`}
+          >
+            <BellIcon className="size-5" />
+            {conversation.muted && (
+              <span aria-hidden="true" className="absolute h-0.5 w-6 rotate-45 rounded-full bg-current" />
+            )}
+            <span className="sr-only">{conversation.muted ? "Unmute" : "Mute"} notifications</span>
+          </button>
+        )}
         {conversation?.is_moderator && (
           <span className="rounded-full bg-fill-strong px-2.5 py-1 text-caption font-semibold">
             You moderate
@@ -194,7 +245,29 @@ export function Thread({ conversationId }: { conversationId: number }) {
           submit();
         }}
       >
-        <div className="flex items-end gap-2 rounded-[24px] bg-fill p-1.5 pl-4 ring-accent/60 focus-within:ring-2">
+        {files.length > 0 && (
+          <ul aria-label="Files to send" className="mb-2 flex flex-wrap gap-2">
+            {files.map((f, i) => (
+              <li key={`${f.name}-${i}`} className="flex items-center gap-1.5 rounded-full bg-fill-strong py-1 pr-1 pl-3 text-footnote">
+                <span className="max-w-48 truncate font-semibold">{f.name}</span>
+                <span className="text-ink-2">{fileSize(f.size)}</span>
+                <button type="button" aria-label={`Remove ${f.name}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                  className="grid size-6 place-items-center rounded-full hover:bg-fill">
+                  <span aria-hidden="true">×</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {fileError && <p role="alert" className="mb-2 px-2 text-footnote text-danger-ink">{fileError}</p>}
+        <div className="flex items-end gap-2 rounded-[24px] bg-fill p-1.5 pl-1.5 ring-accent/60 focus-within:ring-2">
+          <button type="button" aria-label="Attach files" title="Attach files" onClick={() => fileInput.current?.click()}
+            className="press grid size-10 shrink-0 place-items-center rounded-full text-ink-2 hover:bg-fill-strong">
+            <PaperclipIcon className="size-5" />
+          </button>
+          <input ref={fileInput} type="file" multiple className="sr-only" tabIndex={-1} aria-hidden="true"
+            accept=".pdf,.png,.jpg,.jpeg,.docx,.pptx,.xlsx,.zip,.txt,.md,.csv,.py,.java,.c,.cpp,.h,.js,.ts,.sql,.ipynb"
+            onChange={(e) => pickFiles(e.target.files)} />
           <label htmlFor="composer" className="sr-only">
             Message {conversation?.title}
           </label>
@@ -219,7 +292,7 @@ export function Thread({ conversationId }: { conversationId: number }) {
           <button
             type="submit"
             aria-label="Send"
-            disabled={!draft.trim()}
+            disabled={!draft.trim() && files.length === 0}
             className="press grid size-10 shrink-0 place-items-center rounded-full bg-accent text-on-accent disabled:opacity-40"
           >
             <SendIcon className="size-5" />
@@ -283,13 +356,35 @@ function MessageRow({
             )}
           </span>
         )}
-        <div
-          className={`whitespace-pre-wrap break-words rounded-[20px] px-3.5 py-2 text-body ${bubble} ${
-            m.pending ? "opacity-60" : ""
-          }`}
-        >
-          {m.deleted ? "Message removed" : m.body}
-        </div>
+        {(m.deleted || m.body) && (
+          <div
+            className={`whitespace-pre-wrap break-words rounded-[20px] px-3.5 py-2 text-body ${bubble} ${
+              m.pending ? "opacity-60" : ""
+            }`}
+          >
+            {m.deleted ? "Message removed" : m.body}
+          </div>
+        )}
+        {!m.deleted && (m.attachments?.length ?? 0) > 0 && (
+          <div className={`mt-1 flex flex-col gap-1 ${mine ? "items-end" : "items-start"} ${m.pending ? "opacity-60" : ""}`}>
+            {m.attachments!.map((f) =>
+              f.id > 0 && f.content_type.startsWith("image/") ? (
+                <a key={f.id} href={`/api/chat/files/${f.id}`} target="_blank" rel="noopener noreferrer"
+                  className="block overflow-hidden rounded-[16px] border border-divider">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- private, permission-checked file */}
+                  <img src={`/api/chat/files/${f.id}`} alt={f.name} className="max-h-56 max-w-64 object-cover" />
+                </a>
+              ) : (
+                <a key={f.id} href={f.id > 0 ? `/api/chat/files/${f.id}` : undefined}
+                  className="press inline-flex max-w-64 items-center gap-2 rounded-full bg-fill-strong px-3 py-1.5 text-footnote font-semibold">
+                  <PaperclipIcon className="size-4 shrink-0" />
+                  <span className="truncate">{f.name}</span>
+                  <span className="shrink-0 font-normal text-ink-2">{fileSize(f.size)}</span>
+                </a>
+              ),
+            )}
+          </div>
+        )}
         <span className="mt-0.5 flex items-center gap-2 px-1 text-caption text-ink-3">
           {m.failed ? (
             <span className="text-danger-ink">

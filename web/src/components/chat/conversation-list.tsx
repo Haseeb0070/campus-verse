@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useConversations } from "@/lib/chat";
+import { NewMessageButton } from "./new-message";
 import { courseBg, formatTime, relativeTime } from "@/lib/format";
 import type { Conversation } from "@/lib/types";
 
@@ -10,8 +11,10 @@ function preview(c: Conversation, myId?: number) {
   const m = c.last_message;
   if (!m) return "No messages yet. Say hello.";
   if (m.deleted) return "Message removed";
+  const text = m.body || (m.attachments?.length ? "Sent a file" : "");
+  if (c.kind === "direct") return m.sender.id === myId ? `You: ${text}` : text;
   const who = m.sender.id === myId ? "You" : m.sender.name.split(" ")[0];
-  return `${who}: ${m.body}`;
+  return `${who}: ${text}`;
 }
 
 function when(iso: string | null) {
@@ -27,7 +30,10 @@ export function ConversationList({ myId }: { myId?: number }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="px-2 text-title-1 font-bold">Chat</h1>
+      <div className="flex items-center justify-between gap-2 px-2">
+        <h1 className="text-title-1 font-bold">Chat</h1>
+        <NewMessageButton />
+      </div>
       {conversations.isPending && <p className="px-2 text-body text-ink-2">Loading…</p>}
       {conversations.isError && (
         <p role="alert" className="px-2 text-body text-ink-2">
@@ -49,14 +55,21 @@ export function ConversationList({ myId }: { myId?: number }) {
                 c.id === activeId ? "bg-fill-strong" : "hover:bg-fill"
               }`}
             >
-              <span
-                className={`grid size-11 shrink-0 place-items-center rounded-[14px] text-body font-bold text-white ${
-                  c.color ? courseBg[c.color] : "bg-course-slate"
-                }`}
-                aria-hidden="true"
-              >
-                {c.section_code ?? c.title.slice(0, 2)}
-              </span>
+              {c.other ? (
+                <span className="grid size-11 shrink-0 place-items-center rounded-full bg-fill-strong text-body font-semibold"
+                  aria-hidden="true">
+                  {c.other.initials}
+                </span>
+              ) : (
+                <span
+                  className={`grid size-11 shrink-0 place-items-center rounded-[14px] text-body font-bold text-white ${
+                    c.color ? courseBg[c.color] : "bg-course-slate"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {c.section_code ?? c.title.slice(0, 2)}
+                </span>
+              )}
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-2">
                   <span className="truncate text-body font-semibold">{c.title}</span>

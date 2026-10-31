@@ -18,6 +18,10 @@ def message_payload(message: Message, teachers: set[int]) -> dict:
         "body": "" if deleted else message.body,
         "deleted": deleted,
         "created_at": message.created_at.isoformat(),
+        "attachments": [] if deleted else [
+            {"id": f.pk, "name": f.original_name, "size": f.size, "content_type": f.content_type}
+            for f in message.attachments.all()
+        ],
         "sender": {
             "id": sender.pk,
             "name": sender.get_full_name() or sender.email,

@@ -4,7 +4,8 @@ export default function ChatIndex() {
       <div>
         <p className="text-headline font-semibold">Pick a conversation</p>
         <p className="mt-1 text-body text-ink-2">
-          Every section you&apos;re in has its own chat with your classmates and teachers.
+          Every section you&apos;re in has its own chat. Use New message to write to a classmate,
+          teacher or staff member one to one.
         </p>
       </div>
     </div>

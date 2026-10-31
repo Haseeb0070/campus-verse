@@ -3,14 +3,17 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
-from ninja import Router, Schema, Status
+from django.http import FileResponse
+from ninja import File, Form, Router, Schema, Status
 from ninja.errors import HttpError
+from ninja.files import UploadedFile
 
 from apps.core import realtime
+from apps.identity.models import User
 
 from . import services
-from .models import Conversation, Message
-from .serializers import message_payload
+from .models import Conversation, ConversationMember, Message
+from .serializers import initials, message_payload
 
 router = Router(tags=["chat"])
 
@@ -22,6 +25,13 @@ class SenderOut(Schema):
     is_teacher: bool
 
 
+class AttachmentOut(Schema):
+    id: int
+    name: str
+    size: int
+    content_type: str
+
+
 class MessageOut(Schema):
     id: int
     conversation_id: int
@@ -30,6 +40,23 @@ class MessageOut(Schema):
     deleted: bool
     created_at: datetime
     sender: SenderOut
+    attachments: list[AttachmentOut] = []
+
+
+class PersonOut(Schema):
+    id: int
+    name: str
+    initials: str
+    kind: str
+    detail: str = ""
+
+
+class DirectIn(Schema):
+    user_id: int
+
+
+class MuteIn(Schema):
+    muted: bool
 
 
 class ConversationOut(Schema):
@@ -44,6 +71,8 @@ class ConversationOut(Schema):
     is_moderator: bool
     last_message: MessageOut | None
     last_message_at: datetime | None
+    other: PersonOut | None = None
+    muted: bool = False
 
 
 class MessagePage(Schema):
@@ -80,15 +109,25 @@ def _conversation(request, conversation_id: int) -> Conversation:
         raise HttpError(404, "Conversation not found") from None
 
 
+def _person(u: User) -> dict:
+    return {"id": u.pk, "name": u.get_full_name() or u.email, "initials": initials(u),
+            "kind": u.kind, "detail": u.get_kind_display()}
+
+
 def _summary_out(s: services.ConversationSummary, user) -> dict:
     conv = s.conversation
     course = conv.section.offering.course if conv.section else None
     teachers = services.teacher_ids(conv)
+    other = services.other_member(user, conv)
     return {
         "id": conv.pk,
         "kind": conv.kind,
         "section_id": conv.section_id,
-        "title": conv.title,
+        "title": (other.get_full_name() or other.email) if other else conv.title,
+        "other": _person(other) if other else None,
+        "muted": ConversationMember.objects.filter(
+            conversation=conv, user=user, muted=True
+        ).exists(),
         "course_title": course.title if course else None,
         "section_code": conv.section.code if conv.section else None,
         "color": course.color if course else None,
@@ -136,6 +175,65 @@ def send_message(request, conversation_id: int, payload: SendIn):
         raise HttpError(403, str(err)) from None
     # 200 for a retried send that was already stored, so clients can tell it apart.
     return Status(201 if created else 200, message_payload(message, services.teacher_ids(conv)))
+
+
+@router.post(
+    "/conversations/{conversation_id}/attachments", response={200: MessageOut, 201: MessageOut}
+)
+def send_with_files(
+    request,
+    conversation_id: int,
+    client_id: Form[uuid.UUID],
+    body: Form[str] = "",
+    files: File[list[UploadedFile]] = None,
+):
+    """The same as sending a message, with files (multipart)."""
+    conv = _conversation(request, conversation_id)
+    try:
+        message, created = services.send_message(
+            request.user, conv, body=body, client_id=client_id, uploads=files or []
+        )
+    except ValidationError as err:
+        raise HttpError(422, err.messages[0]) from None
+    except PermissionDenied as err:
+        raise HttpError(403, str(err)) from None
+    return Status(201 if created else 200, message_payload(message, services.teacher_ids(conv)))
+
+
+@router.get("/people", response=list[PersonOut])
+def people(request, q: str = ""):
+    """Who you can start a one-to-one chat with."""
+    return [_person(u) for u in services.contacts(request.user, q)]
+
+
+@router.post("/direct", response={200: ConversationOut, 403: dict})
+def start_direct(request, payload: DirectIn):
+    other = User.objects.filter(pk=payload.user_id).first()
+    try:
+        conv = services.start_direct(request.user, other)
+    except PermissionDenied as err:
+        return Status(403, {"detail": str(err)})
+    return Status(200, get_conversation(request, conv.pk))
+
+
+@router.post("/conversations/{conversation_id}/mute", response={204: None})
+def mute(request, conversation_id: int, payload: MuteIn):
+    services.set_muted(request.user, _conversation(request, conversation_id), payload.muted)
+    return Status(204, None)
+
+
+@router.get("/files/{file_id}", response={200: None})
+def download(request, file_id: int):
+    stored = services.downloadable_attachment(request.user, file_id)
+    # Same 404 whether it doesn't exist or isn't yours (SRS 9.2).
+    if stored is None:
+        raise HttpError(404, "File not found")
+    response = FileResponse(stored.file.open("rb"),
+                            as_attachment=not stored.content_type.startswith("image/"),
+                            filename=stored.original_name, content_type=stored.content_type)
+    response["Cache-Control"] = "private, max-age=3600"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @router.post("/conversations/{conversation_id}/read", response={204: None})

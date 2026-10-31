@@ -9,8 +9,11 @@ from django.utils import timezone
 
 from apps.academic.models import Section
 from apps.core import realtime
-from apps.enrollment.models import TeacherAssignment
+from apps.core.files import check_upload, store_upload
+from apps.enrollment.models import SectionEnrollment, TeacherAssignment
 from apps.governance import audit
+from apps.identity.models import User
+from apps.identity.roles import is_institution_admin
 from apps.scheduling.services import member_section_ids
 
 from .models import Conversation, ConversationMember, Message
@@ -18,6 +21,7 @@ from .models import Conversation, ConversationMember, Message
 logger = logging.getLogger(__name__)
 
 MAX_BODY = 4000
+MAX_ATTACHMENTS = 4
 
 
 @dataclass
@@ -137,7 +141,11 @@ def conversations_for(user) -> list[ConversationSummary]:
 def list_messages(conversation: Conversation, *, before_id: int | None = None, limit: int = 50):
     """Newest `limit` messages (older than `before_id` if given), returned oldest first."""
     limit = max(1, min(limit, 100))
-    qs = Message.objects.filter(conversation=conversation).select_related("sender")
+    qs = (
+        Message.objects.filter(conversation=conversation)
+        .select_related("sender")
+        .prefetch_related("attachments")
+    )
     if before_id:
         qs = qs.filter(id__lt=before_id)
     page = list(qs.order_by("-id")[: limit + 1])
@@ -169,16 +177,22 @@ def _publish(channel: str, data: dict) -> None:
     transaction.on_commit(send)
 
 
-def send_message(user, conversation: Conversation, *, body: str, client_id: uuid.UUID):
+def send_message(user, conversation: Conversation, *, body: str, client_id: uuid.UUID,
+                 uploads=()):
     from .serializers import message_payload  # avoid a cycle with the API schemas
 
     if not can_access(user, conversation):
         raise PermissionDenied("You're not in this conversation.")
     body = (body or "").strip()
-    if not body:
+    uploads = list(uploads)
+    if not body and not uploads:
         raise ValidationError("Write a message first.")
     if len(body) > MAX_BODY:
         raise ValidationError(f"Messages can be up to {MAX_BODY} characters.")
+    if len(uploads) > MAX_ATTACHMENTS:
+        raise ValidationError(f"Attach up to {MAX_ATTACHMENTS} files at a time.")
+    for upload in uploads:  # the same checks as coursework: allow-list, real content, size
+        check_upload(upload)
 
     existing = Message.objects.filter(
         conversation=conversation, sender=user, client_id=client_id
@@ -195,6 +209,8 @@ def send_message(user, conversation: Conversation, *, body: str, client_id: uuid
                 client_id=client_id,
                 body=body,
             )
+            if uploads:
+                message.attachments.set([store_upload(user, u) for u in uploads])
             Conversation.objects.filter(pk=conversation.pk).update(
                 last_message_at=message.created_at
             )
@@ -208,7 +224,125 @@ def send_message(user, conversation: Conversation, *, body: str, client_id: uuid
         conversation.channel,
         {"type": "message.created", "message": message_payload(message, teacher_ids(conversation))},
     )
+    if conversation.kind == Conversation.Kind.DIRECT:
+        _notify_direct(user, conversation, message)
     return message, True
+
+
+# One-to-one messages ---------------------------------------------------------------------------
+
+
+def _shared_section_people(user) -> set[int]:
+    sections = member_section_ids(user)
+    people = set(
+        SectionEnrollment.objects.filter(
+            section_id__in=sections, status=SectionEnrollment.Status.ACTIVE
+        ).values_list("student_id", flat=True)
+    )
+    people |= set(
+        TeacherAssignment.objects.filter(section_id__in=sections).values_list(
+            "teacher_id", flat=True
+        )
+    )
+    return people - {user.pk}
+
+
+def _is_staff(user) -> bool:
+    return user.kind == User.Kind.STAFF or is_institution_admin(user)
+
+
+def can_message(user, other) -> bool:
+    """Academic messaging, not open social DMs (SRS 5.10): people who share a section, or staff
+    and anyone in their institution."""
+    if other is None or other.pk == user.pk or not other.is_active:
+        return False
+    if other.institution_id != user.institution_id or user.institution_id is None:
+        return False
+    return _is_staff(user) or _is_staff(other) or other.pk in _shared_section_people(user)
+
+
+def contacts(user, q: str = "", limit: int = 20) -> list:
+    """People you can start a conversation with, best matches first."""
+    if user.institution_id is None:
+        return []
+    qs = User.objects.filter(institution_id=user.institution_id, is_active=True).exclude(pk=user.pk)
+    if not _is_staff(user):
+        staff_ids = set(
+            User.objects.filter(institution_id=user.institution_id, kind=User.Kind.STAFF)
+            .values_list("pk", flat=True)
+        )
+        qs = qs.filter(pk__in=_shared_section_people(user) | staff_ids)
+    q = (q or "").strip()
+    if q:
+        qs = qs.filter(
+            Q(first_name__icontains=q) | Q(last_name__icontains=q)
+            | Q(preferred_name__icontains=q) | Q(email__icontains=q)
+        )
+    return list(qs.order_by("first_name", "last_name")[: max(1, min(limit, 50))])
+
+
+def start_direct(user, other) -> Conversation:
+    if not can_message(user, other):
+        raise PermissionDenied("You can only message people you share a class with, or staff.")
+    low, high = sorted((user.pk, other.pk))
+    with transaction.atomic():
+        conversation, created = Conversation.objects.get_or_create(
+            direct_key=f"{low}:{high}",
+            defaults={"institution_id": user.institution_id, "kind": Conversation.Kind.DIRECT},
+        )
+        if created:
+            for person in (user, other):
+                ConversationMember.objects.create(
+                    institution_id=user.institution_id, conversation=conversation, user=person
+                )
+    return conversation
+
+
+def other_member(user, conversation: Conversation):
+    if conversation.kind != Conversation.Kind.DIRECT:
+        return None
+    member = conversation.members.exclude(user=user).select_related("user").first()
+    return member.user if member else None
+
+
+def set_muted(user, conversation: Conversation, muted: bool) -> None:
+    if not can_access(user, conversation):
+        raise PermissionDenied("You're not in this conversation.")
+    member, _ = ConversationMember.objects.get_or_create(
+        conversation=conversation, user=user,
+        defaults={"institution_id": conversation.institution_id},
+    )
+    member.muted = muted
+    member.save(update_fields=["muted", "updated_at"])
+
+
+def _notify_direct(sender, conversation: Conversation, message: Message) -> None:
+    """One notification per unread run: the first new message since the person last read the
+    chat notifies them; the rest wait until they've caught up. Muted chats never notify."""
+    from apps.notifications.models import Notification
+    from apps.notifications.services import notify
+
+    for member in conversation.members.exclude(user=sender).filter(muted=False):
+        preview = message.body or f"Sent {message.attachments.count()} file(s)"
+        notify(
+            [member.user_id], kind=Notification.Kind.DIRECT_MESSAGE,
+            institution_id=conversation.institution_id,
+            title=f"Message from {sender.get_full_name() or sender.email}",
+            body=preview if len(preview) <= 140 else preview[:139] + "…",
+            link=f"/chat/{conversation.pk}", actor_id=sender.pk,
+            dedupe_key=f"dm:{conversation.pk}:{member.last_read_message_id}",
+        )
+
+
+def downloadable_attachment(user, file_id: int):
+    """The file, if it's attached to a visible message in a chat this person is in."""
+    message = (
+        Message.objects.filter(attachments__id=file_id, deleted_at__isnull=True)
+        .select_related("conversation").first()
+    )
+    if message is None or not can_access(user, message.conversation):
+        return None
+    return message.attachments.get(pk=file_id)
 
 
 def delete_message(user, message: Message) -> Message:

@@ -173,8 +173,11 @@ export function useChat(conversationId: number, me: Me | undefined) {
     };
   }, [conversationId, qc, me?.id]);
 
+  // Files picked for a message, kept by client id so a failed send can be retried with them.
+  const filesFor = useRef(new Map<string, File[]>());
+
   const send = useCallback(
-    async (body: string, retryOf?: ChatMessage) => {
+    async (body: string, retryOf?: ChatMessage, files: File[] = []) => {
       if (!me) return;
       const optimistic: ChatMessage = retryOf
         ? { ...retryOf, pending: true, failed: false }
@@ -188,20 +191,33 @@ export function useChat(conversationId: number, me: Me | undefined) {
             sender: {
               id: me.id,
               name: me.full_name,
-              initials: `${me.first_name[0] ?? ""}${me.last_name[0] ?? ""}`.toUpperCase(),
+              initials: `${(me.preferred_name || me.first_name)[0] ?? ""}${me.last_name[0] ?? ""}`.toUpperCase(),
               is_teacher: false,
             },
+            attachments: files.map((f, i) => ({ id: -(i + 1), name: f.name, size: f.size, content_type: f.type })),
             pending: true,
           };
+      if (!retryOf && files.length) filesFor.current.set(optimistic.client_id, files);
+      const toSend = filesFor.current.get(optimistic.client_id) ?? [];
       upsert(qc, conversationId, optimistic);
       try {
-        const saved = await apiFetch<ChatMessage>(
-          `/api/chat/conversations/${conversationId}/messages`,
-          {
+        let saved: ChatMessage;
+        if (toSend.length) {
+          const form = new FormData();
+          form.append("client_id", optimistic.client_id);
+          form.append("body", optimistic.body);
+          toSend.forEach((f) => form.append("files", f));
+          saved = await apiFetch<ChatMessage>(`/api/chat/conversations/${conversationId}/attachments`, {
+            method: "POST",
+            body: form,
+          });
+        } else {
+          saved = await apiFetch<ChatMessage>(`/api/chat/conversations/${conversationId}/messages`, {
             method: "POST",
             body: JSON.stringify({ body: optimistic.body, client_id: optimistic.client_id }),
-          },
-        );
+          });
+        }
+        filesFor.current.delete(optimistic.client_id);
         upsert(qc, conversationId, saved);
         qc.invalidateQueries({ queryKey: conversationsKey });
       } catch {

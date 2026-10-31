@@ -117,6 +117,7 @@ export interface ChatMessage {
   deleted: boolean;
   created_at: string;
   sender: { id: number; name: string; initials: string; is_teacher: boolean };
+  attachments?: StoredFileInfo[];
   /** Client-only: optimistic state while sending. */
   pending?: boolean;
   failed?: boolean;
@@ -134,6 +135,17 @@ export interface Conversation {
   is_moderator: boolean;
   last_message: ChatMessage | null;
   last_message_at: string | null;
+  /** The other person, in a one-to-one chat. */
+  other: ChatPerson | null;
+  muted: boolean;
+}
+
+export interface ChatPerson {
+  id: number;
+  name: string;
+  initials: string;
+  kind: "student" | "teacher" | "staff";
+  detail: string;
 }
 
 export interface MessagePage {
