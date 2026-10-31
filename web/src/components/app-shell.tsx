@@ -15,6 +15,7 @@ import { useLiveNotifications, useNotifications } from "@/lib/notifications";
 import {
   AssignmentsIcon,
   BellIcon,
+  CalendarIcon,
   ChatIcon,
   FeedIcon,
   FlagIcon,
@@ -35,6 +36,7 @@ const baseNav = [
   { href: "/today", label: "Today", Icon: TodayIcon },
   { href: "/feed", label: "Feed", Icon: FeedIcon },
   { href: "/timetable", label: "Timetable", Icon: TimetableIcon },
+  { href: "/calendar", label: "Calendar", Icon: CalendarIcon },
   { href: "/assignments", label: "Assignments", Icon: AssignmentsIcon },
   { href: "/resources", label: "Resources", Icon: ResourcesIcon },
   { href: "/chat", label: "Chat", Icon: ChatIcon },

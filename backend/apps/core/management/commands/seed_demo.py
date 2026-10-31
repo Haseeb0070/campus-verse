@@ -1,4 +1,5 @@
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from allauth.account.models import EmailAddress
 from django.conf import settings
@@ -161,6 +162,7 @@ class Command(BaseCommand):
         add_demo_assignments(s["CS-301 3B"], imran, s["MATH-210 2A"], farah)
         add_demo_posts(inst, s["CS-301 3B"], ayesha, hamza, imran, nadia)
         add_demo_resources(s["CS-301 3B"], s["CS-301 3C"], imran, s["MATH-210 2A"], farah)
+        add_demo_events(inst, cs, s["CS-301 3B"], s["CS-301 3C"], imran, nadia)
 
         publish_notice(
             author=nadia,
@@ -303,4 +305,40 @@ def add_demo_resources(ds_3b, ds_3c, ds_teacher, math_section, math_teacher):
         description="Every example from Tuesday's class, written out step by step.",
         upload=pdf("chapter-5-examples.pdf", "Chapter 5: Worked examples",
                    ["Example 5.1", "Example 5.2", "Example 5.3"]),
+    )
+
+
+def add_demo_events(institution, department, ds_3b, ds_3c, teacher, admin):
+    """A month with something of each kind: an exam, a holiday, a seminar that fills up, and an
+    online workshop."""
+    from apps.events.services import create_event
+
+    zone = ZoneInfo(institution.timezone)  # the campus's clock, not the server's
+
+    def at(days: int, hour: int, minute: int = 0):
+        day = timezone.localdate(timezone=zone) + timedelta(days=days)
+        return datetime.combine(day, time(hour, minute), tzinfo=zone)
+
+    create_event(
+        admin, targets=[("department", department.pk)], category="exam",
+        title="CS mid-term exams begin", starts_at=at(9, 9), ends_at=at(9, 12),
+        location="Exam Hall A", description="Bring your student card. Seating plans are posted "
+        "outside the hall 30 minutes before.",
+    )
+    create_event(
+        admin, targets=[("institution", institution.pk)], category="holiday",
+        title="Campus closed: public holiday", starts_at=at(13, 0), ends_at=at(13, 23, 59),
+        all_day=True, description="No classes. The library opens 10 AM to 4 PM.",
+    )
+    create_event(
+        teacher, targets=[("section", ds_3b.pk), ("section", ds_3c.pk)], category="seminar",
+        title="Graph algorithms in maps and games", starts_at=at(4, 15), ends_at=at(4, 16, 30),
+        location="Seminar Room 2", registration=True, capacity=3,
+        description="A guest talk on shortest paths, with a live demo. Seats are limited.",
+    )
+    create_event(
+        admin, targets=[("institution", institution.pk)], category="workshop",
+        title="Writing a strong CV", starts_at=at(6, 14), ends_at=at(6, 15), mode="online",
+        online_url="https://meet.example.com/cv-workshop", registration=True,
+        description="Career services walk through CVs that get interviews.",
     )

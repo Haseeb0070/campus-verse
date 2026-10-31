@@ -18,6 +18,7 @@ class Notification(InstitutionScopedModel):
         MODERATION = "moderation.action"
         RESOURCE = "resource.shared"
         CORRECTION = "account.correction"
+        EVENT = "event.update"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"

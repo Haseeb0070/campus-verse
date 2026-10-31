@@ -17,6 +17,8 @@ GROUPS: list[dict] = [
      "detail": "Cancelled, moved or room-changed classes."},
     {"key": "assignments", "label": "Assignments and grades", "in_app": True, "email": True,
      "detail": "New work, reminders a day before deadlines, and released grades."},
+    {"key": "events", "label": "Events and exams", "in_app": True, "email": False,
+     "detail": "New events for you, cancellations, and places freed from a waitlist."},
     {"key": "resources", "label": "Course resources", "in_app": True, "email": False,
      "detail": "New or updated slides, notes and readings."},
     {"key": "feed", "label": "Replies in the feed", "in_app": True, "email": False,
@@ -38,6 +40,7 @@ KIND_GROUP = {
     Kind.FEED_COMMENT: "feed",
     Kind.MODERATION: "account",
     Kind.CORRECTION: "account",
+    Kind.EVENT: "events",
 }
 
 

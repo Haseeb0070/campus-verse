@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   AssignmentsIcon,
   BellIcon,
+  CalendarIcon,
   FeedIcon,
   FlagIcon,
   NoticesIcon,
@@ -26,6 +27,7 @@ const icons: Record<NotificationKind, typeof BellIcon> = {
   "moderation.action": FlagIcon,
   "resource.shared": ResourcesIcon,
   "account.correction": PersonIcon,
+  "event.update": CalendarIcon,
 };
 
 function isToday(iso: string) {

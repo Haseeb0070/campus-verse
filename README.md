@@ -43,7 +43,7 @@ uv run python manage.py runserver
 
 `seed_demo` (development only) creates Demo University with courses, sections, a weekly
 timetable including a moved class and a room change, notices, assignments, feed posts and
-course resources. Demo accounts, all with the password `campusverse-demo`:
+course resources and calendar events. Demo accounts, all with the password `campusverse-demo`:
 
 | Email | Who |
 |---|---|
@@ -88,9 +88,11 @@ cd backend
 uv run celery -A config beat -l info
 ```
 
-Beat runs the assignment notifications every 5 minutes: work that has just opened, and
-reminders 24 hours before a deadline for students who haven't submitted. Without Redis, run
-the same job by hand or from a scheduler:
+Beat publishes scheduled notices every minute, and runs the assignment notifications every 5
+minutes: work that has just opened, and reminders 24 hours before a deadline for students who
+haven't submitted. Notification emails go out from the worker too. Without Redis, everything
+runs inline, notice pages publish anything due when they load, and this command does the rest
+(run it by hand or from a scheduler):
 
 ```bash
 cd backend
@@ -147,6 +149,7 @@ backend/
   apps/administration/ admin API: overview, people and invites, roles, timetable import, audit
   apps/feed/         campus feed: posts, comments, reactions, reports, moderation
   apps/resources/    course material: files and links per section, versions, archive
+  apps/events/       calendar events: exams, holidays, seminars; sign-ups with a waitlist
   apps/governance/   append-only audit log
   tests/
 web/

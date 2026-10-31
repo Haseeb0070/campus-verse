@@ -44,6 +44,7 @@ const affects: Record<NotificationKind, string[][]> = {
   "moderation.action": [["feed"]],
   "resource.shared": [["resources"]],
   "account.correction": [["corrections"]],
+  "event.update": [["events"]],
 };
 
 export interface Toast {

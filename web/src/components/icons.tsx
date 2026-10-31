@@ -191,3 +191,11 @@ export const PersonIcon = (p: IconProps) => (
     <path d="M5 19.5a7 7 0 0 1 14 0" />
   </Icon>
 );
+
+export const CalendarIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3.5" y="5" width="17" height="15" rx="3" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+    <circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none" />
+  </Icon>
+);

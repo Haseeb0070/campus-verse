@@ -209,7 +209,8 @@ export type NotificationKind =
   | "feed.comment"
   | "moderation.action"
   | "resource.shared"
-  | "account.correction";
+  | "account.correction"
+  | "event.update";
 
 export interface AppNotification {
   id: number;
