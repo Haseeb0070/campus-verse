@@ -38,6 +38,21 @@ export default function ManageOverview() {
         <h1 className="mt-1 text-large-title font-bold">Overview</h1>
       </header>
 
+      {me && !me.two_step && (
+        <div className="glass flex flex-wrap items-center gap-3 rounded-card p-4">
+          <span className="min-w-0 flex-1">
+            <span className="block text-body font-semibold">Turn on two-step sign-in</span>
+            <span className="block text-footnote text-ink-2">
+              Your account can change everyone&apos;s access. A code from your phone keeps it safe
+              even if your password leaks.
+            </span>
+          </span>
+          <Link href="/profile" className="press inline-flex h-10 items-center rounded-full bg-accent px-4 text-footnote font-semibold text-on-accent">
+            Set it up
+          </Link>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map(([label, value, sub]) => (
           <div key={String(label)} className="glass rounded-card p-5">

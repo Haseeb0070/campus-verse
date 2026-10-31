@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Select } from "@/components/select";
 import { Switch } from "@/components/switch";
+import { TwoStepCard } from "@/components/two-step-card";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { courseBg, relativeTime } from "@/lib/format";
 import { useNotificationPreferences } from "@/lib/notifications";
@@ -324,6 +325,7 @@ export default function ProfilePage() {
 
       <NameCard me={me} />
       <PasswordCard />
+      <TwoStepCard on={me.two_step} />
       <NotificationsCard />
 
       {me.sections.length > 0 && (

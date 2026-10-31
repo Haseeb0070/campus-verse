@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { LogoMark } from "@/components/icons";
-import { signIn } from "@/lib/auth";
+import { signIn, signOut, verifyCode } from "@/lib/auth";
 
 type FieldErrors = { email?: string; password?: string };
 
@@ -17,6 +17,40 @@ function SignInForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [step, setStep] = useState<"password" | "code">("password");
+  const [code, setCode] = useState("");
+  const [recovery, setRecovery] = useState(false);
+
+  async function finish() {
+    await queryClient.invalidateQueries();
+    const next = params.get("next");
+    router.replace(next?.startsWith("/") && !next.startsWith("//") ? next : "/today");
+  }
+
+  async function handleCode(event: React.FormEvent) {
+    event.preventDefault();
+    const clean = code.replace(/\s+/g, "");
+    if (!recovery && !/^\d{6}$/.test(clean)) return setFormError("Enter the 6-digit code from your app.");
+    if (recovery && clean.length < 6) return setFormError("Enter one of your recovery codes.");
+    setFormError(null);
+    setPending(true);
+    const error = await verifyCode(clean);
+    if (error) {
+      setFormError(error);
+      setPending(false);
+      return;
+    }
+    await finish();
+  }
+
+  async function startOver() {
+    await signOut().catch(() => undefined); // drop the half-finished sign-in
+    setStep("password");
+    setCode("");
+    setRecovery(false);
+    setFormError(null);
+    setPassword("");
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -29,15 +63,17 @@ function SignInForm() {
     if (errors.email || errors.password) return;
 
     setPending(true);
-    const error = await signIn(email.trim(), password);
-    if (error) {
-      setFormError(error);
+    const result = await signIn(email.trim(), password);
+    if (!result.ok) {
       setPending(false);
+      if ("needsCode" in result) {
+        setStep("code");
+        return;
+      }
+      setFormError(result.error);
       return;
     }
-    await queryClient.invalidateQueries();
-    const next = params.get("next");
-    router.replace(next?.startsWith("/") && !next.startsWith("//") ? next : "/today");
+    await finish();
   }
 
   const inputClass =
@@ -52,6 +88,56 @@ function SignInForm() {
           <p className="text-body text-ink-2">Use the email your institution gave you.</p>
         </div>
 
+        {step === "code" ? (
+          <form onSubmit={handleCode} noValidate className="glass flex flex-col gap-4 rounded-card p-6">
+            <div>
+              <h2 className="text-headline font-semibold">Two-step sign-in</h2>
+              <p className="mt-1 text-footnote text-ink-2">
+                {recovery
+                  ? "Enter one of the recovery codes you saved. Each one works once."
+                  : "Open your authenticator app and enter the 6-digit code for CampusVerse."}
+              </p>
+            </div>
+            {formError && (
+              <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">
+                {formError}
+              </p>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="code" className="text-footnote font-semibold text-ink-2">
+                {recovery ? "Recovery code" : "Code"}
+              </label>
+              <input
+                id="code"
+                key={recovery ? "recovery" : "totp"}
+                autoFocus
+                autoComplete="one-time-code"
+                inputMode={recovery ? "text" : "numeric"}
+                maxLength={recovery ? 32 : 7}
+                placeholder={recovery ? "abcd1234" : "123 456"}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className={`${inputClass} border-transparent text-center text-title-2 font-semibold tracking-[0.3em]`}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={pending}
+              className="press mt-2 h-12 rounded-full bg-accent text-body font-semibold text-on-accent disabled:opacity-70"
+            >
+              {pending ? "Checking…" : "Continue"}
+            </button>
+            <div className="flex flex-wrap justify-between gap-2 text-footnote font-semibold">
+              <button type="button" onClick={() => { setRecovery((r) => !r); setCode(""); setFormError(null); }}
+                className="text-accent-ink">
+                {recovery ? "Use a code from my app" : "Lost your phone? Use a recovery code"}
+              </button>
+              <button type="button" onClick={startOver} className="text-ink-2">
+                Start over
+              </button>
+            </div>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} noValidate className="glass flex flex-col gap-4 rounded-card p-6">
           {formError && (
             <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">
@@ -117,6 +203,7 @@ function SignInForm() {
             {pending ? "Signing in…" : "Sign in"}
           </button>
         </form>
+        )}
 
         <p className="mt-5 text-center text-footnote text-ink-2">
           Your institution creates accounts. If you don&apos;t have one, ask your admin.

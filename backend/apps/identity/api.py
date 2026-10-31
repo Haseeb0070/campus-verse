@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from allauth.mfa.models import Authenticator
 from django.core.exceptions import ValidationError
 from ninja import Router, Schema, Status
 
@@ -36,6 +37,7 @@ class MeOut(Schema):
     preferred_name: str
     full_name: str
     kind: str
+    two_step: bool
     institution: InstitutionOut | None
     roles: list[str]
     sections: list[SectionOut]
@@ -58,6 +60,9 @@ def me(request):
         "preferred_name": user.preferred_name,
         "full_name": user.get_full_name() or user.email,
         "kind": user.kind,
+        "two_step": Authenticator.objects.filter(
+            user=user, type=Authenticator.Type.TOTP
+        ).exists(),
         "institution": user.institution,
         "roles": sorted({r.role for r in user.roles.filter(institution_id=user.institution_id)}),
         "sections": [

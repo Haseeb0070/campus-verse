@@ -14,6 +14,7 @@ export interface Me {
   first_name: string;
   last_name: string;
   preferred_name: string;
+  two_step: boolean;
   full_name: string;
   kind: "student" | "teacher" | "staff";
   institution: { id: number; name: string; timezone: string } | null;
