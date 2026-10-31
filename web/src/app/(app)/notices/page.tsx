@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { relativeTime } from "@/lib/format";
+import { formatDateTime, relativeTime } from "@/lib/format";
 import { useAudiences, useMyNotices, useNotices } from "@/lib/queries";
 import type { MyNotice } from "@/lib/types";
 
@@ -93,14 +93,17 @@ function MyNoticeRow({ notice: n }: { notice: MyNotice }) {
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function act(path: "publish" | "archive") {
+  async function act(path: "publish" | "archive" | "unschedule") {
     setBusy(true);
     setError(null);
     try {
       await apiFetch(`/api/notices/${n.id}/${path}`, { method: "POST" });
       await queryClient.invalidateQueries({ queryKey: ["notices"] });
     } catch {
-      setError(path === "publish" ? "Couldn't publish. Try again." : "Couldn't archive. Try again.");
+      setError(
+        { publish: "Couldn't publish.", archive: "Couldn't archive.", unschedule: "Couldn't cancel." }[path] +
+          " Try again.",
+      );
     } finally {
       setBusy(false);
       setConfirmArchive(false);
@@ -108,31 +111,47 @@ function MyNoticeRow({ notice: n }: { notice: MyNotice }) {
   }
 
   const audience = n.targets.map((t) => t.label).join(", ") || "No audience yet";
+  const chip =
+    n.status === "scheduled"
+      ? { text: "Scheduled", cls: "bg-accent/12 text-accent-ink" }
+      : n.status === "draft"
+        ? { text: "Draft", cls: "bg-warning/18 text-ink" }
+        : n.expired
+          ? { text: "Expired", cls: "bg-fill-strong text-ink-2" }
+          : { text: "Published", cls: "bg-success/15 text-ink" };
+  const when =
+    n.status === "scheduled" && n.publish_at
+      ? ` · goes out ${formatDateTime(n.publish_at)}`
+      : n.published_at
+        ? ` · ${relativeTime(n.published_at)}`
+        : ` · edited ${relativeTime(n.updated_at)}`;
+  const until = n.expires_at && !n.expired ? ` · until ${formatDateTime(n.expires_at)}` : "";
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-row p-2.5 hover:bg-fill">
-      <span
-        className={`rounded-full px-2 py-0.5 text-caption font-semibold ${
-          n.status === "draft" ? "bg-warning/18 text-ink" : "bg-success/15 text-ink"
-        }`}
-      >
-        {n.status === "draft" ? "Draft" : "Published"}
-      </span>
+      <span className={`rounded-full px-2 py-0.5 text-caption font-semibold ${chip.cls}`}>{chip.text}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-body font-semibold">{n.title}</span>
         <span className="block truncate text-footnote text-ink-2">
           {audience} · {n.reach} {n.reach === 1 ? "person" : "people"}
-          {n.published_at ? ` · ${relativeTime(n.published_at)}` : ` · edited ${relativeTime(n.updated_at)}`}
+          {when}
+          {until}
         </span>
         {error && <span className="block text-footnote text-danger-ink">{error}</span>}
       </span>
       <span className="flex items-center gap-2 text-footnote font-semibold">
-        {n.status === "draft" && n.targets.length > 0 && (
+        {n.status === "scheduled" && (
+          <button onClick={() => act("unschedule")} disabled={busy}
+            className="rounded-full px-2 py-1.5 text-ink-2 hover:bg-fill-strong">
+            Cancel schedule
+          </button>
+        )}
+        {(n.status === "draft" || n.status === "scheduled") && n.targets.length > 0 && (
           <button
             onClick={() => act("publish")}
             disabled={busy}
             className="press rounded-full bg-accent px-3 py-1.5 text-on-accent disabled:opacity-60"
           >
-            Publish
+            {n.status === "scheduled" ? "Publish now" : "Publish"}
           </button>
         )}
         {confirmArchive ? (

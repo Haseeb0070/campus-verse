@@ -91,6 +91,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.notifications.tasks.send_scheduled",
         "schedule": 300.0,
     },
+    "scheduled-notices": {
+        "task": "apps.notices.tasks.publish_due",
+        "schedule": 60.0,
+    },
 }
 
 AUTH_USER_MODEL = "identity.User"

@@ -4,12 +4,21 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { DateTimeField, todayIso } from "@/components/date-picker";
 import { ChevronLeftIcon } from "@/components/icons";
 import { ApiError, apiFetch } from "@/lib/api";
+import { toLocalInput } from "@/lib/format";
 import { useAudiences, useReach } from "@/lib/queries";
 import type { Audience, MyNotice } from "@/lib/types";
 
-type Errors = { title?: string; body?: string; targets?: string };
+type Errors = { title?: string; body?: string; targets?: string; publishAt?: string; expiresAt?: string };
+
+function inHours(hours: number) {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + hours);
+  return toLocalInput(d);
+}
 
 export default function NewNoticePage() {
   const router = useRouter();
@@ -22,6 +31,10 @@ export default function NewNoticePage() {
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState<"draft" | "publish" | null>(null);
+  const [when, setWhen] = useState<"now" | "later">("now");
+  const [publishAt, setPublishAt] = useState(() => inHours(18));
+  const [expires, setExpires] = useState(false);
+  const [expiresAt, setExpiresAt] = useState(() => inHours(24 * 7));
   const reach = useReach(targets);
 
   const groups = (audiences.data ?? []).reduce<Record<string, Audience[]>>((acc, a) => {
@@ -39,6 +52,11 @@ export default function NewNoticePage() {
     if (!title.trim()) next.title = "Give the notice a title.";
     if (!body.trim()) next.body = "Write the notice text.";
     if (publish && targets.length === 0) next.targets = "Choose who should see this notice.";
+    const goesOut = publish && when === "later" ? new Date(publishAt) : new Date();
+    if (publish && when === "later" && !(goesOut > new Date()))
+      next.publishAt = "Pick a time in the future, or publish it now.";
+    if (expires && !(new Date(expiresAt) > goesOut))
+      next.expiresAt = "The take-down time has to be after it goes out.";
     setErrors(next);
     setFormError(null);
     if (Object.keys(next).length) return;
@@ -53,6 +71,8 @@ export default function NewNoticePage() {
           priority: important ? "important" : "normal",
           targets,
           publish,
+          publish_at: publish && when === "later" ? new Date(publishAt).toISOString() : null,
+          expires_at: expires ? new Date(expiresAt).toISOString() : null,
         }),
       });
       await queryClient.invalidateQueries({ queryKey: ["notices"] });
@@ -207,6 +227,42 @@ export default function NewNoticePage() {
           </span>
         </label>
 
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-2 text-footnote font-semibold text-ink-2">When to publish</legend>
+          <div role="radiogroup" aria-label="When to publish" className="flex rounded-control bg-fill p-1 sm:w-1/2">
+            {(["now", "later"] as const).map((w) => (
+              <button key={w} type="button" role="radio" aria-checked={when === w} onClick={() => setWhen(w)}
+                className={`h-9 flex-1 rounded-[9px] text-footnote font-semibold ${
+                  when === w ? "bg-[var(--cv-bg)] shadow-sm" : "text-ink-2"
+                }`}>
+                {w === "now" ? "Now" : "Later"}
+              </button>
+            ))}
+          </div>
+          {when === "later" && (
+            <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2 sm:w-2/3">
+              Goes out on
+              <DateTimeField value={publishAt} onChange={setPublishAt} label="Goes out on" min={todayIso()}
+                className="h-11 w-full rounded-control bg-fill px-3 text-body font-normal text-ink" />
+              <span className="font-normal">Only you see it until then. Nobody is notified early.</span>
+              {errors.publishAt && <span className="font-normal text-danger-ink">{errors.publishAt}</span>}
+            </label>
+          )}
+          <label className="flex items-center gap-3 text-body">
+            <input type="checkbox" checked={expires} onChange={(e) => setExpires(e.target.checked)} />
+            Take it down automatically
+          </label>
+          {expires && (
+            <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2 sm:w-2/3">
+              Remove from feeds on
+              <DateTimeField value={expiresAt} onChange={setExpiresAt} label="Remove from feeds on" min={todayIso()}
+                className="h-11 w-full rounded-control bg-fill px-3 text-body font-normal text-ink" />
+              <span className="font-normal">Good for room changes and one-off reminders. You can still see it.</span>
+              {errors.expiresAt && <span className="font-normal text-danger-ink">{errors.expiresAt}</span>}
+            </label>
+          )}
+        </fieldset>
+
         <div className="flex flex-wrap justify-end gap-3 border-t border-divider pt-4">
           <button
             type="button"
@@ -221,7 +277,9 @@ export default function NewNoticePage() {
             disabled={pending !== null}
             className="press h-11 rounded-full bg-accent px-6 text-body font-semibold text-on-accent disabled:opacity-60"
           >
-            {pending === "publish" ? "Publishing…" : "Publish"}
+            {pending === "publish"
+              ? when === "later" ? "Scheduling…" : "Publishing…"
+              : when === "later" ? "Schedule" : "Publish"}
           </button>
         </div>
       </form>

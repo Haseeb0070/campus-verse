@@ -44,8 +44,11 @@ export interface MyNotice {
   title: string;
   body: string;
   priority: "normal" | "important";
-  status: "draft" | "published" | "archived";
+  status: "draft" | "scheduled" | "published" | "archived";
   published_at: string | null;
+  publish_at: string | null;
+  expires_at: string | null;
+  expired: boolean;
   updated_at: string;
   targets: { key: string; label: string }[];
   reach: number;

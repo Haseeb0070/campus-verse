@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Literal
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.utils import timezone
 from ninja import Query, Router, Schema, Status
 from ninja.errors import HttpError
 
@@ -38,6 +39,9 @@ class MyNoticeOut(Schema):
     priority: str
     status: str
     published_at: datetime | None
+    publish_at: datetime | None
+    expires_at: datetime | None
+    expired: bool
     updated_at: datetime
     targets: list[TargetOut]
     reach: int
@@ -63,6 +67,13 @@ class NoticeIn(Schema):
     priority: Literal["normal", "important"] = "normal"
     targets: list[str]
     publish: bool = True
+    # With publish=True: when to send it out (leave empty for now) and when to take it down.
+    publish_at: datetime | None = None
+    expires_at: datetime | None = None
+
+
+class ScheduleIn(Schema):
+    publish_at: datetime
 
 
 class ErrorOut(Schema):
@@ -85,6 +96,9 @@ def _mine_out(notice: Notice) -> dict:
         "priority": notice.priority,
         "status": notice.status,
         "published_at": notice.published_at,
+        "publish_at": notice.publish_at,
+        "expires_at": notice.expires_at,
+        "expired": notice.expires_at is not None and notice.expires_at <= timezone.now(),
         "updated_at": notice.updated_at,
         "targets": [{"key": f"{t}:{i}", "label": scope_label(t, i)} for t, i in targets],
         "reach": reach(targets, notice.institution_id),
@@ -100,8 +114,9 @@ def _own_notice(request, notice_id: int) -> Notice:
 
 @router.get("", response=list[NoticeOut])
 def list_notices(request, limit: int = 50):
+    services.publish_due()  # schedules work even when no background worker is running
     return (
-        Notice.objects.published()
+        Notice.objects.live()
         .visible_to(request.user)
         .select_related("author")
         .order_by("-published_at")[: max(1, min(limit, 100))]
@@ -124,6 +139,7 @@ def audience_reach(request, targets: Query[list[str]]):
 
 @router.get("/mine", response=list[MyNoticeOut])
 def my_notices(request):
+    services.publish_due()
     notices = Notice.objects.filter(author=request.user).exclude(
         status=Notice.Status.ARCHIVED
     ).order_by("-updated_at")[:50]
@@ -132,11 +148,17 @@ def my_notices(request):
 
 @router.post("", response={201: MyNoticeOut, 403: ErrorOut, 422: ErrorOut})
 def create_notice(request, payload: NoticeIn):
-    notice = Notice(title=payload.title, body=payload.body, priority=payload.priority)
+    notice = Notice(title=payload.title, body=payload.body, priority=payload.priority,
+                    expires_at=payload.expires_at)
     targets = _parse_targets(payload.targets)
-    action = services.publish_notice if payload.publish else services.save_draft
     try:
-        action(author=request.user, notice=notice, targets=targets)
+        if not payload.publish:
+            services.save_draft(author=request.user, notice=notice, targets=targets)
+        elif payload.publish_at is not None:
+            services.schedule_notice(author=request.user, notice=notice, targets=targets,
+                                     publish_at=payload.publish_at)
+        else:
+            services.publish_notice(author=request.user, notice=notice, targets=targets)
     except PermissionDenied as err:
         return Status(403, {"detail": str(err)})
     except ValidationError as err:
@@ -149,6 +171,31 @@ def publish(request, notice_id: int):
     notice = _own_notice(request, notice_id)
     try:
         services.publish_draft(author=request.user, notice=notice)
+    except PermissionDenied as err:
+        return Status(403, {"detail": str(err)})
+    except ValidationError as err:
+        return Status(422, {"detail": err.messages[0]})
+    return Status(200, _mine_out(notice))
+
+
+@router.post("/{notice_id}/schedule", response={200: MyNoticeOut, 403: ErrorOut, 422: ErrorOut})
+def schedule(request, notice_id: int, payload: ScheduleIn):
+    notice = _own_notice(request, notice_id)
+    try:
+        services.reschedule(author=request.user, notice=notice, publish_at=payload.publish_at)
+    except PermissionDenied as err:
+        return Status(403, {"detail": str(err)})
+    except ValidationError as err:
+        return Status(422, {"detail": err.messages[0]})
+    return Status(200, _mine_out(notice))
+
+
+@router.post("/{notice_id}/unschedule",
+             response={200: MyNoticeOut, 403: ErrorOut, 422: ErrorOut})
+def unschedule(request, notice_id: int):
+    notice = _own_notice(request, notice_id)
+    try:
+        services.unschedule(author=request.user, notice=notice)
     except PermissionDenied as err:
         return Status(403, {"detail": str(err)})
     except ValidationError as err:

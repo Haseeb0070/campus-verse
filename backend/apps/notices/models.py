@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
+from django.db.models import Q
+from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
 from apps.core.audience import visible_q
@@ -8,6 +10,11 @@ from apps.core.models import AudienceTarget, InstitutionScopedModel, Institution
 
 
 class NoticeQuerySet(InstitutionScopedQuerySet):
+    def live(self, now=None):
+        """Published and not past its expiry (FR-NOT-03)."""
+        now = now or timezone.now()
+        return self.published().filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))
+
     def published(self):
         return self.filter(status=Notice.Status.PUBLISHED)
 
@@ -18,6 +25,7 @@ class NoticeQuerySet(InstitutionScopedQuerySet):
 class Notice(InstitutionScopedModel):
     class Status(models.TextChoices):
         DRAFT = "draft"
+        SCHEDULED = "scheduled"  # publishes itself at publish_at
         PUBLISHED = "published"
         ARCHIVED = "archived"
 
@@ -33,6 +41,9 @@ class Notice(InstitutionScopedModel):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="notices"
     )
     published_at = models.DateTimeField(null=True, blank=True)
+    publish_at = models.DateTimeField(
+        null=True, blank=True, help_text="When a scheduled notice goes out"
+    )
     expires_at = models.DateTimeField(null=True, blank=True)
     targets = GenericRelation(AudienceTarget)
     history = HistoricalRecords()
