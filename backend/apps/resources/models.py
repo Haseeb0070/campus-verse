@@ -78,3 +78,14 @@ class ResourceVersion(InstitutionScopedModel):
 
     def __str__(self):
         return f"{self.resource} v{self.number}"
+
+
+class ResourceDownload(InstitutionScopedModel):
+    """One download of a resource file, for usage reports (SRS 12.1). Reports only ever show
+    counts, never who downloaded what."""
+
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name="downloads")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+
+    class Meta:
+        indexes = [models.Index(fields=["institution", "created_at"])]

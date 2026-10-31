@@ -263,3 +263,16 @@ def test_demo_resources_include_every_state(db, settings):
         body = f.read()
     assert body.startswith(b"%PDF-1.4") and body.rstrip().endswith(b"%%EOF")
     assert b"slide 14 fixed" in body
+
+
+def test_downloads_are_counted_for_reports(client, campus):
+    from apps.resources.models import ResourceDownload
+
+    r = share(campus)
+    client.force_login(campus.ayesha)
+    file_id = r.versions.get().file_id
+    assert client.get(f"/api/resources/files/{file_id}").status_code == 200
+    client.force_login(campus.hamza)  # 3C: refused, and not counted
+    assert client.get(f"/api/resources/files/{file_id}").status_code == 404
+    assert list(ResourceDownload.objects.values_list("user__email", flat=True)) == [
+        "ayesha@test.edu"]

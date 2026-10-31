@@ -470,3 +470,12 @@ def run_source(request, source_id: int):
             return Status(422, {"detail": src.last_error or "The sync failed."})
         return Status(200, _run_out(run, detail=True))
     return _call(go)
+
+
+@router.get("/reports", response=dict)
+def get_reports(request, days: int = 30):
+    """Summaries for one period (7, 30 or 90 days); counts and rates only (SRS 12.1)."""
+    from . import reports
+
+    _admin(request)
+    return reports.build(request.user, days)

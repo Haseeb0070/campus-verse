@@ -14,7 +14,7 @@ from apps.core.files import ACCEPT
 from apps.core.models import StoredFile
 
 from . import services
-from .models import Resource, ResourceVersion
+from .models import Resource, ResourceDownload, ResourceVersion
 
 router = Router(tags=["resources"])
 
@@ -258,6 +258,8 @@ def download(request, file_id: int):
     # Same 404 whether it doesn't exist or isn't yours: no probing for file IDs (SRS 9.2).
     if version is None:
         raise HttpError(404, "File not found")
+    ResourceDownload.objects.create(institution_id=version.institution_id,
+                                    resource_id=version.resource_id, user=request.user)
     stored = version.file
     response = FileResponse(
         stored.file.open("rb"),
