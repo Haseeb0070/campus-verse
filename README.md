@@ -40,7 +40,8 @@ uv run python manage.py createsuperuser
 uv run python manage.py runserver
 ```
 
-Web app, on http://localhost:3000 (it proxies `/api` and `/_allauth` to Django):
+Web app, on http://localhost:3000 (it proxies `/api` and `/_allauth` to Django). If Django
+runs on another port, copy `web/.env.example` to `web/.env.local` and change the URLs:
 
 ```bash
 cd web

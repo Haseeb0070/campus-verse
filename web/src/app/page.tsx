@@ -1,5 +1,7 @@
 import { ApiStatus } from "@/components/api-status";
 
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+
 const courses = [
   { code: "CS-301", title: "Data Structures", color: "bg-course-lagoon" },
   { code: "MATH-210", title: "Linear Algebra", color: "bg-course-tangerine" },
@@ -26,13 +28,13 @@ export default function Home() {
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <a
-            href="http://localhost:8000/api/docs"
+            href={`${backendUrl}/api/docs`}
             className="press inline-flex h-11 items-center rounded-full bg-accent px-5 text-body font-semibold text-on-accent"
           >
             Open API docs
           </a>
           <a
-            href="http://localhost:8000/admin/"
+            href={`${backendUrl}/admin/`}
             className="press inline-flex h-11 items-center rounded-full bg-fill-strong px-5 text-body font-semibold"
           >
             Django admin
