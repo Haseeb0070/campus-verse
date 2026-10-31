@@ -102,7 +102,9 @@ uv run python manage.py send_reminders
 ## Admin area
 
 Institution admins get **Manage** in the web app (sign in as `nadia@demo.campusverse.test`):
-overview with room clashes, people and invites, roles, the audit log, and **timetable import**.
+overview with room clashes, people and invites, roles, **courses and sections** (terms,
+departments, programs, courses, sections, teachers and enrollment), correction requests, the
+audit log, and **timetable import**. Department coordinators get Courses for their own departments.
 
 The import takes a CSV with these columns (download the template from the import page):
 

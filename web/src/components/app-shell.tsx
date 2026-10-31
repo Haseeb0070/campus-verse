@@ -141,7 +141,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ...(moderation?.can_moderate
       ? [{ href: "/moderation", label: "Moderation", Icon: FlagIcon }]
       : []),
-    ...(isAdmin ? [{ href: "/manage", label: "Manage", Icon: ManageIcon }] : []),
+    ...(isAdmin
+      ? [{ href: "/manage", label: "Manage", Icon: ManageIcon }]
+      : user.roles.includes("department_coordinator")
+        ? [{ href: "/manage/academic", label: "Courses", Icon: ManageIcon }]
+        : []),
   ];
   // Phones get four tabs; everything else sits under More.
   const primaryHrefs = ["/today", "/timetable", "/assignments", "/chat"];
