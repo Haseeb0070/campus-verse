@@ -200,7 +200,9 @@ export type NotificationKind =
   | "class.changed"
   | "assignment.opened"
   | "assignment.due_soon"
-  | "grades.released";
+  | "grades.released"
+  | "feed.comment"
+  | "moderation.action";
 
 export interface AppNotification {
   id: number;

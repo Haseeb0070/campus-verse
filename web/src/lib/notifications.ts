@@ -40,6 +40,8 @@ const affects: Record<NotificationKind, string[][]> = {
   "assignment.opened": [["assignments"]],
   "assignment.due_soon": [["assignments"]],
   "grades.released": [["assignments"]],
+  "feed.comment": [["feed"]],
+  "moderation.action": [["feed"]],
 };
 
 export interface Toast {

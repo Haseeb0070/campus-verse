@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.assignments",
     "apps.notifications",
     "apps.administration",
+    "apps.feed",
     "apps.governance",
 ]
 

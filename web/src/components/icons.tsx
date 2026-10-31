@@ -46,6 +46,19 @@ export const ChatIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const FeedIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="16" height="16" rx="4" />
+    <path d="M8 9h8M8 12.5h8M8 16h5" />
+  </Icon>
+);
+
+export const FlagIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 21V4.5M5 4.5h11l-2 4 2 4H5" />
+  </Icon>
+);
+
 export const ManageIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M12 3.5l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9v-5z" />

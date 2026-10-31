@@ -159,6 +159,7 @@ class Command(BaseCommand):
         )
 
         add_demo_assignments(s["CS-301 3B"], imran, s["MATH-210 2A"], farah)
+        add_demo_posts(inst, s["CS-301 3B"], ayesha, hamza, imran, nadia)
 
         publish_notice(
             author=nadia,
@@ -208,3 +209,17 @@ def add_demo_assignments(ds_section, ds_teacher, math_section, math_teacher):
         submission_type="both", max_points=10, allow_late=True,
         late_until=now + timedelta(days=6),
     )
+
+
+def add_demo_posts(institution, section, student, classmate, teacher, admin):
+    """A little life in the feed: a question, a teacher reminder and a campus welcome."""
+    from apps.feed.services import add_comment, create_post
+
+    create_post(admin, body="Welcome to CampusVerse! Ask questions in your section's space, "
+                "and share notes and resources with your classmates.",
+                targets=[("institution", institution.pk)])
+    create_post(teacher, body="Office hours move to Tuesday 2 to 4 PM this week, room F-12.",
+                targets=[("section", section.pk)])
+    question = create_post(classmate, body="Does anyone have the whiteboard notes from Thursday? "
+                           "I missed the last 20 minutes.", targets=[("section", section.pk)])
+    add_comment(student, question, body="I took photos, I'll post them after class.")

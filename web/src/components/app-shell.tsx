@@ -10,11 +10,14 @@ import { useUnreadTotal } from "@/lib/chat";
 import { courseBg } from "@/lib/format";
 import { useMe } from "@/lib/queries";
 import { disconnectRealtime } from "@/lib/realtime";
+import { useModerationSummary } from "@/lib/feed";
 import { useLiveNotifications, useNotifications } from "@/lib/notifications";
 import {
   AssignmentsIcon,
   BellIcon,
   ChatIcon,
+  FeedIcon,
+  FlagIcon,
   LogoMark,
   ManageIcon,
   MoreIcon,
@@ -28,6 +31,7 @@ import { Toasts } from "./toasts";
 
 const baseNav = [
   { href: "/today", label: "Today", Icon: TodayIcon },
+  { href: "/feed", label: "Feed", Icon: FeedIcon },
   { href: "/timetable", label: "Timetable", Icon: TimetableIcon },
   { href: "/assignments", label: "Assignments", Icon: AssignmentsIcon },
   { href: "/chat", label: "Chat", Icon: ChatIcon },
@@ -35,13 +39,23 @@ const baseNav = [
   { href: "/notifications", label: "Notifications", Icon: BellIcon },
 ];
 
-function UnreadBadge({ count, className = "" }: { count: number; className?: string }) {
+function UnreadBadge({
+  count,
+  label = "unread",
+  className = "",
+}: {
+  count: number;
+  label?: string;
+  className?: string;
+}) {
   if (!count) return null;
   return (
     <span
       className={`grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-caption font-semibold text-on-accent ${className}`}
     >
-      <span className="sr-only">{count} unread</span>
+      <span className="sr-only">
+        {count} {label}
+      </span>
       <span aria-hidden="true">{count > 99 ? "99+" : count}</span>
     </span>
   );
@@ -55,9 +69,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [signingOut, setSigningOut] = useState(false);
   const unread = useUnreadTotal();
   const notificationsUnread = useNotifications().data?.unread ?? 0;
+  const moderation = useModerationSummary().data;
   const { toasts, dismiss } = useLiveNotifications(me.data?.id);
   const badgeFor = (href: string) =>
-    href === "/chat" ? unread : href === "/notifications" ? notificationsUnread : 0;
+    href === "/chat"
+      ? unread
+      : href === "/notifications"
+        ? notificationsUnread
+        : href === "/moderation"
+          ? (moderation?.open ?? 0)
+          : 0;
+  const badgeLabel = (href: string) => (href === "/moderation" ? "open reports" : "unread");
   const [moreOpen, setMoreOpen] = useState(false);
 
   const unauthorized = me.error instanceof ApiError && me.error.status === 401;
@@ -111,6 +133,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ...baseNav.slice(0, 2),
     ...(teaches ? [{ href: "/sections", label: "Sections", Icon: SectionsIcon }] : []),
     ...baseNav.slice(2),
+    ...(moderation?.can_moderate
+      ? [{ href: "/moderation", label: "Moderation", Icon: FlagIcon }]
+      : []),
     ...(isAdmin ? [{ href: "/manage", label: "Manage", Icon: ManageIcon }] : []),
   ];
   // Phones get four tabs; everything else sits under More.
@@ -143,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="size-5" />
                 <span className="flex-1">{label}</span>
-                <UnreadBadge count={badgeFor(href)} />
+                <UnreadBadge count={badgeFor(href)} label={badgeLabel(href)} />
               </Link>
             </li>
           ))}
@@ -211,13 +236,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="size-5" />
                 <span className="flex-1">{label}</span>
-                <UnreadBadge count={badgeFor(href)} />
+                <UnreadBadge count={badgeFor(href)} label={badgeLabel(href)} />
               </Link>
             ))}
             <button
               onClick={handleSignOut}
               disabled={signingOut}
-              className="press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium text-danger"
+              className="press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium text-danger-ink"
             >
               <SignOutIcon className="size-5" />
               Sign out
@@ -241,7 +266,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Icon className="size-[22px]" />
             <span className="max-w-full truncate">{label}</span>
-            <UnreadBadge count={badgeFor(href)} className="absolute top-1 left-1/2" />
+            <UnreadBadge count={badgeFor(href)} label={badgeLabel(href)} className="absolute top-1 left-1/2" />
           </Link>
         ))}
         <button

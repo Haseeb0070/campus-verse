@@ -14,6 +14,8 @@ class Notification(InstitutionScopedModel):
         ASSIGNMENT_OPENED = "assignment.opened"
         ASSIGNMENT_DUE_SOON = "assignment.due_soon"
         GRADES_RELEASED = "grades.released"
+        FEED_COMMENT = "feed.comment"
+        MODERATION = "moderation.action"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"

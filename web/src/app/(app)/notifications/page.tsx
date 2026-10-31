@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { AssignmentsIcon, BellIcon, NoticesIcon, TimetableIcon } from "@/components/icons";
+import {
+  AssignmentsIcon,
+  BellIcon,
+  FeedIcon,
+  FlagIcon,
+  NoticesIcon,
+  TimetableIcon,
+} from "@/components/icons";
 import { relativeTime } from "@/lib/format";
 import { useMarkRead, useNotifications } from "@/lib/notifications";
 import type { AppNotification, NotificationKind } from "@/lib/types";
@@ -12,6 +19,8 @@ const icons: Record<NotificationKind, typeof BellIcon> = {
   "assignment.opened": AssignmentsIcon,
   "assignment.due_soon": AssignmentsIcon,
   "grades.released": AssignmentsIcon,
+  "feed.comment": FeedIcon,
+  "moderation.action": FlagIcon,
 };
 
 function isToday(iso: string) {

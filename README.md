@@ -145,6 +145,7 @@ backend/
   apps/core/files.py upload checks: allow-listed types verified by content, size limit
   apps/notifications/ in-app notifications: fan-out, no duplicates, live push, reminders
   apps/administration/ admin API: overview, people and invites, roles, timetable import, audit
+  apps/feed/         campus feed: posts, comments, reactions, reports, moderation
   apps/governance/   append-only audit log
   tests/
 web/
