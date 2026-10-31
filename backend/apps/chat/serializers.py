@@ -2,7 +2,8 @@ from .models import Message
 
 
 def initials(user) -> str:
-    letters = f"{user.first_name[:1]}{user.last_name[:1]}" or user.email[:1]
+    first = user.preferred_name or user.first_name
+    letters = f"{first[:1]}{user.last_name[:1]}" or user.email[:1]
     return letters.upper()
 
 

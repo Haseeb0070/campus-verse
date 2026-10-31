@@ -184,3 +184,10 @@ export function LogoMark({ className = "" }: { className?: string }) {
     </span>
   );
 }
+
+export const PersonIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="8.5" r="3.5" />
+    <path d="M5 19.5a7 7 0 0 1 14 0" />
+  </Icon>
+);

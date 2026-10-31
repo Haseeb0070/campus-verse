@@ -22,6 +22,7 @@ import {
   ManageIcon,
   MoreIcon,
   NoticesIcon,
+  PersonIcon,
   ResourcesIcon,
   SectionsIcon,
   SignOutIcon,
@@ -145,7 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const primaryNav = nav.filter((n) => primaryHrefs.includes(n.href));
   const secondaryNav = nav.filter((n) => !primaryHrefs.includes(n.href));
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  const initials = `${user.first_name[0] ?? ""}${user.last_name[0] ?? ""}` || user.email[0];
+  const initials = `${(user.preferred_name || user.first_name)[0] ?? ""}${user.last_name[0] ?? ""}` || user.email[0];
 
   return (
     <div className="min-h-screen md:flex md:gap-5 md:p-5">
@@ -191,16 +192,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <div className="mt-auto flex items-center gap-2.5 rounded-row bg-fill p-2.5">
-          <span className="grid size-9 place-items-center rounded-full bg-accent/15 text-footnote font-semibold text-accent-ink">
-            {initials.toUpperCase()}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-footnote font-semibold">{user.full_name}</span>
-            <span className="block truncate text-caption text-ink-2">
-              {user.institution?.name ?? "No institution"}
+        <div className="mt-auto flex items-center gap-1 rounded-row bg-fill p-1.5">
+          <Link
+            href="/profile"
+            aria-current={isActive("/profile") ? "page" : undefined}
+            title="Your profile"
+            className="press flex min-w-0 flex-1 items-center gap-2.5 rounded-[12px] p-1 hover:bg-fill-strong"
+          >
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent/15 text-footnote font-semibold text-accent-ink">
+              {initials.toUpperCase()}
             </span>
-          </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-footnote font-semibold">{user.full_name}</span>
+              <span className="block truncate text-caption text-ink-2">
+                {user.institution?.name ?? "No institution"}
+              </span>
+            </span>
+          </Link>
           <button
             onClick={handleSignOut}
             disabled={signingOut}
@@ -241,6 +249,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <UnreadBadge count={badgeFor(href)} label={badgeLabel(href)} />
               </Link>
             ))}
+            <Link
+              href="/profile"
+              onClick={() => setMoreOpen(false)}
+              aria-current={isActive("/profile") ? "page" : undefined}
+              className={`press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium ${
+                isActive("/profile") ? "bg-fill-strong text-accent-ink" : ""
+              }`}
+            >
+              <PersonIcon className="size-5" />
+              <span className="flex-1">Profile</span>
+            </Link>
             <button
               onClick={handleSignOut}
               disabled={signingOut}

@@ -13,6 +13,7 @@ export interface Me {
   email: string;
   first_name: string;
   last_name: string;
+  preferred_name: string;
   full_name: string;
   kind: "student" | "teacher" | "staff";
   institution: { id: number; name: string; timezone: string } | null;
@@ -203,7 +204,8 @@ export type NotificationKind =
   | "grades.released"
   | "feed.comment"
   | "moderation.action"
-  | "resource.shared";
+  | "resource.shared"
+  | "account.correction";
 
 export interface AppNotification {
   id: number;

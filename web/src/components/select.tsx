@@ -190,6 +190,8 @@ export function Select({
         aria-activedescendant={open ? `${id}-${active}` : undefined}
         tabIndex={-1}
         onKeyDown={onListKey}
+        // Inside a <label>, a click here would otherwise "activate" the label and reopen the menu.
+        onClick={(e) => e.preventDefault()}
         onToggle={(e) => {
           // Light dismiss (a click outside) closes the popover without telling React.
           if ((e.nativeEvent as ToggleEvent).newState === "closed" && open) {

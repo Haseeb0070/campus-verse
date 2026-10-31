@@ -7,6 +7,7 @@ import {
   FeedIcon,
   FlagIcon,
   NoticesIcon,
+  PersonIcon,
   ResourcesIcon,
   TimetableIcon,
 } from "@/components/icons";
@@ -23,6 +24,7 @@ const icons: Record<NotificationKind, typeof BellIcon> = {
   "feed.comment": FeedIcon,
   "moderation.action": FlagIcon,
   "resource.shared": ResourcesIcon,
+  "account.correction": PersonIcon,
 };
 
 function isToday(iso: string) {

@@ -1,7 +1,13 @@
-from ninja import Router, Schema
+from datetime import datetime
+
+from django.core.exceptions import ValidationError
+from ninja import Router, Schema, Status
 
 from apps.academic.models import Section
 from apps.scheduling.services import member_section_ids
+
+from . import profile
+from .models import CorrectionRequest
 
 router = Router(tags=["me"])
 
@@ -27,6 +33,7 @@ class MeOut(Schema):
     email: str
     first_name: str
     last_name: str
+    preferred_name: str
     full_name: str
     kind: str
     institution: InstitutionOut | None
@@ -48,6 +55,7 @@ def me(request):
         "email": user.email,
         "first_name": user.first_name,
         "last_name": user.last_name,
+        "preferred_name": user.preferred_name,
         "full_name": user.get_full_name() or user.email,
         "kind": user.kind,
         "institution": user.institution,
@@ -65,3 +73,58 @@ def me(request):
             for s in sections
         ],
     }
+
+
+class ProfileIn(Schema):
+    preferred_name: str = ""
+
+
+class CorrectionIn(Schema):
+    topic: str
+    details: str
+
+
+class CorrectionOut(Schema):
+    id: int
+    topic: str
+    topic_label: str
+    details: str
+    status: str
+    response: str
+    created_at: datetime
+    resolved_at: datetime | None
+
+
+class ErrorOut(Schema):
+    detail: str
+
+
+def correction_out(c: CorrectionRequest) -> dict:
+    return {
+        "id": c.pk, "topic": c.topic, "topic_label": c.get_topic_display(), "details": c.details,
+        "status": c.status, "response": c.response, "created_at": c.created_at,
+        "resolved_at": c.resolved_at,
+    }
+
+
+@router.patch("", response={200: MeOut, 422: ErrorOut})
+def update(request, payload: ProfileIn):
+    try:
+        profile.update_profile(request.user, preferred_name=payload.preferred_name)
+    except ValidationError as err:
+        return Status(422, {"detail": err.messages[0]})
+    return Status(200, me(request))
+
+
+@router.get("/corrections", response=list[CorrectionOut])
+def my_corrections(request):
+    return [correction_out(c) for c in request.user.corrections.all()[:20]]
+
+
+@router.post("/corrections", response={201: CorrectionOut, 422: ErrorOut})
+def ask_for_correction(request, payload: CorrectionIn):
+    try:
+        c = profile.request_correction(request.user, topic=payload.topic, details=payload.details)
+    except ValidationError as err:
+        return Status(422, {"detail": err.messages[0]})
+    return Status(201, correction_out(c))

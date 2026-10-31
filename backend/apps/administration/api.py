@@ -10,7 +10,9 @@ from ninja.files import UploadedFile
 from apps.academic.models import Department
 from apps.chat.serializers import initials
 from apps.governance.models import AuditLog
-from apps.identity.models import RoleAssignment, User
+from apps.identity import profile
+from apps.identity.api import CorrectionOut, correction_out
+from apps.identity.models import CorrectionRequest, RoleAssignment, User
 from apps.identity.roles import is_institution_admin
 
 from . import imports, people
@@ -106,6 +108,15 @@ class AuditOut(Schema):
     changes: dict
 
 
+class ManageCorrectionOut(CorrectionOut):
+    person: PersonOut
+
+
+class ResolveCorrectionIn(Schema):
+    status: str
+    response: str = ""
+
+
 PERSON = {200: PersonOut, 403: ErrorOut, 422: ErrorOut}
 DONE = {204: None, 403: ErrorOut, 422: ErrorOut}
 
@@ -164,6 +175,33 @@ def _call(fn):
         return Status(403, {"detail": str(err)})
     except ValidationError as err:
         return Status(422, {"detail": err.messages[0]})
+
+
+@router.get("/corrections", response=list[ManageCorrectionOut])
+def corrections(request, status: str = "open"):
+    _admin(request)
+    qs = CorrectionRequest.objects.filter(
+        institution_id=request.user.institution_id
+    ).select_related("user")
+    if status != "all":
+        qs = qs.filter(status=status)
+    return [
+        correction_out(c) | {"person": _person_out(c.user)} for c in qs.order_by("created_at")[:100]
+    ]
+
+
+@router.post("/corrections/{correction_id}/resolve",
+             response={200: ManageCorrectionOut, 403: ErrorOut, 422: ErrorOut})
+def resolve_correction(request, correction_id: int, payload: ResolveCorrectionIn):
+    _admin(request)
+    c = CorrectionRequest.objects.filter(
+        pk=correction_id, institution_id=request.user.institution_id
+    ).select_related("user").first()
+    if c is None:
+        raise HttpError(404, "Request not found")
+    return _call(lambda: Status(200, correction_out(profile.resolve_correction(
+        request.user, c, status=payload.status, response=payload.response,
+    )) | {"person": _person_out(c.user)}))
 
 
 @router.get("/overview", response=OverviewOut)

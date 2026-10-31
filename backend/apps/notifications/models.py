@@ -17,6 +17,7 @@ class Notification(InstitutionScopedModel):
         FEED_COMMENT = "feed.comment"
         MODERATION = "moderation.action"
         RESOURCE = "resource.shared"
+        CORRECTION = "account.correction"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"

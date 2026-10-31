@@ -8,6 +8,7 @@ const tabs = [
   { href: "/manage", label: "Overview" },
   { href: "/manage/people", label: "People" },
   { href: "/manage/import", label: "Timetable import" },
+  { href: "/manage/requests", label: "Requests" },
   { href: "/manage/audit", label: "Audit log" },
 ];
 

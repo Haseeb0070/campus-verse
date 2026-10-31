@@ -43,6 +43,7 @@ const affects: Record<NotificationKind, string[][]> = {
   "feed.comment": [["feed"]],
   "moderation.action": [["feed"]],
   "resource.shared": [["resources"]],
+  "account.correction": [["corrections"]],
 };
 
 export interface Toast {
