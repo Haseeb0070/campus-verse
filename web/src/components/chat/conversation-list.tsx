@@ -48,53 +48,66 @@ export function ConversationList({ myId }: { myId?: number }) {
       <ul className="flex flex-col gap-0.5">
         {conversations.data?.map((c) => (
           <li key={c.id}>
-            <Link
-              href={`/chat/${c.id}`}
-              aria-current={c.id === activeId ? "page" : undefined}
-              className={`press flex items-center gap-3 rounded-row p-2.5 ${
-                c.id === activeId ? "bg-fill-strong" : "hover:bg-fill"
-              }`}
-            >
-              {c.other ? (
-                <span className="grid size-11 shrink-0 place-items-center rounded-full bg-fill-strong text-body font-semibold"
-                  aria-hidden="true">
-                  {c.other.initials}
-                </span>
-              ) : (
-                <span
-                  className={`grid size-11 shrink-0 place-items-center rounded-[14px] text-body font-bold text-white ${
-                    c.color ? courseBg[c.color] : "bg-course-slate"
-                  }`}
-                  aria-hidden="true"
-                >
-                  {c.section_code ?? c.title.slice(0, 2)}
-                </span>
-              )}
-              <span className="min-w-0 flex-1">
-                <span className="flex items-baseline justify-between gap-2">
-                  <span className="truncate text-body font-semibold">{c.title}</span>
-                  <span className="shrink-0 text-caption text-ink-3">{when(c.last_message_at)}</span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <span
-                    className={`min-w-0 flex-1 truncate text-footnote ${
-                      c.unread ? "font-medium text-ink" : "text-ink-2"
-                    }`}
-                  >
-                    {preview(c, myId)}
-                  </span>
-                  {c.unread > 0 && (
-                    <span className="grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-caption font-semibold text-on-accent">
-                      <span className="sr-only">{c.unread} unread</span>
-                      <span aria-hidden="true">{c.unread > 99 ? "99+" : c.unread}</span>
-                    </span>
-                  )}
-                </span>
-              </span>
-            </Link>
+            <ConversationRow conversation={c} myId={myId} active={c.id === activeId} />
           </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+/** One conversation: avatar, title, last message and unread count. Also used on Today. */
+export function ConversationRow({
+  conversation: c,
+  myId,
+  active = false,
+}: {
+  conversation: Conversation;
+  myId?: number;
+  active?: boolean;
+}) {
+  return (
+    <Link
+      href={`/chat/${c.id}`}
+      aria-current={active ? "page" : undefined}
+      className={`press flex items-center gap-3 rounded-row p-2.5 ${active ? "bg-fill-strong" : "hover:bg-fill"}`}
+    >
+      {c.other ? (
+        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-fill-strong text-body font-semibold"
+          aria-hidden="true">
+          {c.other.initials}
+        </span>
+      ) : (
+        <span
+          className={`grid size-11 shrink-0 place-items-center rounded-[14px] text-body font-bold text-white ${
+            c.color ? courseBg[c.color] : "bg-course-slate"
+          }`}
+          aria-hidden="true"
+        >
+          {c.section_code ?? c.title.slice(0, 2)}
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="truncate text-body font-semibold">{c.title}</span>
+          <span className="shrink-0 text-caption text-ink-3">{when(c.last_message_at)}</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <span
+            className={`min-w-0 flex-1 truncate text-footnote ${
+              c.unread ? "font-medium text-ink" : "text-ink-2"
+            }`}
+          >
+            {preview(c, myId)}
+          </span>
+          {c.unread > 0 && (
+            <span className="grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-caption font-semibold text-on-accent">
+              <span className="sr-only">{c.unread} unread</span>
+              <span aria-hidden="true">{c.unread > 99 ? "99+" : c.unread}</span>
+            </span>
+          )}
+        </span>
+      </span>
+    </Link>
   );
 }

@@ -44,6 +44,8 @@ export async function signIn(email: string, password: string): Promise<SignInRes
       // 401 here means signed in but another step (like email verification) is pending.
       return { ok: false, error: "Your account needs another step before you can sign in. Contact your admin." };
     }
+    // 409: this browser is already signed in (another tab, or the back button), so carry on.
+    if (err instanceof ApiError && err.status === 409) return { ok: true };
     return { ok: false, error: "Couldn't reach CampusVerse. Check your connection and try again." };
   }
 }

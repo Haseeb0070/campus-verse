@@ -17,17 +17,21 @@ export function ClassRow({
   highlight = false,
   onManage,
   attendance = false,
+  past = false,
 }: {
   occ: Occurrence;
   timeZone?: string;
   highlight?: boolean;
+  /** The class has already ended: dim it and mark it done. */
+  past?: boolean;
   /** Offer "Attendance" on the section's classes that have started (when it's switched on). */
   attendance?: boolean;
   /** Shown only for classes the viewer may change (teachers of the section, admins). */
   onManage?: (occ: Occurrence) => void;
 }) {
-  const chip = statusChip[occ.status];
   const off = occ.status === "cancelled" || occ.status === "moved";
+  const chip = statusChip[occ.status] ?? (past ? { label: "Done", className: "bg-fill-strong text-ink-2" } : undefined);
+  const faded = off || past;
   const where = occ.mode === "online" ? "Online" : occ.room || "Room to be confirmed";
 
   return (
@@ -38,18 +42,18 @@ export function ClassRow({
     >
       <span
         className={`w-12 shrink-0 pt-0.5 text-footnote font-semibold tabular-nums ${
-          off ? "text-ink-3" : "text-ink-2"
+          faded ? "text-ink-3" : "text-ink-2"
         }`}
       >
         {formatTime(occ.starts_at, timeZone)}
       </span>
       <span
-        className={`w-1 shrink-0 rounded-full ${courseBg[occ.color]} ${off ? "opacity-40" : ""}`}
+        className={`w-1 shrink-0 rounded-full ${courseBg[occ.color]} ${faded ? "opacity-40" : ""}`}
         aria-hidden="true"
       />
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
-          <span className={`text-body font-semibold ${off ? "text-ink-2 line-through" : ""}`}>
+          <span className={`text-body font-semibold ${off ? "text-ink-2 line-through" : past ? "text-ink-2" : ""}`}>
             {occ.course_title}
           </span>
           {chip && (

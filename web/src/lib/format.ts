@@ -41,6 +41,18 @@ export function relativeTime(iso: string, now = Date.now()) {
   return rtf.format(Math.round(hours / 24), "day");
 }
 
+/** When a class starts, in words: "Starts in 20 minutes", "Today at 13:00", "Tomorrow at 10:30",
+ *  "Thursday at 09:00", or "Mon, Nov 16 at 09:00" once it's more than a week away. */
+export function startsLabel(date: string, startsAt: string, today: string, timeZone?: string, now = Date.now()) {
+  const time = formatTime(startsAt, timeZone);
+  if (date === today) {
+    return new Date(startsAt).getTime() - now < 60 * 60_000 ? `Starts ${relativeTime(startsAt, now)}` : `Today at ${time}`;
+  }
+  if (date === addDays(today, 1)) return `Tomorrow at ${time}`;
+  if (date < addDays(today, 7)) return `${formatDay(date, { day: undefined, month: undefined })} at ${time}`;
+  return `${formatDay(date, { weekday: "short", month: "short" })} at ${time}`;
+}
+
 export function formatDateTime(iso: string, timeZone?: string) {
   return new Intl.DateTimeFormat(undefined, {
     weekday: "short",
