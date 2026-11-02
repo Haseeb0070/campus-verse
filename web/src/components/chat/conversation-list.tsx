@@ -61,16 +61,21 @@ export function ConversationRow({
   conversation: c,
   myId,
   active = false,
+  arriving = false,
 }: {
   conversation: Conversation;
   myId?: number;
   active?: boolean;
+  /** A new message just came in: the row settles into place and its unread count pops. */
+  arriving?: boolean;
 }) {
   return (
     <Link
       href={`/chat/${c.id}`}
       aria-current={active ? "page" : undefined}
-      className={`press flex items-center gap-3 rounded-row p-2.5 ${active ? "bg-fill-strong" : "hover:bg-fill"}`}
+      className={`press flex items-center gap-3 rounded-row p-2.5 ${active ? "bg-fill-strong" : "hover:bg-fill"} ${
+        arriving ? "arrive" : ""
+      }`}
     >
       {c.other ? (
         <span className="grid size-11 shrink-0 place-items-center rounded-full bg-fill-strong text-body font-semibold"
@@ -101,7 +106,11 @@ export function ConversationRow({
             {preview(c, myId)}
           </span>
           {c.unread > 0 && (
-            <span className="grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-caption font-semibold text-on-accent">
+            <span
+              className={`grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-caption font-semibold text-on-accent ${
+                arriving ? "pop" : ""
+              }`}
+            >
               <span className="sr-only">{c.unread} unread</span>
               <span aria-hidden="true">{c.unread > 99 ? "99+" : c.unread}</span>
             </span>

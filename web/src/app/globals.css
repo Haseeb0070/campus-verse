@@ -34,6 +34,12 @@
   --cv-success-ink: #065f46;
   --cv-warning-ink: #92400e;
   --cv-danger-ink: #991b1b;
+  /* The notice board: kraft board, warm paper notes, shadows tinted to the board. */
+  --cv-board: #e4dccb;
+  --cv-board-line: #d2c6ae;
+  --cv-paper: #fffdf8;
+  --cv-note-shadow: 0 1px 2px rgb(60 45 20 / 0.12), 0 8px 18px -8px rgb(60 45 20 / 0.3);
+  --cv-note-shadow-lift: 0 2px 4px rgb(60 45 20 / 0.12), 0 18px 30px -10px rgb(60 45 20 / 0.38);
 
   /* Tells the browser and OS which theme native UI should use: select popups, date and
      time pickers, number spinners, checkboxes and scrollbars. Without it, dark mode gets
@@ -69,6 +75,11 @@
     --cv-success-ink: #7fe0b0;
     --cv-warning-ink: #f6c76a;
     --cv-danger-ink: #ff9aa2;
+    --cv-board: #182035;
+    --cv-board-line: #26314d;
+    --cv-paper: #222d48;
+    --cv-note-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 18px -8px rgb(0 0 0 / 0.6);
+    --cv-note-shadow-lift: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 30px -10px rgb(0 0 0 / 0.7);
   }
 }
 
@@ -98,6 +109,11 @@
   --cv-success-ink: #7fe0b0;
   --cv-warning-ink: #f6c76a;
   --cv-danger-ink: #ff9aa2;
+  --cv-board: #182035;
+  --cv-board-line: #26314d;
+  --cv-paper: #222d48;
+  --cv-note-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 18px -8px rgb(0 0 0 / 0.6);
+  --cv-note-shadow-lift: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 30px -10px rgb(0 0 0 / 0.7);
 }
 
 @theme inline {
@@ -122,6 +138,9 @@
   --color-side-line: var(--cv-side-line);
   --color-hero: var(--cv-hero);
   --color-hero-line: var(--cv-hero-line);
+  --color-board: var(--cv-board);
+  --color-board-line: var(--cv-board-line);
+  --color-paper: var(--cv-paper);
   --color-rim: var(--cv-rim);
   /* The sidebar and phone tab bar stay navy in both themes, so their inks are fixed. */
   --color-side-ink: #e2e8f0;
@@ -249,16 +268,191 @@
   animation: cv-pulse 1.2s ease-in-out infinite;
 }
 
+/* Two-tone icons: an icon's body shape (marked .duo) fills softly when its link is the current
+   page, and the icon settles with a small pop as it becomes current. */
+.duo {
+  fill: currentColor;
+  fill-opacity: 0;
+  transition: fill-opacity 200ms ease-out;
+}
+
+[aria-current="page"] .duo {
+  fill-opacity: 0.24;
+}
+
+@keyframes cv-icon-pop {
+  0% {
+    transform: scale(0.82);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+}
+
+[aria-current="page"] svg:has(.duo) {
+  animation: cv-icon-pop 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The sidebar's current-page highlight slides to the new page instead of jumping. */
+.nav-pill {
+  transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease-out;
+}
+
+/* Unread counts pop in when something new arrives. */
+@keyframes cv-pop {
+  from {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+}
+
+@utility pop {
+  animation: cv-pop 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* A check that draws itself: a class finishing, or nothing left to do. */
+@keyframes cv-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.draw path {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: cv-draw 520ms cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards;
+}
+
+/* The greeting's sun or moon rises once as Today opens. */
+@keyframes cv-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) rotate(-25deg);
+  }
+}
+
+@utility rise {
+  animation: cv-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* A class in progress: its dot breathes slowly (well clear of the 0.2 Hz range). */
+@keyframes cv-breathe {
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+}
+
+@utility breathe {
+  animation: cv-breathe 2.4s ease-in-out infinite;
+}
+
+/* Notice board notes. Each note sits at its own slight tilt (--tilt), lifts and straightens under
+   the pointer, and is pinned in when it first appears: the paper drops onto the board, then the
+   pin presses in. --delay staggers a board's notes. `backwards` (not `both`) hands the transform
+   back to hover once the note has landed. */
+.note {
+  transform: rotate(var(--tilt, 0deg));
+  box-shadow: var(--cv-note-shadow);
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms ease-out;
+}
+
+.note:hover,
+.note:focus-within {
+  transform: translateY(-3px) rotate(0deg);
+  box-shadow: var(--cv-note-shadow-lift);
+}
+
+@keyframes cv-note-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) rotate(calc(var(--tilt, 0deg) - 4deg)) scale(1.02);
+  }
+}
+
+@keyframes cv-pin-press {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(1.35);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(1px) scale(0.9);
+  }
+}
+
+.note-in {
+  animation: cv-note-drop 560ms cubic-bezier(0.16, 1, 0.3, 1) var(--delay, 0ms) backwards;
+}
+
+.note-in .pin {
+  animation: cv-pin-press 380ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--delay, 0ms) + 320ms) backwards;
+}
+
+/* Arriving from a link to one notice (.note-found, set by the page): it lifts, gets a ring, and
+   its pin taps twice. */
+@keyframes cv-pin-tap {
+  40% {
+    transform: translateY(-4px) scale(1.15);
+  }
+}
+
+.note-found {
+  transform: translateY(-3px) rotate(0deg);
+  box-shadow:
+    var(--cv-note-shadow-lift),
+    0 0 0 3px var(--cv-accent);
+}
+
+.note-found .pin {
+  animation: cv-pin-tap 520ms ease-out 400ms 2;
+}
+
+@keyframes cv-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .press:active {
     transform: none;
   }
-  .arrive,
-  .menu-pop {
+  /* Notes keep their tilt and fade in; nothing drops, lifts or taps. */
+  .note:hover,
+  .note:focus-within,
+  .note-found {
+    transform: rotate(var(--tilt, 0deg));
+  }
+  .note-in,
+  .note-in .pin {
+    animation-name: cv-fade-in;
+  }
+  .note-found .pin {
     animation: none;
   }
-  .pulse-dot {
+  .arrive,
+  .menu-pop,
+  .pop,
+  .rise,
+  [aria-current="page"] svg:has(.duo) {
     animation: none;
+  }
+  .pulse-dot,
+  .breathe {
+    animation: none;
+  }
+  .nav-pill {
+    transition: opacity 150ms ease-out;
+  }
+  /* Still show the check; just don't draw it. */
+  .draw path {
+    animation: none;
+    stroke-dashoffset: 0;
   }
 }
 
@@ -338,4 +532,14 @@ body {
 :focus-visible {
   outline: 2px solid var(--cv-accent);
   outline-offset: 2px;
+}
+
+/* No visible scrollbars anywhere: pages, the sidebar and panels still scroll with the wheel,
+   trackpad, touch and keyboard. */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
 }

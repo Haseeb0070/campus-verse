@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { signOut } from "@/lib/auth";
 import { useUnreadTotal } from "@/lib/chat";
@@ -66,6 +66,19 @@ function UnreadBadge({
   );
 }
 
+/** Where the sidebar's current-page highlight sits. It slides there from the previous page; the
+ *  first placement (or one after a page with no sidebar link) doesn't animate. */
+function useNavPill(deps: unknown[]) {
+  const ref = useRef<HTMLElement>(null);
+  const [pill, setPill] = useState<{ y: number; h: number; slide: boolean } | null>(null);
+  useLayoutEffect(() => {
+    const link = ref.current?.querySelector<HTMLElement>('ul a[aria-current="page"]');
+    setPill((prev) => (link ? { y: link.offsetTop, h: link.offsetHeight, slide: prev != null } : null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  return { ref, pill };
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const me = useMe();
   const router = useRouter();
@@ -86,6 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           : 0;
   const badgeLabel = (href: string) => (href === "/moderation" ? "open reports" : "unread");
   const [moreOpen, setMoreOpen] = useState(false);
+  const side = useNavPill([pathname, me.data, moderation?.can_moderate]);
 
   const unauthorized = me.error instanceof ApiError && me.error.status === 401;
   useEffect(() => {
@@ -183,9 +197,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen md:flex">
       <nav
+        ref={side.ref}
         aria-label="Main"
         className="side sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r border-side-line px-3.5 py-5 md:flex"
       >
+        <span
+          aria-hidden="true"
+          className={`nav-pill pointer-events-none absolute inset-x-3.5 top-0 rounded-control bg-side-active ${
+            side.pill ? "" : "opacity-0"
+          }`}
+          style={{
+            height: side.pill?.h ?? 40,
+            transform: `translateY(${side.pill?.y ?? 0}px)`,
+            transition: side.pill?.slide ? undefined : "none",
+          }}
+        />
         <div className="flex items-center gap-3 border-b border-side-line px-1.5 pb-4">
           <LogoMark className="size-9" />
           <span className="min-w-0">
@@ -222,8 +248,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <Link
                         href={href}
                         aria-current={active ? "page" : undefined}
-                        className={`group flex h-10 items-center gap-3 rounded-control px-3 text-footnote font-semibold transition-colors ${
-                          active ? "bg-side-active text-white" : "text-side-ink hover:bg-side-hover hover:text-white"
+                        className={`group relative flex h-10 items-center gap-3 rounded-control px-3 text-footnote font-semibold transition-colors ${
+                          active ? "text-white" : "text-side-ink hover:bg-side-hover hover:text-white"
                         }`}
                       >
                         <Icon className={`size-[18px] ${active ? "text-white" : "text-side-icon group-hover:text-white"}`} />

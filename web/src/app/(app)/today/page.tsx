@@ -1,10 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { AssignmentStatusChip } from "@/components/assignment-status";
 import { ConversationRow } from "@/components/chat/conversation-list";
 import { ClassRow } from "@/components/class-row";
-import { BellIcon, CalendarIcon, ChatIcon, PinIcon, TimetableIcon, VideoIcon } from "@/components/icons";
+import { Pushpin } from "@/components/pushpin";
+import {
+  BellIcon,
+  CalendarIcon,
+  ChatIcon,
+  CheckIcon,
+  MoonIcon,
+  PinIcon,
+  TimetableIcon,
+  TodayIcon,
+  VideoIcon,
+} from "@/components/icons";
 import { useConversations } from "@/lib/chat";
 import { categoryTone, useEvents } from "@/lib/events";
 import {
@@ -33,6 +45,16 @@ function pending(list: Assignment[] | undefined) {
     .sort((a, b) => a.due_at.localeCompare(b.due_at));
 }
 
+/** The current time, refreshed every 30 seconds so class progress and Done states keep up. */
+function useNow(every = 30_000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), every);
+    return () => clearInterval(id);
+  }, [every]);
+  return now;
+}
+
 /** One line on how the day is going, for the header. */
 function dayStatus(live: Occurrence[], now: number) {
   const left = live.filter((o) => new Date(o.ends_at).getTime() > now).length;
@@ -53,9 +75,13 @@ export default function TodayPage() {
   const unreadNotes = useNotifications().data?.unread ?? 0;
 
   const upNext = next.data;
-  const now = Date.now();
-  const inProgress =
-    upNext && new Date(upNext.starts_at).getTime() <= now && new Date(upNext.ends_at).getTime() > now;
+  const now = useNow();
+  const startMs = upNext ? new Date(upNext.starts_at).getTime() : 0;
+  const endMs = upNext ? new Date(upNext.ends_at).getTime() : 0;
+  const inProgress = upNext && startMs <= now && endMs > now;
+  const elapsed = inProgress ? (now - startMs) / (endMs - startMs) : 0;
+  const hello = greeting(tz);
+  const DayIcon = hello === "Good evening" ? MoonIcon : TodayIcon;
   const sectionChat = upNext && conversations.data?.find((c) => c.kind === "section" && c.section_id === upNext.section_id);
   const todays = classes.data ?? [];
   const live = todays.filter((c) => c.status !== "cancelled" && c.status !== "moved");
@@ -66,8 +92,15 @@ export default function TodayPage() {
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div>
-          <h1 className="text-large-title font-bold">
-            {greeting(tz)}, {me.data?.first_name || "there"}
+          <h1 className="flex items-center gap-3 text-large-title font-bold">
+            <DayIcon
+              className={`rise size-8 shrink-0 [&_.duo]:[fill-opacity:0.3] ${
+                DayIcon === MoonIcon ? "text-accent-ink [&_path]:fill-current [&_path]:[fill-opacity:0.2]" : "text-warning"
+              }`}
+            />
+            <span>
+              {hello}, {me.data?.first_name || "there"}
+            </span>
           </h1>
           <p className="mt-1 text-body text-ink-2">
             {formatDay(today)}
@@ -85,7 +118,10 @@ export default function TodayPage() {
         )}
       </header>
 
-      <section aria-label="Up next" className="rounded-card border border-hero-line bg-hero p-6 text-white md:p-7">
+      <section
+        aria-label="Up next"
+        className="relative overflow-hidden rounded-card border border-hero-line bg-hero p-6 text-white md:p-7"
+      >
         {next.isPending ? (
           <p className="text-body text-white/80">Loading your next class…</p>
         ) : !upNext ? (
@@ -96,11 +132,29 @@ export default function TodayPage() {
         ) : (
           <div className="flex flex-col gap-4">
             <span className="inline-flex items-center gap-2 self-start rounded-full bg-white/12 px-3 py-1 text-footnote font-semibold">
-              <span className={`size-2 rounded-full ${courseBg[upNext.color]}`} aria-hidden="true" />
+              <span
+                className={`size-2 rounded-full ${courseBg[upNext.color]} ${inProgress ? "breathe" : ""}`}
+                aria-hidden="true"
+              />
               {inProgress
-                ? `Happening now · until ${formatTime(upNext.ends_at, tz)}`
+                ? `Happening now · ${Math.max(1, Math.round((endMs - now) / 60_000))} min left`
                 : startsLabel(upNext.date, upNext.starts_at, today, tz, now)}
             </span>
+            {inProgress && (
+              <div
+                role="progressbar"
+                aria-label="Class progress"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(elapsed * 100)}
+                className="absolute inset-x-0 bottom-0 h-1 bg-white/10"
+              >
+                <div
+                  className={`h-full origin-left transition-transform duration-1000 ease-out ${courseBg[upNext.color]}`}
+                  style={{ transform: `scaleX(${elapsed})` }}
+                />
+              </div>
+            )}
             <div>
               <h2 className="text-title-1 font-bold">{upNext.course_title}</h2>
               <p className="mt-1 text-body text-white/80">
@@ -158,7 +212,9 @@ export default function TodayPage() {
 
           <Card title="Today's classes" count={live.length} query={classes} link={{ href: "/timetable", label: "Full week" }}>
             {classes.isSuccess && todays.length === 0 && (
-              <p className="px-5 py-4 text-body text-ink-2">No classes today. Your next one is shown above.</p>
+              <EmptyNote Icon={TimetableIcon} tone="bg-accent/12 text-accent-ink" title="No classes today">
+                Your next one is shown above.
+              </EmptyNote>
             )}
             <ul className="flex flex-col gap-1 p-2">
               {todays.map((occ) => (
@@ -183,7 +239,14 @@ export default function TodayPage() {
             link={{ href: "/assignments", label: "All work" }}
           >
             {assignments.isSuccess && work.length === 0 && (
-              <p className="px-5 py-4 text-body text-ink-2">{teaching ? "Nothing waiting." : "You're all caught up."}</p>
+              <EmptyNote
+                Icon={CheckIcon}
+                draw
+                tone="bg-success/12 text-success-ink"
+                title={teaching ? "Nothing to mark" : "You're all caught up"}
+              >
+                {teaching ? "New hand-ins show up here." : "Nothing to hand in right now. Enjoy the breathing room."}
+              </EmptyNote>
             )}
             <ul className="divide-y divide-divider">
               {work.slice(0, 4).map((a) => (
@@ -263,25 +326,60 @@ function Card({
   );
 }
 
+/** A friendlier empty card: a tinted spot icon, a short title and one line of help. */
+function EmptyNote({
+  Icon,
+  tone,
+  title,
+  draw = false,
+  children,
+}: {
+  Icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactNode;
+  tone: string;
+  title: string;
+  /** Draw the icon's stroke in (for a check). */
+  draw?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3.5 px-5 py-4">
+      <span className={`grid size-11 shrink-0 place-items-center rounded-full ${tone}`}>
+        <Icon className={`size-5 [&_.duo]:[fill-opacity:0.24] ${draw ? "draw" : ""}`} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-body font-semibold">{title}</span>
+        <span className="block text-footnote text-ink-2">{children}</span>
+      </span>
+    </div>
+  );
+}
+
 function RecentChats({ myId }: { myId?: number }) {
   const conversations = useConversations();
   const list = (conversations.data ?? []).filter((c) => c.last_message).slice(0, 3);
   const unread = conversations.data?.reduce((sum, c) => sum + c.unread, 0) ?? 0;
+  // Messages already on screen. A row whose last message isn't in here arrived since the last
+  // render, so it settles in; nothing animates on the first load.
+  const seen = useRef<Set<number> | null>(null);
+  const arrived = (id: number | undefined) => id != null && seen.current != null && !seen.current.has(id);
+  useEffect(() => {
+    if (conversations.data) seen.current = new Set(conversations.data.flatMap((c) => c.last_message?.id ?? []));
+  });
   return (
     <Card title="Recent chats" count={unread} countLabel="unread" query={conversations} link={{ href: "/chat", label: "All chats" }}>
       {conversations.isSuccess && list.length === 0 && (
-        <p className="px-5 py-4 text-body text-ink-2">
-          No messages yet. Every section you&apos;re in has its own chat; say hello in{" "}
+        <EmptyNote Icon={ChatIcon} tone="bg-accent/12 text-accent-ink" title="No messages yet">
+          Every section you&apos;re in has its own chat. Say hello in{" "}
           <Link href="/chat" className="font-semibold text-accent-ink hover:underline">
             Chat
           </Link>
           .
-        </p>
+        </EmptyNote>
       )}
       <ul className="flex flex-col gap-0.5 p-2">
         {list.map((c) => (
           <li key={c.id}>
-            <ConversationRow conversation={c} myId={myId} />
+            <ConversationRow conversation={c} myId={myId} arriving={arrived(c.last_message?.id)} />
           </li>
         ))}
       </ul>
@@ -297,18 +395,23 @@ function NoticesCard() {
       <ul className="divide-y divide-divider">
         {notices.data?.map((n) => (
           <li key={n.id}>
-            <Link href={`/notices#notice-${n.id}`} className="flex flex-col gap-0.5 px-5 py-3.5 hover:bg-fill">
-              <span className="flex flex-wrap items-center gap-2">
-                {n.priority === "important" && (
-                  <span className="rounded-full bg-danger/12 px-2 py-0.5 text-caption font-semibold text-danger-ink">
-                    Important
-                  </span>
-                )}
-                <span className="text-body font-semibold">{n.title}</span>
-              </span>
-              <span className="text-footnote text-ink-2">
-                {n.author_name}
-                {n.published_at && ` · ${relativeTime(n.published_at)}`}
+            <Link href={`/notices#notice-${n.id}`} className="flex items-start gap-3 px-5 py-3.5 hover:bg-fill">
+              <Pushpin
+                className={`mt-0.5 size-5 shrink-0 ${n.priority === "important" ? "text-danger" : "text-accent"}`}
+              />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="flex flex-wrap items-center gap-2">
+                  {n.priority === "important" && (
+                    <span className="rounded-full bg-danger/12 px-2 py-0.5 text-caption font-semibold text-danger-ink">
+                      Important
+                    </span>
+                  )}
+                  <span className="text-body font-semibold">{n.title}</span>
+                </span>
+                <span className="text-footnote text-ink-2">
+                  {n.author_name}
+                  {n.published_at && ` · ${relativeTime(n.published_at)}`}
+                </span>
               </span>
             </Link>
           </li>

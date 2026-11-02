@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useRef } from "react";
+import { CheckIcon } from "@/components/icons";
 import { courseBg, formatDay, formatTime } from "@/lib/format";
 import type { Occurrence, OccurrenceStatus } from "@/lib/types";
 
@@ -32,6 +36,12 @@ export function ClassRow({
   const off = occ.status === "cancelled" || occ.status === "moved";
   const chip = statusChip[occ.status] ?? (past ? { label: "Done", className: "bg-fill-strong text-ink-2" } : undefined);
   const faded = off || past;
+  // Draw the Done check only when the class ends while the page is open, not on every load.
+  const wasPast = useRef(past);
+  const justEnded = past && !wasPast.current;
+  useEffect(() => {
+    wasPast.current = past;
+  });
   const where = occ.mode === "online" ? "Online" : occ.room || "Room to be confirmed";
 
   return (
@@ -57,7 +67,10 @@ export function ClassRow({
             {occ.course_title}
           </span>
           {chip && (
-            <span className={`rounded-full px-2 py-0.5 text-caption font-semibold ${chip.className}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-semibold ${chip.className}`}>
+              {past && !statusChip[occ.status] && (
+                <CheckIcon className={`size-3 text-success-ink ${justEnded ? "draw" : ""}`} />
+              )}
               {chip.label}
             </span>
           )}
