@@ -35,17 +35,14 @@ import {
 } from "./icons";
 import { Toasts } from "./toasts";
 
-const baseNav = [
-  { href: "/today", label: "Today", Icon: TodayIcon },
-  { href: "/feed", label: "Feed", Icon: FeedIcon },
-  { href: "/timetable", label: "Timetable", Icon: TimetableIcon },
-  { href: "/calendar", label: "Calendar", Icon: CalendarIcon },
-  { href: "/assignments", label: "Assignments", Icon: AssignmentsIcon },
-  { href: "/resources", label: "Resources", Icon: ResourcesIcon },
-  { href: "/chat", label: "Chat", Icon: ChatIcon },
-  { href: "/notices", label: "Notices", Icon: NoticesIcon },
-  { href: "/notifications", label: "Notifications", Icon: BellIcon },
-];
+type NavGroup = "Overview" | "Academics" | "Community" | "Administration";
+type NavItem = {
+  href: string;
+  label: string;
+  Icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactNode;
+  group: NavGroup;
+};
+const NAV_GROUPS: NavGroup[] = ["Overview", "Academics", "Community", "Administration"];
 
 function UnreadBadge({
   count,
@@ -59,7 +56,7 @@ function UnreadBadge({
   if (!count) return null;
   return (
     <span
-      className={`grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-caption font-semibold text-on-accent ${className}`}
+      className={`grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-caption font-semibold ${className || "bg-accent text-on-accent"}`}
     >
       <span className="sr-only">
         {count} {label}
@@ -150,21 +147,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const courses = [...new Map(user.sections.map((s) => [s.course_code, s])).values()];
   const teaches = user.sections.some((s) => s.teaching);
   const isAdmin = user.roles.includes("institution_admin");
-  const nav = [
-    ...baseNav.slice(0, 2),
-    ...(teaches ? [{ href: "/sections", label: "Sections", Icon: SectionsIcon }] : []),
-    ...baseNav.slice(2),
+  const nav: NavItem[] = [
+    { href: "/today", label: "Today", Icon: TodayIcon, group: "Overview" },
+    { href: "/timetable", label: "Timetable", Icon: TimetableIcon, group: "Overview" },
+    { href: "/calendar", label: "Calendar", Icon: CalendarIcon, group: "Overview" },
+    ...(teaches ? [{ href: "/sections", label: "Sections", Icon: SectionsIcon, group: "Academics" as const }] : []),
+    { href: "/assignments", label: "Assignments", Icon: AssignmentsIcon, group: "Academics" },
+    { href: "/resources", label: "Resources", Icon: ResourcesIcon, group: "Academics" },
     ...(teaches && user.institution?.attendance_enabled
-      ? [{ href: "/attendance", label: "Attendance", Icon: ChecklistIcon }]
+      ? [{ href: "/attendance", label: "Attendance", Icon: ChecklistIcon, group: "Academics" as const }]
       : []),
-    ...(user.kind === "student" ? [{ href: "/progress", label: "Progress", Icon: ProgressIcon }] : []),
+    ...(user.kind === "student"
+      ? [{ href: "/progress", label: "Progress", Icon: ProgressIcon, group: "Academics" as const }]
+      : []),
+    { href: "/feed", label: "Feed", Icon: FeedIcon, group: "Community" },
+    { href: "/chat", label: "Chat", Icon: ChatIcon, group: "Community" },
+    { href: "/notices", label: "Notices", Icon: NoticesIcon, group: "Community" },
+    { href: "/notifications", label: "Notifications", Icon: BellIcon, group: "Community" },
     ...(moderation?.can_moderate
-      ? [{ href: "/moderation", label: "Moderation", Icon: FlagIcon }]
+      ? [{ href: "/moderation", label: "Moderation", Icon: FlagIcon, group: "Administration" as const }]
       : []),
     ...(isAdmin
-      ? [{ href: "/manage", label: "Manage", Icon: ManageIcon }]
+      ? [{ href: "/manage", label: "Manage", Icon: ManageIcon, group: "Administration" as const }]
       : user.roles.includes("department_coordinator")
-        ? [{ href: "/manage/academic", label: "Courses", Icon: ManageIcon }]
+        ? [{ href: "/manage/academic", label: "Courses", Icon: ManageIcon, group: "Administration" as const }]
         : []),
   ];
   // Phones get four tabs; everything else sits under More.
@@ -175,74 +181,95 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const initials = `${(user.preferred_name || user.first_name)[0] ?? ""}${user.last_name[0] ?? ""}` || user.email[0];
 
   return (
-    <div className="min-h-screen md:flex md:gap-5 md:p-5">
+    <div className="min-h-screen md:flex">
       <nav
         aria-label="Main"
-        className="glass-side sticky top-5 hidden h-[calc(100vh-2.5rem)] w-64 shrink-0 flex-col gap-5 rounded-card px-3 py-5 md:flex"
+        className="side sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r border-side-line px-3.5 py-5 md:flex"
       >
-        <div className="flex items-center gap-2.5 px-2">
-          <LogoMark className="size-[34px]" />
-          <span className="text-headline font-semibold">CampusVerse</span>
+        <div className="flex items-center gap-3 border-b border-side-line px-1.5 pb-4">
+          <LogoMark className="size-9" />
+          <span className="min-w-0">
+            <span className="block text-headline font-bold text-white">CampusVerse</span>
+            <span className="block truncate text-caption text-side-muted">
+              {user.institution?.name ?? "No institution"}
+            </span>
+          </span>
         </div>
 
         <Link
           href="/search"
           aria-label="Search (Ctrl K)"
-          className="press -mt-1 flex h-10 items-center gap-2.5 rounded-control bg-fill px-3 text-body text-ink-2 hover:bg-fill-strong"
+          className="flex h-10 items-center gap-2.5 rounded-control border border-white/10 bg-white/[0.06] px-3 text-footnote text-side-muted transition-colors hover:bg-white/[0.12] hover:text-white"
         >
           <SearchIcon className="size-[18px]" />
           <span className="flex-1">Search</span>
-          <kbd className="rounded-md bg-fill-strong px-1.5 py-px font-sans text-caption font-semibold text-ink">Ctrl K</kbd>
+          <kbd className="rounded-md border border-white/15 bg-white/10 px-1.5 py-px font-sans text-caption font-semibold text-side-ink">
+            Ctrl K
+          </kbd>
         </Link>
 
-        <ul className="flex flex-col gap-0.5">
-          {nav.map(({ href, label, Icon }) => (
-            <li key={href}>
-              <Link
-                href={href}
-                aria-current={isActive(href) ? "page" : undefined}
-                className={`press flex h-10 items-center gap-3 rounded-control px-3 text-body font-medium ${
-                  isActive(href) ? "bg-fill-strong text-accent-ink" : "hover:bg-fill"
-                }`}
-              >
-                <Icon className="size-5" />
-                <span className="flex-1">{label}</span>
-                <UnreadBadge count={badgeFor(href)} label={badgeLabel(href)} />
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {NAV_GROUPS.map((group) => {
+          const items = nav.filter((n) => n.group === group);
+          if (!items.length) return null;
+          return (
+            <div key={group}>
+              <p className="px-3 pb-1.5 text-caption font-semibold text-side-muted">{group}</p>
+              <ul className="flex flex-col gap-0.5">
+                {items.map(({ href, label, Icon }) => {
+                  const active = isActive(href);
+                  return (
+                    <li key={href}>
+                      <Link
+                        href={href}
+                        aria-current={active ? "page" : undefined}
+                        className={`group flex h-10 items-center gap-3 rounded-control px-3 text-footnote font-semibold transition-colors ${
+                          active ? "bg-side-active text-white" : "text-side-ink hover:bg-side-hover hover:text-white"
+                        }`}
+                      >
+                        <Icon className={`size-[18px] ${active ? "text-white" : "text-side-icon group-hover:text-white"}`} />
+                        <span className="flex-1">{label}</span>
+                        <UnreadBadge
+                          count={badgeFor(href)}
+                          label={badgeLabel(href)}
+                          className={active ? "bg-white text-side-active" : "bg-side-active text-white"}
+                        />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
 
         {courses.length > 0 && (
           <div>
-            <p className="mb-1.5 px-3 text-caption font-semibold text-ink-3">Your courses</p>
+            <p className="px-3 pb-1.5 text-caption font-semibold text-side-muted">Your courses</p>
             <ul className="flex flex-col gap-0.5">
               {courses.map((c) => (
-                <li key={c.course_code} className="flex h-9 items-center gap-3 px-3 text-footnote">
-                  <span className={`size-3 rounded ${courseBg[c.color]}`} aria-hidden="true" />
-                  <span className="min-w-0 flex-1 truncate">{c.course_title}</span>
-                  <span className="text-caption text-ink-3">{c.course_code}</span>
+                <li key={c.course_code} className="flex h-8 items-center gap-2.5 px-3 text-caption">
+                  <span className={`size-2 shrink-0 rounded-full ${courseBg[c.color]}`} aria-hidden="true" />
+                  <span className="shrink-0 font-semibold text-white">{c.course_code}</span>
+                  <span className="min-w-0 flex-1 truncate text-side-muted">{c.course_title}</span>
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        <div className="mt-auto flex items-center gap-1 rounded-row bg-fill p-1.5">
+        <div className="mt-auto flex items-center gap-1 border-t border-side-line pt-3">
           <Link
             href="/profile"
             aria-current={isActive("/profile") ? "page" : undefined}
             title="Your profile"
-            className="press flex min-w-0 flex-1 items-center gap-2.5 rounded-[12px] p-1 hover:bg-fill-strong"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-control p-1.5 transition-colors hover:bg-side-hover"
           >
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent/15 text-footnote font-semibold text-accent-ink">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full border border-side-active bg-side-avatar text-footnote font-bold text-side-avatar-ink">
               {initials.toUpperCase()}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-footnote font-semibold">{user.full_name}</span>
-              <span className="block truncate text-caption text-ink-2">
-                {user.institution?.name ?? "No institution"}
-              </span>
+              <span className="block truncate text-footnote font-semibold text-white">{user.full_name}</span>
+              <span className="block truncate text-caption capitalize text-side-muted">{user.kind}</span>
             </span>
           </Link>
           <button
@@ -250,14 +277,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             disabled={signingOut}
             aria-label="Sign out"
             title="Sign out"
-            className="press grid size-9 place-items-center rounded-full text-ink-2 hover:bg-fill-strong"
+            className="grid size-9 place-items-center rounded-control text-side-muted transition-colors hover:bg-danger/20 hover:text-white"
           >
             <SignOutIcon className="size-5" />
           </button>
         </div>
       </nav>
 
-      <main className="min-w-0 flex-1 px-4 pb-32 pt-8 md:px-2 md:pb-8 md:pt-3">{children}</main>
+      <main className="min-w-0 flex-1 px-4 pb-28 pt-6 md:px-8 md:pb-10 md:pt-7">{children}</main>
 
       {moreOpen && (
         <>
@@ -268,7 +295,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
           <div
             id="more-menu"
-            className="glass-thick arrive fixed right-4 bottom-24 z-20 flex w-56 origin-bottom-right flex-col rounded-[22px] p-1.5 md:hidden"
+            className="glass-thick arrive fixed right-3 bottom-20 z-20 flex w-56 origin-bottom-right flex-col rounded-card p-1.5 md:hidden"
           >
             {secondaryNav.map(({ href, label, Icon }) => (
               <Link
@@ -276,7 +303,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={href}
                 onClick={() => setMoreOpen(false)}
                 aria-current={isActive(href) ? "page" : undefined}
-                className={`press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium ${
+                className={`press flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium hover:bg-fill ${
                   isActive(href) ? "bg-fill-strong text-accent-ink" : ""
                 }`}
               >
@@ -289,7 +316,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href="/search"
               onClick={() => setMoreOpen(false)}
               aria-current={isActive("/search") ? "page" : undefined}
-              className={`press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium ${
+              className={`press flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium hover:bg-fill ${
                 isActive("/search") ? "bg-fill-strong text-accent-ink" : ""
               }`}
             >
@@ -300,7 +327,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href="/profile"
               onClick={() => setMoreOpen(false)}
               aria-current={isActive("/profile") ? "page" : undefined}
-              className={`press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium ${
+              className={`press flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium hover:bg-fill ${
                 isActive("/profile") ? "bg-fill-strong text-accent-ink" : ""
               }`}
             >
@@ -310,7 +337,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               onClick={handleSignOut}
               disabled={signingOut}
-              className="press flex h-11 items-center gap-3 rounded-[16px] px-3 text-body font-medium text-danger-ink"
+              className="press flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium hover:bg-fill text-danger-ink"
             >
               <SignOutIcon className="size-5" />
               Sign out
@@ -321,35 +348,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Tabs"
-        className="glass-thick fixed inset-x-4 bottom-5 z-20 flex rounded-full p-1 md:hidden"
+        className="side fixed inset-x-0 bottom-0 z-20 flex border-t border-side-line px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] md:hidden"
       >
         {primaryNav.map(({ href, label, Icon }) => (
           <Link
             key={href}
             href={href}
             aria-current={isActive(href) ? "page" : undefined}
-            className={`press relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold ${
-              isActive(href) ? "bg-fill-strong text-accent-ink" : "text-ink-2"
+            className={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-control text-[11px] font-semibold ${
+              isActive(href) ? "text-side-avatar-ink" : "text-side-muted"
             }`}
           >
             <Icon className="size-[22px]" />
             <span className="max-w-full truncate">{label}</span>
-            <UnreadBadge count={badgeFor(href)} label={badgeLabel(href)} className="absolute top-1 left-1/2" />
+            <UnreadBadge
+              count={badgeFor(href)}
+              label={badgeLabel(href)}
+              className="absolute top-0.5 left-1/2 bg-side-active text-white"
+            />
           </Link>
         ))}
         <button
           onClick={() => setMoreOpen((o) => !o)}
           aria-expanded={moreOpen}
           aria-controls="more-menu"
-          className={`press relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-semibold ${
-            moreOpen || secondaryNav.some((n) => isActive(n.href)) ? "bg-fill-strong text-accent-ink" : "text-ink-2"
+          className={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-control text-[11px] font-semibold ${
+            moreOpen || secondaryNav.some((n) => isActive(n.href)) ? "text-side-avatar-ink" : "text-side-muted"
           }`}
         >
           <MoreIcon className="size-[22px]" />
           More
           <UnreadBadge
             count={secondaryNav.reduce((sum, n) => sum + badgeFor(n.href), 0)}
-            className="absolute top-1 left-1/2"
+            className="absolute top-0.5 left-1/2 bg-side-active text-white"
           />
         </button>
       </nav>

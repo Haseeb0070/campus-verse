@@ -1,34 +1,39 @@
 @import "tailwindcss";
 
-/* CampusVerse Glass design tokens. Components use the Tailwind names in @theme below
-   (bg-surface, text-ink-2, rounded-card, text-large-title...), never raw hex values. */
+/* CampusVerse Portal design tokens: a deep navy sidebar, solid white cards on a cool slate
+   ground, royal blue for actions, and a matching navy dark mode. Components use the Tailwind
+   names in @theme below (bg-surface, text-ink-2, rounded-card, text-large-title...), never raw
+   hex values. */
 
 :root {
-  --cv-bg: #eef0f5;
-  --cv-surface: rgb(255 255 255 / 0.82);
-  --cv-surface-side: rgb(255 255 255 / 0.5);
-  --cv-surface-thick: rgb(255 255 255 / 0.78);
-  --cv-fill: rgb(118 128 150 / 0.1);
-  --cv-fill-strong: rgb(118 128 150 / 0.14);
-  --cv-rim: rgb(255 255 255 / 0.75);
-  --cv-rim-top: rgb(255 255 255 / 0.95);
-  --cv-shadow: 0 14px 36px -16px rgb(28 38 84 / 0.25);
-  --cv-divider: rgb(17 19 24 / 0.07);
+  --cv-bg: #edf2f8;
+  --cv-surface: #ffffff;
+  --cv-surface-thick: #ffffff;
+  --cv-side: #0b1329;
+  --cv-side-line: rgb(255 255 255 / 0.08);
+  --cv-hero: #13213f;
+  --cv-hero-line: #22345e;
+  --cv-fill: #f1f5fa;
+  --cv-fill-strong: #e3ebf6;
+  --cv-rim: #dbe4ef;
+  --cv-shadow: 0 1px 3px rgb(15 23 42 / 0.06);
+  --cv-shadow-pop: 0 10px 24px -6px rgb(15 23 42 / 0.16);
+  --cv-divider: rgb(15 23 42 / 0.08);
 
-  --cv-ink: #111318;
-  --cv-ink-2: #5d6270;
-  --cv-ink-3: #5f6474;
+  --cv-ink: #0f172a;
+  --cv-ink-2: #475569;
+  --cv-ink-3: #5b6b82;
 
-  --cv-accent: #335cff;
-  --cv-accent-ink: #2747d6; /* text on light tints; buttons keep --cv-accent */
+  --cv-accent: #1d4ed8;
+  --cv-accent-ink: #1e40af; /* text on light tints; buttons keep --cv-accent */
   --cv-on-accent: #ffffff;
-  --cv-success: #22b35e;
-  --cv-warning: #e8a100;
-  --cv-danger: #e0244e;
+  --cv-success: #059669;
+  --cv-warning: #d97706;
+  --cv-danger: #dc2626;
   /* Status colours as text: darker in light mode so they pass 4.5:1 on their own tints. */
-  --cv-success-ink: #0b6b3c;
-  --cv-warning-ink: #9a5b00;
-  --cv-danger-ink: #b01a3e;
+  --cv-success-ink: #065f46;
+  --cv-warning-ink: #92400e;
+  --cv-danger-ink: #991b1b;
 
   /* Tells the browser and OS which theme native UI should use: select popups, date and
      time pickers, number spinners, checkboxes and scrollbars. Without it, dark mode gets
@@ -40,53 +45,59 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --cv-bg: #0b0c10;
-    --cv-surface: rgb(32 34 43 / 0.86);
-    --cv-surface-side: rgb(18 19 25 / 0.92);
-    --cv-surface-thick: rgb(38 42 54 / 0.72);
-    --cv-fill: rgb(255 255 255 / 0.08);
-    --cv-fill-strong: rgb(255 255 255 / 0.12);
-    --cv-rim: rgb(255 255 255 / 0.09);
-    --cv-rim-top: rgb(255 255 255 / 0.08);
-    --cv-shadow: 0 20px 44px -18px rgb(0 0 0 / 0.65);
-    --cv-divider: rgb(255 255 255 / 0.08);
-    --cv-ink: #f2f4f8;
-    --cv-ink-2: #b8bec9;
-    --cv-ink-3: #a0a7b6;
-    --cv-accent: #3d5cff;
-    --cv-accent-ink: #94a6ff;
-    --cv-success: #34d27a;
-    --cv-warning: #f2b632;
-    --cv-danger: #ff5468;
-    --cv-success-ink: #34d27a;
-    --cv-warning-ink: #f2b632;
-    --cv-danger-ink: #ff8a99;
+    --cv-bg: #0d1424;
+    --cv-surface: #141d31;
+    --cv-surface-thick: #18223a;
+    --cv-side: #0a1020;
+    --cv-side-line: rgb(255 255 255 / 0.06);
+    --cv-hero: #1b2c55;
+    --cv-hero-line: #2b4378;
+    --cv-fill: #1a2440;
+    --cv-fill-strong: #213052;
+    --cv-rim: #243150;
+    --cv-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+    --cv-shadow-pop: 0 12px 28px -6px rgb(0 0 0 / 0.55);
+    --cv-divider: rgb(255 255 255 / 0.07);
+    --cv-ink: #e9eef8;
+    --cv-ink-2: #c0c9dc;
+    --cv-ink-3: #95a1ba;
+    --cv-accent: #3a6ee8;
+    --cv-accent-ink: #a8c2ff;
+    --cv-success: #22a06b;
+    --cv-warning: #e0a03a;
+    --cv-danger: #e5484d;
+    --cv-success-ink: #7fe0b0;
+    --cv-warning-ink: #f6c76a;
+    --cv-danger-ink: #ff9aa2;
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --cv-bg: #0b0c10;
-  --cv-surface: rgb(32 34 43 / 0.86);
-  --cv-surface-side: rgb(18 19 25 / 0.92);
-  --cv-surface-thick: rgb(38 42 54 / 0.72);
-  --cv-fill: rgb(255 255 255 / 0.08);
-  --cv-fill-strong: rgb(255 255 255 / 0.12);
-  --cv-rim: rgb(255 255 255 / 0.09);
-  --cv-rim-top: rgb(255 255 255 / 0.08);
-  --cv-shadow: 0 20px 44px -18px rgb(0 0 0 / 0.65);
-  --cv-divider: rgb(255 255 255 / 0.08);
-  --cv-ink: #f2f4f8;
-  --cv-ink-2: #b8bec9;
-  --cv-ink-3: #a0a7b6;
-  --cv-accent: #3d5cff;
-  --cv-accent-ink: #94a6ff;
-  --cv-success: #34d27a;
-  --cv-warning: #f2b632;
-  --cv-danger: #ff5468;
-  --cv-success-ink: #34d27a;
-  --cv-warning-ink: #f2b632;
-  --cv-danger-ink: #ff8a99;
+  --cv-bg: #0d1424;
+  --cv-surface: #141d31;
+  --cv-surface-thick: #18223a;
+  --cv-side: #0a1020;
+  --cv-side-line: rgb(255 255 255 / 0.06);
+  --cv-hero: #1b2c55;
+  --cv-hero-line: #2b4378;
+  --cv-fill: #1a2440;
+  --cv-fill-strong: #213052;
+  --cv-rim: #243150;
+  --cv-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  --cv-shadow-pop: 0 12px 28px -6px rgb(0 0 0 / 0.55);
+  --cv-divider: rgb(255 255 255 / 0.07);
+  --cv-ink: #e9eef8;
+  --cv-ink-2: #c0c9dc;
+  --cv-ink-3: #95a1ba;
+  --cv-accent: #3a6ee8;
+  --cv-accent-ink: #a8c2ff;
+  --cv-success: #22a06b;
+  --cv-warning: #e0a03a;
+  --cv-danger: #e5484d;
+  --cv-success-ink: #7fe0b0;
+  --cv-warning-ink: #f6c76a;
+  --cv-danger-ink: #ff9aa2;
 }
 
 @theme inline {
@@ -107,6 +118,26 @@
   --color-success-ink: var(--cv-success-ink);
   --color-warning-ink: var(--cv-warning-ink);
   --color-danger-ink: var(--cv-danger-ink);
+  --color-side: var(--cv-side);
+  --color-side-line: var(--cv-side-line);
+  --color-hero: var(--cv-hero);
+  --color-hero-line: var(--cv-hero-line);
+  --color-rim: var(--cv-rim);
+  /* The sidebar and phone tab bar stay navy in both themes, so their inks are fixed. */
+  --color-side-ink: #e2e8f0;
+  --color-side-muted: #8b99b6;
+  --color-side-icon: #8fa2c7;
+  --color-side-hover: rgb(255 255 255 / 0.08);
+  --color-side-active: #2f5fd6;
+  --color-side-avatar: #1e3a8a;
+  --color-side-avatar-ink: #bfd3ff;
+  /* Solid tiles on the Today stat cards, and ink for white buttons on the navy hero. */
+  --color-tone-blue: #2563eb;
+  --color-tone-amber: #d97706;
+  --color-tone-green: #059669;
+  --color-tone-violet: #7c3aed;
+  --color-hero-ink: #0f172a;
+  --color-on-warning: #1f1300;
 
   /* Course colours: one per course, used everywhere that course appears. */
   --color-course-lagoon: #12a4a6;
@@ -118,19 +149,19 @@
   --color-course-gold: #c9962b;
   --color-course-slate: #6b7489;
 
-  /* System font first (SF Pro on Apple, Segoe UI on Windows). */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI",
-    system-ui, sans-serif;
+  /* Plus Jakarta Sans (bundled, imported in the root layout), then the system font. */
+  --font-sans: "Plus Jakarta Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
 
   /* Type scale: tracking tightens as size grows, leading loosens as it shrinks. */
-  --text-large-title: 2.75rem;
-  --text-large-title--line-height: 1.05;
-  --text-large-title--letter-spacing: -0.03em;
-  --text-title-1: 2rem;
-  --text-title-1--line-height: 1.1;
-  --text-title-1--letter-spacing: -0.025em;
-  --text-title-2: 1.375rem;
-  --text-title-2--line-height: 1.2;
+  --text-large-title: 1.85rem;
+  --text-large-title--line-height: 1.15;
+  --text-large-title--letter-spacing: -0.025em;
+  --text-title-1: 1.6rem;
+  --text-title-1--line-height: 1.2;
+  --text-title-1--letter-spacing: -0.02em;
+  --text-title-2: 1.125rem;
+  --text-title-2--line-height: 1.3;
   --text-title-2--letter-spacing: -0.02em;
   --text-headline: 1.0625rem;
   --text-headline--line-height: 1.3;
@@ -144,33 +175,28 @@
   --text-caption--letter-spacing: 0.01em;
 
   --radius-control: 12px;
-  --radius-row: 16px;
-  --radius-card: 28px;
+  --radius-row: 12px;
+  --radius-card: 20px;
 }
 
-/* Materials: weight encodes hierarchy. Never stack glass on glass. */
+/* Surfaces: solid cards with a hairline edge (the names stay "glass" so every page keeps
+   working). glass is a card, glass-thick is anything that floats (menus, popovers, toasts),
+   side is the navy sidebar and phone tab bar. */
 @utility glass {
   background: var(--cv-surface);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  backdrop-filter: blur(30px) saturate(180%);
   border: 1px solid var(--cv-rim);
-  box-shadow: inset 0 1px 0 var(--cv-rim-top), var(--cv-shadow);
-}
-
-@utility glass-side {
-  background: var(--cv-surface-side);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid var(--cv-rim);
-  box-shadow: inset 0 1px 0 var(--cv-rim-top);
+  box-shadow: var(--cv-shadow);
 }
 
 @utility glass-thick {
   background: var(--cv-surface-thick);
-  -webkit-backdrop-filter: blur(36px) saturate(190%);
-  backdrop-filter: blur(36px) saturate(190%);
   border: 1px solid var(--cv-rim);
-  box-shadow: inset 0 1px 0 var(--cv-rim-top), var(--cv-shadow);
+  box-shadow: var(--cv-shadow-pop);
+}
+
+@utility side {
+  background: var(--cv-side);
+  color: #e2e8f0;
 }
 
 /* Feedback on press, instantly (respond on pointer-down, not on release). */
@@ -233,16 +259,6 @@
   }
   .pulse-dot {
     animation: none;
-  }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .glass,
-  .glass-side,
-  .glass-thick {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background: var(--cv-bg);
   }
 }
 
