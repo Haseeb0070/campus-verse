@@ -74,6 +74,12 @@ def test_declining_closes_it_and_hides_it_from_the_decliner(campus):
     send(campus.ayesha, conv, "Thanks for getting back to me")
 
 
+def test_teachers_and_staff_come_first_in_new_message(campus):
+    kinds = [u.kind for u in services.contacts(campus.ayesha)]
+    assert kinds[0] == "teacher"
+    assert kinds == sorted(kinds, key=["teacher", "staff", "student"].index)
+
+
 def test_section_chats_are_never_requests(campus):
     services.ensure_section_conversations(campus.ayesha)
     section_chat = Conversation.objects.get(section=campus.s3b)

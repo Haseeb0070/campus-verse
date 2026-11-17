@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.utils import timezone
 
 from apps.academic.models import Section
@@ -281,7 +281,14 @@ def contacts(user, q: str = "", limit: int = 20) -> list:
             Q(first_name__icontains=q) | Q(last_name__icontains=q)
             | Q(preferred_name__icontains=q) | Q(email__icontains=q)
         )
-    return list(qs.order_by("first_name", "last_name")[: max(1, min(limit, 50))])
+    # Teachers and staff first, so they show before the list fills up with classmates.
+    rank = Case(
+        When(kind=User.Kind.TEACHER, then=Value(0)),
+        When(kind=User.Kind.STAFF, then=Value(1)),
+        default=Value(2),
+        output_field=IntegerField(),
+    )
+    return list(qs.order_by(rank, "first_name", "last_name")[: max(1, min(limit, 50))])
 
 
 def start_direct(user, other) -> Conversation:
