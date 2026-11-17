@@ -5,6 +5,7 @@ import { AssignmentStatusChip } from "@/components/assignment-status";
 import { courseBg, formatDateTime } from "@/lib/format";
 import { useAssignments, useMe } from "@/lib/queries";
 import type { Assignment } from "@/lib/types";
+import { PageTitle } from "@/components/page-title";
 
 function Row({ a, tz }: { a: Assignment; tz?: string }) {
   return (
@@ -49,7 +50,7 @@ export default function AssignmentsPage() {
           <p className="text-body font-semibold text-ink-2">
             {teaches ? "Work you've set and work you're doing" : "Coursework for your sections"}
           </p>
-          <h1 className="mt-1 text-large-title font-bold">Assignments</h1>
+          <PageTitle className="mt-1 text-large-title font-bold" text="Assignments" />
         </div>
         {teaches && (
           <Link

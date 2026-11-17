@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { CheckIcon, ChevronDownIcon } from "./icons";
 import { useAnchoredPopover } from "./use-anchored-popover";
 
@@ -23,7 +23,9 @@ interface SelectProps {
 }
 
 /** A themed replacement for <select>: a glass menu in the browser's top layer (so it also works
-    inside modal dialogs), keyboard-driven like a native list box, with type-to-jump. */
+    inside modal dialogs), keyboard-driven like a native list box, with type-to-jump. Motion after
+    React Bits' GlideSelect: the menu pops from its corner, and one highlight glides between rows
+    (rows can differ in height, so it is measured from the row, not a fixed step). */
 export function Select({
   value,
   onChange,
@@ -60,6 +62,23 @@ export function Select({
     if (option && option.value !== value) onChange(option.value);
     close();
   }
+
+  // The gliding highlight. It jumps into place when the menu opens and glides after that.
+  const pillRef = useRef<HTMLSpanElement>(null);
+  const placed = useRef(false);
+  useLayoutEffect(() => {
+    const pill = pillRef.current;
+    const row = listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`);
+    if (!open || !pill || !row) {
+      placed.current = false;
+      return;
+    }
+    pill.style.transitionDuration = placed.current ? "" : "0ms";
+    pill.style.transform = `translateY(${row.offsetTop}px)`;
+    pill.style.height = `${row.offsetHeight}px`;
+    pill.style.opacity = "1";
+    placed.current = true;
+  }, [open, active, listRef]);
 
   useEffect(() => {
     if (open) listRef.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
@@ -153,8 +172,13 @@ export function Select({
         onClick={(e) => e.preventDefault()}
         onToggle={popover.onToggle}
         style={place}
-        className="glass-thick menu-pop fixed inset-auto m-0 overflow-y-auto rounded-[14px] p-1 text-body text-ink outline-none"
+        className="glass-thick glide-pop fixed inset-auto m-0 overflow-y-auto rounded-[14px] p-1 text-body text-ink outline-none"
       >
+        <span
+          ref={pillRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-1 top-0 rounded-[9px] bg-accent opacity-0 [transition:transform_220ms_cubic-bezier(0.23,1,0.32,1),height_220ms_cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
+        />
         {open &&
           options.map((o, i) => {
             const isActive = i === active;
@@ -168,8 +192,8 @@ export function Select({
                 aria-selected={isSelected}
                 onPointerMove={() => setActive(i)}
                 onClick={() => choose(i)}
-                className={`flex min-h-9 cursor-default select-none items-center gap-2 rounded-[9px] py-1.5 pr-3 pl-2 ${
-                  isActive ? "bg-accent text-on-accent" : ""
+                className={`relative flex min-h-9 cursor-default select-none items-center gap-2 rounded-[9px] py-1.5 pr-3 pl-2 transition-colors duration-150 ${
+                  isActive ? "text-on-accent" : ""
                 }`}
               >
                 <CheckIcon className={`size-4 shrink-0 ${isSelected ? "" : "invisible"}`} />

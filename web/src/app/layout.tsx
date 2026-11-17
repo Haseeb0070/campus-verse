@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 // Plus Jakarta Sans ships with the app (no build-time fetch from Google Fonts).
 import "@fontsource-variable/plus-jakarta-sans";
+import "@fontsource-variable/newsreader";
 import "./globals.css";
 import { Providers } from "./providers";
 

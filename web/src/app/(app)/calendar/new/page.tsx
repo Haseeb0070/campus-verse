@@ -8,6 +8,7 @@ import { ChevronLeftIcon } from "@/components/icons";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { useEventAudiences } from "@/lib/events";
 import type { CampusEvent } from "@/lib/events";
+import { PageTitle } from "@/components/page-title";
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function NewEventPage() {
         <Link href="/calendar" className="inline-flex items-center gap-1 text-footnote font-semibold text-accent-ink">
           <ChevronLeftIcon className="size-4" /> Calendar
         </Link>
-        <h1 className="mt-1 text-large-title font-bold">Add an event</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Add an event" />
       </header>
       {audiences.isSuccess && audiences.data.length === 0 ? (
         <div className="glass rounded-card p-6">

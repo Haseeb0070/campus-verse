@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useConversations } from "@/lib/chat";
 import { courseBg } from "@/lib/format";
 import { useTeaching } from "@/lib/queries";
+import { PageTitle } from "@/components/page-title";
 
 export default function SectionsPage() {
   const sections = useTeaching();
@@ -15,7 +16,7 @@ export default function SectionsPage() {
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <header>
         <p className="text-body font-semibold text-ink-2">Sections you teach</p>
-        <h1 className="mt-1 text-large-title font-bold">My sections</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="My sections" />
       </header>
 
       {sections.isPending && <p className="text-body text-ink-2">Loading…</p>}

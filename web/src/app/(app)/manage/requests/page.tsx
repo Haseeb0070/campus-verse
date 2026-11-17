@@ -6,6 +6,7 @@ import { apiFetch, errorDetail } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 import { useCorrectionQueue } from "@/lib/profile";
 import type { ManagedCorrection } from "@/lib/profile";
+import { PageTitle } from "@/components/page-title";
 
 function RequestRow({ c }: { c: ManagedCorrection }) {
   const queryClient = useQueryClient();
@@ -74,7 +75,7 @@ export default function RequestsPage() {
     <div className="flex flex-col gap-5">
       <header>
         <p className="text-body font-semibold text-ink-2">People asking to fix their records</p>
-        <h1 className="mt-1 text-large-title font-bold">Requests</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Requests" />
       </header>
       {queue.isPending && <p className="text-body text-ink-2">Loading…</p>}
       {queue.isSuccess && items.length === 0 && (

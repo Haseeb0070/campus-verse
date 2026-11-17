@@ -7,6 +7,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { addDays, formatDay, relativeTime, startOfWeek, todayIn } from "@/lib/format";
 import { useMe, useTimetable } from "@/lib/queries";
 import type { Occurrence } from "@/lib/types";
+import { PageTitle } from "@/components/page-title";
 
 export default function TimetablePage() {
   const me = useMe();
@@ -38,7 +39,7 @@ export default function TimetablePage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-body font-semibold text-ink-2">{rangeLabel}</p>
-          <h1 className="mt-1 text-large-title font-bold">Timetable</h1>
+          <PageTitle className="mt-1 text-large-title font-bold" text="Timetable" />
         </div>
         <div className="glass flex items-center gap-1 rounded-full p-1">
           <button

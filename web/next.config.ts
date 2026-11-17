@@ -5,6 +5,8 @@ import type { NextConfig } from "next";
 const backend = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
+  // Load only the parts of the animation library each page uses, not the whole package.
+  experimental: { optimizePackageImports: ["motion"] },
   async rewrites() {
     return [
       { source: "/api/:path*", destination: `${backend}/api/:path*` },

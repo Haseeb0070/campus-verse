@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatedNumber } from "@/components/animated-number";
 
 /** Clean axis maximum: 1, 2, 5, 10, 20, 50… at or above the data's maximum. */
 function niceMax(value: number) {
@@ -77,9 +78,9 @@ export function ColumnChart({
                       className="absolute inset-0 rounded-[6px] outline-offset-0 hover:bg-fill focus-visible:bg-fill"
                     />
                     <span aria-hidden="true"
-                      className={`pointer-events-none relative w-full max-w-6 rounded-t-[4px] bg-accent transition-opacity ${
+                      className={`pointer-events-none grow-y relative w-full max-w-6 rounded-t-[4px] bg-accent transition-opacity ${
                         active !== null && active !== i ? "opacity-60" : ""}`}
-                      style={{ height: `${height}%`, minHeight: p.value ? 2 : 0 }} />
+                      style={{ height: `${height}%`, minHeight: p.value ? 2 : 0, animationDelay: `${i * 25}ms` }} />
                     {i === last && p.value > 0 && active === null && (
                       <span aria-hidden="true" className="pointer-events-none absolute text-caption font-semibold tabular-nums"
                         style={{ bottom: `calc(${height}% + 4px)` }}>
@@ -121,7 +122,7 @@ export function Meter({ value, label }: { value: number | null; label: string })
       <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-accent/15" role="meter"
         aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value ?? undefined}>
         {value !== null && (
-          <span className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${Math.min(100, value)}%` }} />
+          <span className="grow-x absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${Math.min(100, value)}%` }} />
         )}
       </span>
       <span className="w-11 text-right text-footnote font-semibold tabular-nums">{value === null ? "–" : `${value}%`}</span>
@@ -134,7 +135,9 @@ export function StatTile({ label, value, detail }: { label: string; value: strin
   return (
     <div className="glass rounded-card p-5">
       <p className="text-footnote font-semibold text-ink-2">{label}</p>
-      <p className="mt-1 text-title-1 font-bold">{value}</p>
+      <p className="mt-1 text-title-1 font-bold">
+        <AnimatedNumber value={value} />
+      </p>
       {detail && <p className="text-footnote text-ink-2">{detail}</p>}
     </div>
   );

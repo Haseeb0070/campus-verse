@@ -8,6 +8,7 @@ import { ChevronLeftIcon } from "@/components/icons";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { useEvent } from "@/lib/events";
 import type { CampusEvent } from "@/lib/events";
+import { PageTitle } from "@/components/page-title";
 
 export default function EditEventPage() {
   const id = Number(useParams<{ id: string }>().id);
@@ -21,7 +22,7 @@ export default function EditEventPage() {
         <Link href={`/calendar/${id}`} className="inline-flex items-center gap-1 text-footnote font-semibold text-accent-ink">
           <ChevronLeftIcon className="size-4" /> Back to the event
         </Link>
-        <h1 className="mt-1 text-large-title font-bold">Edit event</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Edit event" />
       </header>
       {event.isPending && <p className="text-body text-ink-2">Loading…</p>}
       {event.data && !event.data.can_manage && (

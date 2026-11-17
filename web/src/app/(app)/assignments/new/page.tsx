@@ -11,6 +11,7 @@ import { useTeaching, useUploadRules } from "@/lib/queries";
 import type { Assignment } from "@/lib/types";
 import { DateTimeField } from "@/components/date-picker";
 import { Select } from "@/components/select";
+import { PageTitle } from "@/components/page-title";
 
 const types = [
   { value: "file", label: "Files" },
@@ -104,7 +105,7 @@ export default function NewAssignmentPage() {
         <Link href="/assignments" className="inline-flex items-center gap-1 text-footnote font-semibold text-accent-ink">
           <ChevronLeftIcon className="size-4" /> Assignments
         </Link>
-        <h1 className="mt-1 text-large-title font-bold">New assignment</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="New assignment" />
       </header>
 
       <form

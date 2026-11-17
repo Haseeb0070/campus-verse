@@ -1,11 +1,13 @@
 "use client";
 
+import { ChipGroup } from "@/components/chip-group";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { ColumnChart, Meter, StatTile } from "@/components/charts";
 import { apiFetch } from "@/lib/api";
 import { formatDay, relativeTime } from "@/lib/format";
+import { PageTitle } from "@/components/page-title";
 
 interface Reports {
   days: number;
@@ -52,19 +54,13 @@ export default function ReportsPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-body font-semibold text-ink-2">Counts and rates only, never who did what</p>
-          <h1 className="mt-1 text-large-title font-bold">Reports</h1>
+          <PageTitle className="mt-1 text-large-title font-bold" text="Reports" />
         </div>
       </header>
 
       {/* One filter, above everything it scopes, so every number agrees. */}
-      <div role="radiogroup" aria-label="Period" className="glass flex self-start rounded-full p-1">
-        {PERIODS.map((d) => (
-          <button key={d} role="radio" aria-checked={days === d} onClick={() => setDays(d)}
-            className={`h-9 rounded-full px-4 text-footnote font-semibold ${days === d ? "bg-accent text-on-accent" : "text-ink-2"}`}>
-            Last {d} days
-          </button>
-        ))}
-      </div>
+      <ChipGroup label="Period" className="self-start" value={String(days)} onChange={(d) => setDays(Number(d))}
+        options={PERIODS.map((d) => ({ value: String(d), label: `Last ${d} days` }))} />
 
       {report.isPending && <p className="text-body text-ink-2">Loading…</p>}
       {r && (

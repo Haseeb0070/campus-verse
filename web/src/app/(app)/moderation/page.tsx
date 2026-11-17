@@ -6,6 +6,7 @@ import { useState } from "react";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { type QueuedReport, reasonLabels, useModerationSummary, useReports } from "@/lib/feed";
 import { relativeTime } from "@/lib/format";
+import { PageTitle } from "@/components/page-title";
 
 export default function ModerationPage() {
   const summary = useModerationSummary().data;
@@ -24,7 +25,7 @@ export default function ModerationPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <header>
         <p className="text-body font-semibold text-ink-2">Reports from your spaces</p>
-        <h1 className="mt-1 text-large-title font-bold">Moderation</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Moderation" />
       </header>
 
       {reports.isPending && <p className="text-body text-ink-2">Loading…</p>}

@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { formatDateTime, relativeTime } from "@/lib/format";
 import { useAudiences, useMyNotices, useNotices } from "@/lib/queries";
 import type { MyNotice, Notice } from "@/lib/types";
+import { PageTitle } from "@/components/page-title";
 
 export default function NoticesPage() {
   const notices = useNotices();
@@ -37,7 +38,7 @@ export default function NoticesPage() {
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-large-title font-bold">Notices</h1>
+          <PageTitle className="text-large-title font-bold" text="Notices" />
           <p className="mt-1 text-body text-ink-2">From your teachers, department and campus.</p>
         </div>
         {canPost && (
@@ -166,8 +167,8 @@ function BoardGroup({
 function MyNoticeRow({ notice: n }: { notice: MyNotice }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const [confirmArchive, setConfirmArchive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState(false);
 
   async function act(path: "publish" | "archive" | "unschedule") {
     setBusy(true);

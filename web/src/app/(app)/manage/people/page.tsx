@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipGroup } from "@/components/chip-group";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { apiFetch, errorDetail } from "@/lib/api";
@@ -7,6 +8,7 @@ import { relativeTime } from "@/lib/format";
 import { type ManagedPerson, roleLabel, useDepartments, usePeople } from "@/lib/manage";
 import { useMe } from "@/lib/queries";
 import { Select } from "@/components/select";
+import { PageTitle } from "@/components/page-title";
 
 const kinds = [
   { value: "", label: "Everyone" },
@@ -29,7 +31,7 @@ export default function PeoplePage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-body font-semibold text-ink-2">Accounts, invites and roles</p>
-          <h1 className="mt-1 text-large-title font-bold">People</h1>
+          <PageTitle className="mt-1 text-large-title font-bold" text="People" />
         </div>
         <button
           onClick={() => setInviting((v) => !v)}
@@ -53,21 +55,7 @@ export default function PeoplePage() {
             className={`${field} glass`}
           />
         </label>
-        <div role="radiogroup" aria-label="Filter" className="glass flex rounded-full p-1">
-          {kinds.map((k) => (
-            <button
-              key={k.value}
-              role="radio"
-              aria-checked={kind === k.value}
-              onClick={() => setKind(k.value)}
-              className={`h-9 rounded-full px-3.5 text-footnote font-semibold ${
-                kind === k.value ? "bg-accent text-on-accent" : "text-ink-2"
-              }`}
-            >
-              {k.label}
-            </button>
-          ))}
-        </div>
+        <ChipGroup label="Filter" value={kind} onChange={setKind} options={kinds} />
       </div>
 
       <section aria-label="People" className="glass rounded-card p-3">

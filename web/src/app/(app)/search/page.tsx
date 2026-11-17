@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipGroup } from "@/components/chip-group";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,6 +9,7 @@ import { Select } from "@/components/select";
 import { apiFetch } from "@/lib/api";
 import { courseBg, relativeTime } from "@/lib/format";
 import type { CourseColor } from "@/lib/types";
+import { PageTitle } from "@/components/page-title";
 
 interface Hit {
   id: number;
@@ -108,7 +110,7 @@ function SearchInner() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <header>
-        <h1 className="text-large-title font-bold">Search</h1>
+        <PageTitle className="text-large-title font-bold" text="Search" />
         <p className="mt-1 text-body text-ink-2">Only things you can already open show up here.</p>
       </header>
 
@@ -118,15 +120,8 @@ function SearchInner() {
           placeholder="Notices, courses, resources, events, assignments…"
           className="glass h-12 w-full rounded-full px-5 text-headline outline-none focus:ring-2 focus:ring-accent/50" />
         <div className="flex flex-wrap items-center gap-3">
-          <div role="radiogroup" aria-label="Show" className="glass flex max-w-full gap-1 overflow-x-auto rounded-full p-1">
-            {[{ key: "", label: "Everything" }, ...KINDS].map((k) => (
-              <button key={k.key} type="button" role="radio" aria-checked={kind === k.key} onClick={() => go({ type: k.key })}
-                className={`h-9 whitespace-nowrap rounded-full px-3.5 text-footnote font-semibold ${
-                  kind === k.key ? "bg-accent text-on-accent" : "text-ink-2"}`}>
-                {k.label}
-              </button>
-            ))}
-          </div>
+          <ChipGroup label="Show" value={kind} onChange={(k) => go({ type: k })}
+            options={[{ value: "", label: "Everything" }, ...KINDS.map((k) => ({ value: k.key, label: k.label }))]} />
           <label className="w-44">
             <span className="sr-only">Course</span>
             <Select value={course} onChange={(v) => go({ course: v })} label="Course" className={field}

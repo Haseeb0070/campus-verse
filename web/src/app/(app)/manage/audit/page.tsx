@@ -1,9 +1,11 @@
 "use client";
 
+import { ChipGroup } from "@/components/chip-group";
 import { useState } from "react";
 import { formatDateTime } from "@/lib/format";
 import { useAudit } from "@/lib/manage";
 import { useMe } from "@/lib/queries";
+import { PageTitle } from "@/components/page-title";
 
 const filters = [
   { value: "", label: "Everything" },
@@ -31,18 +33,11 @@ export default function AuditPage() {
     <>
       <header>
         <p className="text-body font-semibold text-ink-2">Append-only: entries can&apos;t be edited or deleted</p>
-        <h1 className="mt-1 text-large-title font-bold">Audit log</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Audit log" />
       </header>
 
-      <div role="radiogroup" aria-label="Filter" className="glass flex flex-wrap gap-1 self-start rounded-[22px] p-1">
-        {filters.map((f) => (
-          <button key={f.value} role="radio" aria-checked={action === f.value} onClick={() => setAction(f.value)}
-            className={`h-9 rounded-full px-3.5 text-footnote font-semibold ${
-              action === f.value ? "bg-accent text-on-accent" : "text-ink-2"}`}>
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <ChipGroup label="Filter" className="self-start" value={action} onChange={setAction}
+        options={filters} />
 
       <section aria-label="Entries" className="glass rounded-card p-4">
         {entries.data?.length === 0 && <p className="p-2 text-body text-ink-2">No entries.</p>}

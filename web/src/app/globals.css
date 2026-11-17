@@ -1,49 +1,48 @@
 @import "tailwindcss";
 
-/* CampusVerse Portal design tokens: a deep navy sidebar, solid white cards on a cool slate
-   ground, royal blue for actions, and a matching navy dark mode. Components use the Tailwind
-   names in @theme below (bg-surface, text-ink-2, rounded-card, text-large-title...), never raw
-   hex values. */
+/* CampusVerse tokens: a notebook-and-library palette. Warm paper ground, brown-black ink,
+   an evergreen sidebar and up-next card, and terracotta for actions. Shadows are tinted
+   brown, never grey-blue. Components use the Tailwind names in @theme below (bg-surface,
+   text-ink-2, rounded-card, text-large-title...), never raw hex values. */
 
 :root {
-  --cv-bg: #edf2f8;
-  --cv-surface: #ffffff;
-  --cv-surface-thick: #ffffff;
-  --cv-side: #0b1329;
-  --cv-side-line: rgb(255 255 255 / 0.08);
-  --cv-hero: #13213f;
-  --cv-hero-line: #22345e;
-  --cv-fill: #f1f5fa;
-  --cv-fill-strong: #e3ebf6;
-  --cv-rim: #dbe4ef;
-  --cv-shadow: 0 1px 3px rgb(15 23 42 / 0.06);
-  --cv-shadow-pop: 0 10px 24px -6px rgb(15 23 42 / 0.16);
-  --cv-divider: rgb(15 23 42 / 0.08);
+  --cv-bg: #f4efe6;
+  --cv-surface: #fffdf8;
+  --cv-surface-thick: #fffdf8;
+  --cv-side: #1f2b24;
+  --cv-side-line: rgb(255 248 235 / 0.08);
+  --cv-hero: #243329;
+  --cv-hero-line: #34483b;
+  --cv-fill: #f3ede2;
+  --cv-fill-strong: #e9e0d0;
+  --cv-rim: #e4d9c6;
+  --cv-shadow: 0 1px 2px rgb(74 52 28 / 0.06), 0 2px 6px -2px rgb(74 52 28 / 0.06);
+  --cv-shadow-pop: 0 12px 28px -8px rgb(74 52 28 / 0.22);
+  --cv-divider: rgb(60 42 20 / 0.09);
 
-  --cv-ink: #0f172a;
-  --cv-ink-2: #475569;
-  --cv-ink-3: #5b6b82;
+  --cv-ink: #241e18;
+  --cv-ink-2: #5a5045;
+  --cv-ink-3: #74695c;
 
-  --cv-accent: #1d4ed8;
-  --cv-accent-ink: #1e40af; /* text on light tints; buttons keep --cv-accent */
-  --cv-on-accent: #ffffff;
-  --cv-success: #059669;
-  --cv-warning: #d97706;
-  --cv-danger: #dc2626;
+  --cv-accent: #b4532a;
+  --cv-accent-ink: #8a3a1b; /* text on light tints; buttons keep --cv-accent */
+  --cv-on-accent: #fffaf2;
+  --cv-success: #3f7a42;
+  --cv-warning: #c98a2b;
+  --cv-danger: #b3361f;
   /* Status colours as text: darker in light mode so they pass 4.5:1 on their own tints. */
-  --cv-success-ink: #065f46;
-  --cv-warning-ink: #92400e;
-  --cv-danger-ink: #991b1b;
-  /* The notice board: kraft board, warm paper notes, shadows tinted to the board. */
-  --cv-board: #e4dccb;
-  --cv-board-line: #d2c6ae;
-  --cv-paper: #fffdf8;
+  --cv-success-ink: #2f5f33;
+  --cv-warning-ink: #7a4f12;
+  --cv-danger-ink: #8a2615;
+  /* The notice board: cork board, cream paper notes, shadows tinted to the board. */
+  --cv-board: #dccdb0;
+  --cv-board-line: #cbb994;
+  --cv-paper: #fffcf3;
   --cv-note-shadow: 0 1px 2px rgb(60 45 20 / 0.12), 0 8px 18px -8px rgb(60 45 20 / 0.3);
   --cv-note-shadow-lift: 0 2px 4px rgb(60 45 20 / 0.12), 0 18px 30px -10px rgb(60 45 20 / 0.38);
 
   /* Tells the browser and OS which theme native UI should use: select popups, date and
-     time pickers, number spinners, checkboxes and scrollbars. Without it, dark mode gets
-     light-on-white dropdown lists. */
+     time pickers, number spinners, checkboxes and scrollbars. */
   color-scheme: light;
   accent-color: var(--cv-accent);
 }
@@ -51,33 +50,34 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --cv-bg: #0d1424;
-    --cv-surface: #141d31;
-    --cv-surface-thick: #18223a;
-    --cv-side: #0a1020;
-    --cv-side-line: rgb(255 255 255 / 0.06);
-    --cv-hero: #1b2c55;
-    --cv-hero-line: #2b4378;
-    --cv-fill: #1a2440;
-    --cv-fill-strong: #213052;
-    --cv-rim: #243150;
+    --cv-bg: #171512;
+    --cv-surface: #201d19;
+    --cv-surface-thick: #27231e;
+    --cv-side: #131a15;
+    --cv-side-line: rgb(255 248 235 / 0.06);
+    --cv-hero: #22302a;
+    --cv-hero-line: #34473b;
+    --cv-fill: #2a2621;
+    --cv-fill-strong: #342f28;
+    --cv-rim: #342e27;
     --cv-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
-    --cv-shadow-pop: 0 12px 28px -6px rgb(0 0 0 / 0.55);
-    --cv-divider: rgb(255 255 255 / 0.07);
-    --cv-ink: #e9eef8;
-    --cv-ink-2: #c0c9dc;
-    --cv-ink-3: #95a1ba;
-    --cv-accent: #3a6ee8;
-    --cv-accent-ink: #a8c2ff;
-    --cv-success: #22a06b;
-    --cv-warning: #e0a03a;
-    --cv-danger: #e5484d;
-    --cv-success-ink: #7fe0b0;
-    --cv-warning-ink: #f6c76a;
-    --cv-danger-ink: #ff9aa2;
-    --cv-board: #182035;
-    --cv-board-line: #26314d;
-    --cv-paper: #222d48;
+    --cv-shadow-pop: 0 14px 30px -8px rgb(0 0 0 / 0.6);
+    --cv-divider: rgb(255 244 225 / 0.07);
+    --cv-ink: #f2ebe0;
+    --cv-ink-2: #cdc2b2;
+    --cv-ink-3: #a69a8a;
+    --cv-accent: #e07a50;
+    --cv-accent-ink: #f0a988;
+    --cv-on-accent: #1c120c;
+    --cv-success: #6aa86a;
+    --cv-warning: #d9a24a;
+    --cv-danger: #e2674f;
+    --cv-success-ink: #a6d6a0;
+    --cv-warning-ink: #efc985;
+    --cv-danger-ink: #f5a593;
+    --cv-board: #2a241d;
+    --cv-board-line: #3a3228;
+    --cv-paper: #302a23;
     --cv-note-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 18px -8px rgb(0 0 0 / 0.6);
     --cv-note-shadow-lift: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 30px -10px rgb(0 0 0 / 0.7);
   }
@@ -85,33 +85,34 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --cv-bg: #0d1424;
-  --cv-surface: #141d31;
-  --cv-surface-thick: #18223a;
-  --cv-side: #0a1020;
-  --cv-side-line: rgb(255 255 255 / 0.06);
-  --cv-hero: #1b2c55;
-  --cv-hero-line: #2b4378;
-  --cv-fill: #1a2440;
-  --cv-fill-strong: #213052;
-  --cv-rim: #243150;
+  --cv-bg: #171512;
+  --cv-surface: #201d19;
+  --cv-surface-thick: #27231e;
+  --cv-side: #131a15;
+  --cv-side-line: rgb(255 248 235 / 0.06);
+  --cv-hero: #22302a;
+  --cv-hero-line: #34473b;
+  --cv-fill: #2a2621;
+  --cv-fill-strong: #342f28;
+  --cv-rim: #342e27;
   --cv-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
-  --cv-shadow-pop: 0 12px 28px -6px rgb(0 0 0 / 0.55);
-  --cv-divider: rgb(255 255 255 / 0.07);
-  --cv-ink: #e9eef8;
-  --cv-ink-2: #c0c9dc;
-  --cv-ink-3: #95a1ba;
-  --cv-accent: #3a6ee8;
-  --cv-accent-ink: #a8c2ff;
-  --cv-success: #22a06b;
-  --cv-warning: #e0a03a;
-  --cv-danger: #e5484d;
-  --cv-success-ink: #7fe0b0;
-  --cv-warning-ink: #f6c76a;
-  --cv-danger-ink: #ff9aa2;
-  --cv-board: #182035;
-  --cv-board-line: #26314d;
-  --cv-paper: #222d48;
+  --cv-shadow-pop: 0 14px 30px -8px rgb(0 0 0 / 0.6);
+  --cv-divider: rgb(255 244 225 / 0.07);
+  --cv-ink: #f2ebe0;
+  --cv-ink-2: #cdc2b2;
+  --cv-ink-3: #a69a8a;
+  --cv-accent: #e07a50;
+  --cv-accent-ink: #f0a988;
+  --cv-on-accent: #1c120c;
+  --cv-success: #6aa86a;
+  --cv-warning: #d9a24a;
+  --cv-danger: #e2674f;
+  --cv-success-ink: #a6d6a0;
+  --cv-warning-ink: #efc985;
+  --cv-danger-ink: #f5a593;
+  --cv-board: #2a241d;
+  --cv-board-line: #3a3228;
+  --cv-paper: #302a23;
   --cv-note-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 18px -8px rgb(0 0 0 / 0.6);
   --cv-note-shadow-lift: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 30px -10px rgb(0 0 0 / 0.7);
 }
@@ -142,31 +143,34 @@
   --color-board-line: var(--cv-board-line);
   --color-paper: var(--cv-paper);
   --color-rim: var(--cv-rim);
-  /* The sidebar and phone tab bar stay navy in both themes, so their inks are fixed. */
-  --color-side-ink: #e2e8f0;
-  --color-side-muted: #8b99b6;
-  --color-side-icon: #8fa2c7;
-  --color-side-hover: rgb(255 255 255 / 0.08);
-  --color-side-active: #2f5fd6;
-  --color-side-avatar: #1e3a8a;
-  --color-side-avatar-ink: #bfd3ff;
-  /* Solid tiles on the Today stat cards, and ink for white buttons on the navy hero. */
-  --color-tone-blue: #2563eb;
-  --color-tone-amber: #d97706;
-  --color-tone-green: #059669;
-  --color-tone-violet: #7c3aed;
-  --color-hero-ink: #0f172a;
+  /* The sidebar and phone tab bar stay evergreen in both themes, so their inks are fixed. */
+  --color-side-ink: #ece5d8;
+  --color-side-muted: #a7ab9a;
+  --color-side-icon: #a9b6a3;
+  --color-side-hover: rgb(255 248 235 / 0.07);
+  --color-side-active: #b4532a;
+  --color-side-avatar: #34473b;
+  --color-side-avatar-ink: #d8e6cf;
+  /* Solid tiles on the Today stat cards, and ink for white buttons on the evergreen hero. */
+  --color-tone-blue: #3d6a85;
+  --color-tone-amber: #c98a2b;
+  --color-tone-green: #3f7a42;
+  --color-tone-violet: #7a5a86;
+  --color-hero-ink: #241e18;
   --color-on-warning: #1f1300;
 
   /* Course colours: one per course, used everywhere that course appears. */
-  --color-course-lagoon: #12a4a6;
-  --color-course-tangerine: #f28c28;
-  --color-course-orchid: #a15ce8;
-  --color-course-rose: #ec4d7a;
-  --color-course-sky: #3d8bf2;
-  --color-course-lime: #6bb33a;
-  --color-course-gold: #c9962b;
-  --color-course-slate: #6b7489;
+  --color-course-lagoon: #2a8c88;
+  --color-course-tangerine: #d9782d;
+  --color-course-orchid: #8e5fb0;
+  --color-course-rose: #c9506d;
+  --color-course-sky: #4a7fb5;
+  --color-course-lime: #6a9a3a;
+  --color-course-gold: #b8902f;
+  --color-course-slate: #6e685e;
+
+  /* Headings set in Newsreader, a bookish serif; everything else in Plus Jakarta Sans. */
+  --font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;
 
   /* Plus Jakarta Sans (bundled, imported in the root layout), then the system font. */
   --font-sans: "Plus Jakarta Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text",
@@ -200,7 +204,7 @@
 
 /* Surfaces: solid cards with a hairline edge (the names stay "glass" so every page keeps
    working). glass is a card, glass-thick is anything that floats (menus, popovers, toasts),
-   side is the navy sidebar and phone tab bar. */
+   side is the evergreen sidebar and phone tab bar. */
 @utility glass {
   background: var(--cv-surface);
   border: 1px solid var(--cv-rim);
@@ -215,7 +219,7 @@
 
 @utility side {
   background: var(--cv-side);
-  color: #e2e8f0;
+  color: #ece5d8;
 }
 
 /* Feedback on press, instantly (respond on pointer-down, not on release). */
@@ -269,15 +273,18 @@
 }
 
 /* Two-tone icons: an icon's body shape (marked .duo) fills softly when its link is the current
-   page, and the icon settles with a small pop as it becomes current. */
-.duo {
-  fill: currentColor;
-  fill-opacity: 0;
-  transition: fill-opacity 200ms ease-out;
-}
+   page, and the icon settles with a small pop as it becomes current. In the base layer so a
+   utility such as [&_.duo]:[fill-opacity:0.3] can fill a standalone icon. */
+@layer base {
+  .duo {
+    fill: currentColor;
+    fill-opacity: 0;
+    transition: fill-opacity 200ms ease-out;
+  }
 
-[aria-current="page"] .duo {
-  fill-opacity: 0.24;
+  [aria-current="page"] .duo {
+    fill-opacity: 0.24;
+  }
 }
 
 @keyframes cv-icon-pop {
@@ -412,6 +419,68 @@
   animation: cv-pin-tap 520ms ease-out 400ms 2;
 }
 
+/* Chart bars grow from their baseline the first time they show. */
+@keyframes cv-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes cv-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@utility grow-y {
+  transform-origin: bottom;
+  animation: cv-grow-y 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility grow-x {
+  transform-origin: left;
+  animation: cv-grow-x 800ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+}
+
+/* Select menus pop from the corner of their trigger (after React Bits' GlideSelect). */
+@keyframes cv-glide-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+@utility glide-pop {
+  transform-origin: top left;
+  animation: cv-glide-pop 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* A thin bar across the top of the content while the next page is on its way. It waits 120ms
+   before showing, so quick page changes never flash it. */
+@keyframes cv-nav-progress {
+  0% {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+  60% {
+    transform: scaleX(0.7);
+  }
+  100% {
+    transform: scaleX(0.92);
+    opacity: 1;
+  }
+}
+
+.nav-progress {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--cv-accent);
+  transform-origin: left;
+  opacity: 0;
+  animation: cv-nav-progress 2.4s cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards;
+}
+
 @keyframes cv-fade-in {
   from {
     opacity: 0;
@@ -435,7 +504,14 @@
   .note-found .pin {
     animation: none;
   }
+  .nav-progress {
+    animation: none;
+    opacity: 1;
+  }
   .arrive,
+  .glide-pop,
+  .grow-x,
+  .grow-y,
   .menu-pop,
   .pop,
   .rise,
@@ -522,6 +598,15 @@ textarea::placeholder {
   opacity: 1;
 }
 
+/* Page and card titles read like a printed timetable or a library card, not a dashboard. */
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 body {
   background: var(--cv-bg);
   color: var(--cv-ink);
@@ -532,6 +617,11 @@ body {
 :focus-visible {
   outline: 2px solid var(--cv-accent);
   outline-offset: 2px;
+}
+
+/* On the evergreen up-next card the accent ring is too faint (about 2.4:1); white reads clearly. */
+.on-hero :focus-visible {
+  outline-color: #fff;
 }
 
 /* No visible scrollbars anywhere: pages, the sidebar and panels still scroll with the wheel,

@@ -16,6 +16,7 @@ import {
   useSyncSources,
 } from "@/lib/manage";
 import { useMe } from "@/lib/queries";
+import { PageTitle } from "@/components/page-title";
 
 const statusChip: Record<ImportRow["status"], { label: string; cls: string }> = {
   new: { label: "New", cls: "bg-success/15 text-ink" },
@@ -117,7 +118,7 @@ export default function ImportPage() {
     <>
       <header>
         <p className="text-body font-semibold text-ink-2">Smart Sync · CSV or Excel exports and scheduled feeds</p>
-        <h1 className="mt-1 text-large-title font-bold">Imports &amp; sync</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Imports & sync" />
       </header>
 
       <form onSubmit={upload} className="glass flex flex-col gap-4 rounded-card p-6" noValidate>

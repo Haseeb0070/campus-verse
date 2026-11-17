@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipGroup } from "@/components/chip-group";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { PostCard } from "@/components/post-card";
@@ -7,6 +8,7 @@ import { apiFetch, errorDetail } from "@/lib/api";
 import { useFeed, useFeedAudiences } from "@/lib/feed";
 import { fileSize } from "@/lib/format";
 import { Select } from "@/components/select";
+import { PageTitle } from "@/components/page-title";
 
 export default function FeedPage() {
   const audiences = useFeedAudiences();
@@ -25,21 +27,14 @@ export default function FeedPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <header>
         <p className="text-body font-semibold text-ink-2">Questions, notes and news from your spaces</p>
-        <h1 className="mt-1 text-large-title font-bold">Feed</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Feed" />
       </header>
 
       <Composer />
 
       <div className="flex flex-wrap items-center gap-3">
-        <div role="radiogroup" aria-label="Space" className="glass flex max-w-full gap-1 overflow-x-auto rounded-full p-1">
-          {[{ key: "", label: "Everything" }, ...(audiences.data ?? [])].map((a) => (
-            <button key={a.key} role="radio" aria-checked={scope === a.key} onClick={() => setScope(a.key)}
-              className={`h-9 whitespace-nowrap rounded-full px-3.5 text-footnote font-semibold ${
-                scope === a.key ? "bg-accent text-on-accent" : "text-ink-2"}`}>
-              {a.label}
-            </button>
-          ))}
-        </div>
+        <ChipGroup label="Space" value={scope} onChange={setScope}
+          options={[{ value: "", label: "Everything" }, ...(audiences.data ?? []).map((a) => ({ value: a.key, label: a.label }))]} />
         <label className="min-w-[12rem] flex-1">
           <span className="sr-only">Search posts</span>
           <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search posts"

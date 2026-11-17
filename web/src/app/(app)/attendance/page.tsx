@@ -10,6 +10,7 @@ import { markLabels, useReport, useSheet } from "@/lib/attendance";
 import type { Mark, Sheet } from "@/lib/attendance";
 import { formatDay, formatTime, relativeTime } from "@/lib/format";
 import { useMe, useTeaching, useTimetable } from "@/lib/queries";
+import { PageTitle } from "@/components/page-title";
 
 const MARKS: Mark[] = ["present", "late", "absent", "excused"];
 const markOn: Record<Mark, string> = {
@@ -175,7 +176,7 @@ function AttendanceInner() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-body font-semibold text-ink-2">{formatDay(day, { weekday: "long", day: "numeric", month: "long" })}</p>
-          <h1 className="mt-1 text-large-title font-bold">Attendance</h1>
+          <PageTitle className="mt-1 text-large-title font-bold" text="Attendance" />
         </div>
         <button onClick={() => setShowReport((r) => !r)} aria-expanded={showReport}
           className="press h-10 rounded-full bg-fill-strong px-4 text-footnote font-semibold">

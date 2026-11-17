@@ -12,7 +12,8 @@ export function Pushpin({ className = "" }: { className?: string }) {
   );
 }
 
-/** A note's tilt in degrees: small, steady per notice (so it doesn't change between visits). */
+/** A note's tilt in degrees: steady per notice (so it doesn't change between visits) and kept
+ *  within a degree, past which rotated body text starts to soften. */
 export function noteTilt(id: number) {
-  return (((id * 37) % 7) - 3) * 0.45;
+  return (((id * 37) % 7) - 3) * 0.3;
 }

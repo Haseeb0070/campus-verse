@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import PulseHeart, { type PulseHeartIcon } from "@/components/reactbits/PulseHeart";
 import { useState } from "react";
 import { apiFetch, errorDetail } from "@/lib/api";
 import {
@@ -39,6 +40,9 @@ async function moderate(type: "post" | "comment", id: number, action: "hide" | "
     body: JSON.stringify({ target_type: type, target_id: id, action }),
   });
 }
+
+/** Each reaction drawn as an icon: a star for helpful, a heart for thanks, a thumb for agree. */
+const reactionIcon: Record<ReactionKind, PulseHeartIcon> = { helpful: "star", thanks: "heart", agree: "thumb" };
 
 export function PostCard({ post }: { post: FeedPost }) {
   const queryClient = useQueryClient();
@@ -155,20 +159,27 @@ export function PostCard({ post }: { post: FeedPost }) {
           const on = post.my_reactions.includes(kind);
           const count = post.reactions[kind] ?? 0;
           return (
-            <button
-              key={kind}
-              aria-pressed={on}
-              disabled={post.visibility !== "visible"}
-              onClick={() =>
-                run(() => apiFetch(`/api/feed/posts/${post.id}/reactions`, { method: "POST", body: JSON.stringify({ kind }) }))
-              }
-              className={`press h-8 rounded-full px-3 text-footnote font-semibold ${
-                on ? "bg-accent/15 text-accent-ink" : "bg-fill text-ink-2 hover:bg-fill-strong"
-              }`}
-            >
-              {reactionLabels[kind]}
-              {count > 0 && <span className="ml-1.5 tabular-nums">{count}</span>}
-            </button>
+            // React Bits PulseHeart: the icon shrinks to a dot, changes colour and pulses back while
+            // the count rolls over. The name shows on hover and is read out with the count.
+            <span key={kind} title={reactionLabels[kind]} className="inline-flex">
+              <PulseHeart
+                liked={on}
+                count={count}
+                icon={reactionIcon[kind]}
+                label={reactionLabels[kind]}
+                disabled={post.visibility !== "visible"}
+                onChange={() =>
+                  run(() => apiFetch(`/api/feed/posts/${post.id}/reactions`, { method: "POST", body: JSON.stringify({ kind }) }))
+                }
+                size={18}
+                corner={999}
+                className="[&_.tabular-nums]:!text-[12px]"
+                likedColor="var(--cv-accent)"
+                idleColor="var(--cv-ink-3)"
+                pillColor="var(--cv-fill)"
+                textColor="var(--cv-ink-2)"
+              />
+            </span>
           );
         })}
         <button onClick={() => setOpen((o) => !o)} aria-expanded={open}

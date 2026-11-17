@@ -12,6 +12,7 @@ import { useMe } from "@/lib/queries";
 import { disconnectRealtime } from "@/lib/realtime";
 import { useModerationSummary } from "@/lib/feed";
 import { useLiveNotifications, useNotifications } from "@/lib/notifications";
+import { PageEnter } from "@/components/page-enter";
 import {
   AssignmentsIcon,
   BellIcon,
@@ -99,7 +100,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           : 0;
   const badgeLabel = (href: string) => (href === "/moderation" ? "open reports" : "unread");
   const [moreOpen, setMoreOpen] = useState(false);
-  const side = useNavPill([pathname, me.data, moderation?.can_moderate]);
+  // The page a nav link was just clicked for. Highlights move there at once instead of after the
+  // next page arrives (a server round trip, plus a compile on first visit in development). Once
+  // the path changes, the real path takes over again.
+  const [goingTo, setGoingTo] = useState<{ href: string; from: string } | null>(null);
+  const at = goingTo && goingTo.from === pathname ? goingTo.href : pathname;
+  // True between a nav click and the new page arriving: the current page steps back at once, so
+  // the content answers the click together with the highlight instead of sitting there unchanged.
+  const leaving = at !== pathname;
+  const side = useNavPill([at, me.data, moderation?.can_moderate]);
+  // Fetch every page in the menus ahead of time, once the app is idle, so a click only has to
+  // swap the page in. (Production builds also prefetch links as they scroll into view.)
+  useEffect(() => {
+    if (!me.data) return;
+    const hrefs = new Set(
+      [...document.querySelectorAll<HTMLAnchorElement>('nav a[href^="/"]')].map((a) => a.getAttribute("href")!),
+    );
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 300));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = idle(() => hrefs.forEach((href) => router.prefetch(href)));
+    return () => cancel(id);
+  }, [me.data, moderation?.can_moderate, router]);
+  // Macs show the search shortcut as ⌘K. Read after mount so server and client markup agree.
+  const [modKey, setModKey] = useState("Ctrl");
+  useEffect(() => {
+    if (/Mac|iPhone|iPad/.test(navigator.platform)) setModKey("⌘");
+  }, []);
+  // Name the page in the browser tab and for screen readers: "Notices · CampusVerse". These pages
+  // are client components (no per-page metadata), and Next writes the layout's title into <head>
+  // after hydration, so reapply ours whenever the head changes.
+  useEffect(() => {
+    const section = pathname.split("/")[1];
+    const title = section ? `${section[0].toUpperCase()}${section.slice(1)} · CampusVerse` : "CampusVerse";
+    const apply = () => {
+      if (document.title !== title) document.title = title;
+    };
+    apply();
+    const watch = new MutationObserver(apply);
+    watch.observe(document.head, { subtree: true, childList: true, characterData: true });
+    return () => watch.disconnect();
+  }, [pathname]);
 
   const unauthorized = me.error instanceof ApiError && me.error.status === 401;
   useEffect(() => {
@@ -191,11 +231,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const primaryHrefs = ["/today", "/timetable", "/assignments", "/chat"];
   const primaryNav = nav.filter((n) => primaryHrefs.includes(n.href));
   const secondaryNav = nav.filter((n) => !primaryHrefs.includes(n.href));
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string) => at === href || at.startsWith(`${href}/`);
+  // A plain click (not one that opens a new tab or window) moves the highlight straight away.
+  const goTo = (href: string) => (e: React.MouseEvent) => {
+    if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) setGoingTo({ href, from: pathname });
+  };
   const initials = `${(user.preferred_name || user.first_name)[0] ?? ""}${user.last_name[0] ?? ""}` || user.email[0];
 
   return (
     <div className="min-h-screen md:flex">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-control focus:bg-accent focus:px-4 focus:py-2.5 focus:text-footnote focus:font-semibold focus:text-on-accent"
+      >
+        Skip to content
+      </a>
       <nav
         ref={side.ref}
         aria-label="Main"
@@ -224,13 +274,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <Link
           href="/search"
-          aria-label="Search (Ctrl K)"
+          aria-label={`Search (${modKey} K)`}
           className="flex h-10 items-center gap-2.5 rounded-control border border-white/10 bg-white/[0.06] px-3 text-footnote text-side-muted transition-colors hover:bg-white/[0.12] hover:text-white"
         >
           <SearchIcon className="size-[18px]" />
           <span className="flex-1">Search</span>
           <kbd className="rounded-md border border-white/15 bg-white/10 px-1.5 py-px font-sans text-caption font-semibold text-side-ink">
-            Ctrl K
+            {modKey} K
           </kbd>
         </Link>
 
@@ -247,8 +297,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <li key={href}>
                       <Link
                         href={href}
+                        onClick={goTo(href)}
                         aria-current={active ? "page" : undefined}
-                        className={`group relative flex h-10 items-center gap-3 rounded-control px-3 text-footnote font-semibold transition-colors ${
+                        className={`press group relative flex h-10 items-center gap-3 rounded-control px-3 text-footnote font-semibold transition-colors ${
                           active ? "text-white" : "text-side-ink hover:bg-side-hover hover:text-white"
                         }`}
                       >
@@ -310,7 +361,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
 
-      <main className="min-w-0 flex-1 px-4 pb-28 pt-6 md:px-8 md:pb-10 md:pt-7">{children}</main>
+      <main
+        id="main"
+        tabIndex={-1}
+        aria-busy={leaving || undefined}
+        className="relative min-w-0 flex-1 px-4 pb-28 pt-6 outline-none md:px-8 md:pb-10 md:pt-7"
+      >
+        {leaving && <span aria-hidden="true" className="nav-progress" />}
+        <div className={`transition-opacity duration-150 ease-out ${leaving ? "pointer-events-none opacity-40" : ""}`}>
+          {/* Today choreographs its own entrance; chat animates once, not on every conversation. */}
+          {pathname === "/today" ? children : <PageEnter key={pathname.startsWith("/chat") ? "/chat" : pathname}>{children}</PageEnter>}
+        </div>
+      </main>
 
       {moreOpen && (
         <>
@@ -327,7 +389,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={href}
                 href={href}
-                onClick={() => setMoreOpen(false)}
+                onClick={(e) => {
+                  goTo(href)(e);
+                  setMoreOpen(false);
+                }}
                 aria-current={isActive(href) ? "page" : undefined}
                 className={`press flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium hover:bg-fill ${
                   isActive(href) ? "bg-fill-strong text-accent-ink" : ""
@@ -380,8 +445,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link
             key={href}
             href={href}
+            onClick={goTo(href)}
             aria-current={isActive(href) ? "page" : undefined}
-            className={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-control text-[11px] font-semibold ${
+            className={`press relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-control text-[11px] font-semibold ${
               isActive(href) ? "text-side-avatar-ink" : "text-side-muted"
             }`}
           >

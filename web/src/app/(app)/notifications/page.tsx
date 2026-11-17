@@ -16,6 +16,7 @@ import {
 import { relativeTime } from "@/lib/format";
 import { useMarkRead, useNotifications } from "@/lib/notifications";
 import type { AppNotification, NotificationKind } from "@/lib/types";
+import { PageTitle } from "@/components/page-title";
 
 const icons: Record<NotificationKind, typeof BellIcon> = {
   "notice.published": NoticesIcon,
@@ -58,7 +59,7 @@ export default function NotificationsPage() {
           <p className="text-body font-semibold text-ink-2">
             {unread ? `${unread} unread` : "You're all caught up"}
           </p>
-          <h1 className="mt-1 text-large-title font-bold">Notifications</h1>
+          <PageTitle className="mt-1 text-large-title font-bold" text="Notifications" />
         </div>
         <div className="flex flex-wrap gap-2">
           <Link

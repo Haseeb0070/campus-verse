@@ -6,6 +6,9 @@ import { AssignmentStatusChip } from "@/components/assignment-status";
 import { ConversationRow } from "@/components/chat/conversation-list";
 import { ClassRow } from "@/components/class-row";
 import { Pushpin } from "@/components/pushpin";
+import AnimatedContent from "@/components/reactbits/AnimatedContent";
+import BlurText from "@/components/reactbits/BlurText";
+import CountUp from "@/components/reactbits/CountUp";
 import {
   BellIcon,
   CalendarIcon,
@@ -98,9 +101,18 @@ export default function TodayPage() {
                 DayIcon === MoonIcon ? "text-accent-ink [&_path]:fill-current [&_path]:[fill-opacity:0.2]" : "text-warning"
               }`}
             />
-            <span>
-              {hello}, {me.data?.first_name || "there"}
-            </span>
+            {/* Words settle in once, like ink taking; keyed so the name animates when it arrives. */}
+            <BlurText
+              key={me.data?.first_name ?? ""}
+              text={`${hello}, ${me.data?.first_name || "there"}`}
+              trigger="load"
+              effect="drift"
+              blur={4}
+              distance={10}
+              delay={70}
+              stepDuration={0.45}
+              className="gap-x-[0.2em]"
+            />
           </h1>
           <p className="mt-1 text-body text-ink-2">
             {formatDay(today)}
@@ -118,9 +130,10 @@ export default function TodayPage() {
         )}
       </header>
 
+      <AnimatedContent trigger="mount" distance={18} duration={0.7} ease="power3.out" delay={0.05}>
       <section
         aria-label="Up next"
-        className="relative overflow-hidden rounded-card border border-hero-line bg-hero p-6 text-white md:p-7"
+        className="relative overflow-hidden rounded-card border border-hero-line bg-hero p-6 text-white md:p-7 on-hero"
       >
         {next.isPending ? (
           <p className="text-body text-white/80">Loading your next class…</p>
@@ -169,7 +182,10 @@ export default function TodayPage() {
               </span>
               <span className="inline-flex items-center gap-2 rounded-control border border-white/15 bg-white/10 px-3 py-1.5 tabular-nums">
                 <TimetableIcon className="size-4" />
-                {upNext.date === today ? "" : `${formatDay(upNext.date, { month: "short" })}, `}
+                {/* Today and tomorrow are already named in the label above. */}
+                {upNext.date === today || upNext.date === addDays(today, 1)
+                  ? ""
+                  : `${formatDay(upNext.date, { month: "short" })}, `}
                 {formatTime(upNext.starts_at, tz)} – {formatTime(upNext.ends_at, tz)}
               </span>
               {upNext.status === "room_changed" && (
@@ -205,9 +221,17 @@ export default function TodayPage() {
           </div>
         )}
       </section>
+      </AnimatedContent>
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-5">
+        <AnimatedContent
+          trigger="mount"
+          distance={22}
+          duration={0.65}
+          stagger={0.08}
+          delay={0.15}
+          className="flex min-w-0 flex-col gap-5"
+        >
           <RecentChats myId={me.data?.id} />
 
           <Card title="Today's classes" count={live.length} query={classes} link={{ href: "/timetable", label: "Full week" }}>
@@ -229,9 +253,16 @@ export default function TodayPage() {
               ))}
             </ul>
           </Card>
-        </div>
+        </AnimatedContent>
 
-        <div className="flex min-w-0 flex-col gap-5">
+        <AnimatedContent
+          trigger="mount"
+          distance={22}
+          duration={0.65}
+          stagger={0.08}
+          delay={0.22}
+          className="flex min-w-0 flex-col gap-5"
+        >
           <Card
             title={teaching ? "To mark" : "Due soon"}
             count={work.length}
@@ -265,7 +296,7 @@ export default function TodayPage() {
 
           <ComingUp today={today} tz={tz} />
           <NoticesCard />
-        </div>
+        </AnimatedContent>
       </div>
     </div>
   );
@@ -293,8 +324,8 @@ function Card({
       <div className="flex items-center gap-2 border-b border-divider px-5 py-4">
         <h2 className="text-title-2 font-bold">{title}</h2>
         {count != null && count > 0 && (
-          <span className="rounded-full bg-accent/12 px-2 py-0.5 text-caption font-semibold text-accent-ink">
-            {count}
+          <span className="rounded-full bg-accent/12 px-2 py-0.5 text-caption font-semibold tabular-nums text-accent-ink">
+            <CountUp to={count} duration={0.9} trigger="load" mode="roll" />
             {countLabel && <span className="sr-only"> {countLabel}</span>}
           </span>
         )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipGroup } from "@/components/chip-group";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { DocumentIcon, LinkIcon } from "@/components/icons";
@@ -7,6 +8,7 @@ import { courseBg, fileSize, relativeTime } from "@/lib/format";
 import { fileUrl, kindLabels, useResources, useShareOptions } from "@/lib/resources";
 import type { Resource, ResourceKind } from "@/lib/resources";
 import { Select } from "@/components/select";
+import { PageTitle } from "@/components/page-title";
 
 function hostOf(url: string) {
   try {
@@ -112,7 +114,7 @@ export default function ResourcesPage() {
           <p className="text-body font-semibold text-ink-2">
             {canShare ? "Material you share and material shared with you" : "Course material from your teachers"}
           </p>
-          <h1 className="mt-1 text-large-title font-bold">Resources</h1>
+          <PageTitle className="mt-1 text-large-title font-bold" text="Resources" />
         </div>
         {canShare && (
           <Link
@@ -127,15 +129,9 @@ export default function ResourcesPage() {
       {all.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
           {courses.length > 1 && (
-            <div role="radiogroup" aria-label="Course" className="glass flex max-w-full gap-1 overflow-x-auto rounded-full p-1">
-              {[{ id: null, code: "All courses" }, ...courses].map((c) => (
-                <button key={c.id ?? "all"} role="radio" aria-checked={course === c.id} onClick={() => setCourse(c.id)}
-                  className={`h-9 whitespace-nowrap rounded-full px-3.5 text-footnote font-semibold ${
-                    course === c.id ? "bg-accent text-on-accent" : "text-ink-2"}`}>
-                  {c.code}
-                </button>
-              ))}
-            </div>
+            <ChipGroup label="Course" value={String(course ?? "")}
+              onChange={(v) => setCourse(v === "" ? null : Number(v))}
+              options={[{ value: "", label: "All courses" }, ...courses.map((c) => ({ value: String(c.id), label: c.code }))]} />
           )}
           <label>
             <span className="sr-only">Type</span>

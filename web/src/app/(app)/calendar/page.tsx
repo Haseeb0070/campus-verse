@@ -1,5 +1,6 @@
 "use client";
 
+import { ChipGroup } from "@/components/chip-group";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/events";
 import type { EventCategory } from "@/lib/events";
 import { useAssignments, useMe } from "@/lib/queries";
+import { PageTitle } from "@/components/page-title";
 
 interface Item {
   key: string;
@@ -137,7 +139,7 @@ export default function CalendarPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-body font-semibold text-ink-2">Exams, events, holidays and deadlines</p>
-          <h1 className="mt-1 text-large-title font-bold">Calendar</h1>
+          <PageTitle className="mt-1 text-large-title font-bold" text="Calendar" />
         </div>
         {canAdd && (
           <Link href="/calendar/new"
@@ -148,23 +150,10 @@ export default function CalendarPage() {
       </header>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div role="radiogroup" aria-label="View" className="glass flex gap-1 rounded-full p-1">
-          {(["month", "list"] as const).map((v) => (
-            <button key={v} role="radio" aria-checked={view === v} onClick={() => setView(v)}
-              className={`h-9 rounded-full px-4 text-footnote font-semibold ${view === v ? "bg-accent text-on-accent" : "text-ink-2"}`}>
-              {v === "month" ? "Month" : "Upcoming"}
-            </button>
-          ))}
-        </div>
-        <div role="radiogroup" aria-label="Show" className="glass flex max-w-full gap-1 overflow-x-auto rounded-full p-1">
-          {FILTERS.map((f) => (
-            <button key={f.key} role="radio" aria-checked={filter === f.key} onClick={() => setFilter(f.key)}
-              className={`h-9 whitespace-nowrap rounded-full px-3.5 text-footnote font-semibold ${
-                filter === f.key ? "bg-accent text-on-accent" : "text-ink-2"}`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <ChipGroup label="View" value={view} onChange={setView}
+          options={[{ value: "month", label: "Month" }, { value: "list", label: "Upcoming" }]} />
+        <ChipGroup label="Show" value={filter} onChange={setFilter}
+          options={FILTERS.map((f) => ({ value: f.key, label: f.label }))} />
       </div>
 
       {view === "month" ? (

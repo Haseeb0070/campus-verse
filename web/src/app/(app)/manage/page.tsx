@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { AnimatedNumber } from "@/components/animated-number";
 import { formatDay, formatDateTime } from "@/lib/format";
 import { useAudit, useOverview } from "@/lib/manage";
 import { useMe } from "@/lib/queries";
+import { PageTitle } from "@/components/page-title";
 
 export default function ManageOverview() {
   const me = useMe().data;
@@ -35,7 +37,7 @@ export default function ManageOverview() {
     <>
       <header>
         <p className="text-body font-semibold text-ink-2">{me?.institution?.name}</p>
-        <h1 className="mt-1 text-large-title font-bold">Overview</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Overview" />
       </header>
 
       {me && !me.two_step && (
@@ -57,7 +59,9 @@ export default function ManageOverview() {
         {tiles.map(([label, value, sub]) => (
           <div key={String(label)} className="glass rounded-card p-5">
             <p className="text-footnote font-semibold text-ink-2">{label}</p>
-            <p className="mt-1 text-title-1 font-bold tabular-nums">{value}</p>
+            <p className="mt-1 text-title-1 font-bold tabular-nums">
+              {typeof value === "string" || typeof value === "number" ? <AnimatedNumber value={value} /> : value}
+            </p>
             <p className="text-footnote text-ink-3">{sub}</p>
           </div>
         ))}

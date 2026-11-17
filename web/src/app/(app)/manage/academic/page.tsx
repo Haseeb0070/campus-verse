@@ -12,6 +12,7 @@ import { useMe } from "@/lib/queries";
 import { structureKey, useSections, useStructure } from "@/lib/structure";
 import type { CourseRow, Structure } from "@/lib/structure";
 import type { CourseColor } from "@/lib/types";
+import { PageTitle } from "@/components/page-title";
 
 const field =
   "h-11 w-full rounded-control border border-transparent bg-[var(--cv-bg)] px-3 text-body outline-none focus:border-accent";
@@ -390,7 +391,7 @@ export default function AcademicPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-body font-semibold text-ink-2">Terms, courses, sections and who&apos;s in them</p>
-          <h1 className="mt-1 text-large-title font-bold">Courses &amp; sections</h1>
+          <PageTitle className="mt-1 text-large-title font-bold" text="Courses & sections" />
         </div>
         {s && s.terms.length > 0 && (
           <label className="flex items-center gap-2 text-footnote font-semibold text-ink-2">

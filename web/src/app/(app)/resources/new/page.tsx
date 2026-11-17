@@ -10,6 +10,7 @@ import { fileSize } from "@/lib/format";
 import { kindLabels, useShareOptions } from "@/lib/resources";
 import type { Resource, ResourceKind } from "@/lib/resources";
 import { Select } from "@/components/select";
+import { PageTitle } from "@/components/page-title";
 
 export default function ShareResourcePage() {
   const router = useRouter();
@@ -90,7 +91,7 @@ export default function ShareResourcePage() {
         <Link href="/resources" className="inline-flex items-center gap-1 text-footnote font-semibold text-accent-ink">
           <ChevronLeftIcon className="size-4" /> Resources
         </Link>
-        <h1 className="mt-1 text-large-title font-bold">Share a resource</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Share a resource" />
       </header>
 
       {options.isSuccess && courses.length === 0 ? (

@@ -6,6 +6,7 @@ import { useConversations } from "@/lib/chat";
 import { NewMessageButton } from "./new-message";
 import { courseBg, formatTime, relativeTime } from "@/lib/format";
 import type { Conversation } from "@/lib/types";
+import { PageTitle } from "@/components/page-title";
 
 function preview(c: Conversation, myId?: number) {
   const m = c.last_message;
@@ -31,7 +32,7 @@ export function ConversationList({ myId }: { myId?: number }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2 px-2">
-        <h1 className="text-title-1 font-bold">Chat</h1>
+        <PageTitle className="text-title-1 font-bold" text="Chat" />
         <NewMessageButton />
       </div>
       {conversations.isPending && <p className="px-2 text-body text-ink-2">Loading…</p>}

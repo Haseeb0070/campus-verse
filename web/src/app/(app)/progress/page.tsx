@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useProgress } from "@/lib/attendance";
 import { courseBg } from "@/lib/format";
+import { PageTitle } from "@/components/page-title";
 
 const fmt = (n: string | number) => String(Number(n)); // "17.00" -> "17"
 
@@ -14,7 +15,7 @@ export default function ProgressPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <header>
         <p className="text-body font-semibold text-ink-2">Marks your teachers have released, and your attendance</p>
-        <h1 className="mt-1 text-large-title font-bold">Progress</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="Progress" />
       </header>
 
       <p className="rounded-row bg-fill-strong px-4 py-3 text-footnote">

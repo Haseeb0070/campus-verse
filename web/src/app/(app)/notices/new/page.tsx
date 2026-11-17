@@ -10,6 +10,7 @@ import { ApiError, apiFetch } from "@/lib/api";
 import { toLocalInput } from "@/lib/format";
 import { useAudiences, useReach } from "@/lib/queries";
 import type { Audience, MyNotice } from "@/lib/types";
+import { PageTitle } from "@/components/page-title";
 
 type Errors = { title?: string; body?: string; targets?: string; publishAt?: string; expiresAt?: string };
 
@@ -107,7 +108,7 @@ export default function NewNoticePage() {
         <Link href="/notices" className="inline-flex items-center gap-1 text-footnote font-semibold text-accent-ink">
           <ChevronLeftIcon className="size-4" /> Notices
         </Link>
-        <h1 className="mt-1 text-large-title font-bold">New notice</h1>
+        <PageTitle className="mt-1 text-large-title font-bold" text="New notice" />
       </header>
 
       <form
