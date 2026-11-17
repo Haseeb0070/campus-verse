@@ -1,0 +1,84 @@
+# CampusVerse test deployment: the parts that run on Render (https://render.com), on free plans.
+# The web app is on Vercel and the database on Neon; the full guide is docs/deploy.md.
+#
+# In the Render dashboard: New > Blueprint, pick this repository. Render asks for the values
+# marked "sync: false" (the Neon connection string and the Vercel address) before it creates
+# anything; everything else is filled in for you.
+
+services:
+  # Django API. Background tasks run inside the request (no Redis on the free setup), and an
+  # outside timer (cron-job.org) calls POST /api/cron for the scheduled ones.
+  - type: web
+    name: campusverse-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install uv && uv sync --frozen --no-dev && .venv/bin/python manage.py collectstatic --noinput
+    startCommand: bash render-start.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.5"
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      # Neon: the connection string from the Neon dashboard (Connect > "Pooled connection" off),
+      # e.g. postgresql://user:password@ep-something.eu-central-1.aws.neon.tech/neondb?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      # The Vercel address, e.g. https://campusverse.vercel.app (no slash at the end).
+      - key: FRONTEND_URL
+        sync: false
+      # Extra addresses allowed to sign in, comma-separated. To use a Vercel branch preview, add
+      # its fixed branch address, e.g. https://campusverse-git-dev-yourname.vercel.app
+      - key: EXTRA_TRUSTED_ORIGINS
+        value: ""
+      # Secret for POST /api/cron. Copy it from this service's Environment tab into cron-job.org.
+      - key: CRON_SECRET
+        generateValue: true
+      # ADDRESS of Centrifugo below. If Render adds a suffix to its name, change both lines.
+      - key: CENTRIFUGO_API_URL
+        value: https://campusverse-realtime.onrender.com/api
+      - key: CENTRIFUGO_WS_URL
+        value: wss://campusverse-realtime.onrender.com/connection/websocket
+      - key: CENTRIFUGO_API_KEY
+        fromService:
+          type: web
+          name: campusverse-realtime
+          envVarKey: CENTRIFUGO_HTTP_API_KEY
+      - key: CENTRIFUGO_TOKEN_SECRET
+        fromService:
+          type: web
+          name: campusverse-realtime
+          envVarKey: CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY
+      # Loads Demo University on first start (accounts in the README). Testing only.
+      - key: DEMO_SEED
+        value: "true"
+      - key: OPEN_SIGNUP
+        value: "false"
+      # Emails (invites, password resets) are printed to the service log until a mail provider
+      # is set here, e.g. smtp+tls://user:password@smtp.example.com:587
+      - key: EMAIL_URL
+        value: consolemail://
+      - key: WEB_CONCURRENCY
+        value: "2"
+
+  # Centrifugo, for live chat, typing indicators and live notifications. While it sleeps (free
+  # plan), chat still works by checking for new messages every few seconds.
+  - type: web
+    name: campusverse-realtime
+    runtime: docker
+    plan: free
+    dockerfilePath: ./infra/centrifugo/Dockerfile
+    dockerContext: ./infra/centrifugo
+    envVars:
+      - key: CENTRIFUGO_HTTP_SERVER_PORT
+        value: "10000"
+      - key: CENTRIFUGO_HTTP_API_KEY
+        generateValue: true
+      - key: CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY
+        generateValue: true
+      # The Vercel address: the only page allowed to open a live connection. Separate several
+      # with spaces, e.g. "https://campusverse.vercel.app https://campusverse-git-dev-yourname.vercel.app"
+      - key: CENTRIFUGO_CLIENT_ALLOWED_ORIGINS
+        sync: false

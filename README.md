@@ -13,6 +13,8 @@ data sync for students, teachers and administrators.
 Design reference: the canvas "CampusVerse Design Concept" and [`SKILL.md`](SKILL.md)
 (Apple-style motion and materials, adapted for the web).
 
+To put it online for testing (free: Vercel, Neon, Render, cron-job.org), see [docs/deploy.md](docs/deploy.md).
+
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/) (installs Python 3.13 for you)

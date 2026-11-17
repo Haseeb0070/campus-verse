@@ -1,6 +1,11 @@
+import hmac
+import logging
+
+from django.conf import settings
 from django.views.decorators.csrf import ensure_csrf_cookie
 from ninja import NinjaAPI
 from ninja.decorators import decorate_view
+from ninja.errors import HttpError
 from ninja.security import django_auth
 
 from apps.academic.api import router as sections_router
@@ -19,6 +24,8 @@ from apps.resources.api import router as resources_router
 from apps.scheduling.api import router as timetable_router
 from apps.search.api import router as search_router
 
+logger = logging.getLogger(__name__)
+
 api = NinjaAPI(
     title="CampusVerse API",
     version="0.1.0",
@@ -30,6 +37,38 @@ api = NinjaAPI(
 @api.get("/health", auth=None, tags=["system"])
 def health(request):
     return {"status": "ok"}
+
+
+@api.post("/cron", auth=None, tags=["system"])
+def cron(request):
+    """Runs the scheduled jobs, for hosts with no Celery beat (an outside timer calls this).
+
+    Locked behind CRON_SECRET, sent as "Authorization: Bearer <secret>". Without a secret set,
+    the endpoint doesn't exist. Each job is idempotent, so a missed or doubled call is harmless:
+    the next one catches up.
+    """
+    secret = settings.CAMPUSVERSE_CRON_SECRET
+    sent = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if not secret or not hmac.compare_digest(sent.encode(), secret.encode()):
+        raise HttpError(404, "Not found")
+
+    from apps.administration.tasks import run_due_sources
+    from apps.notices.tasks import publish_due
+    from apps.notifications.tasks import send_scheduled
+
+    results: dict[str, object] = {}
+    # Quickest and most time-sensitive first; a slow sync source can't hold up a notice.
+    for name, job in (
+        ("notices_published", publish_due),
+        ("notifications", send_scheduled),
+        ("sources_synced", run_due_sources),
+    ):
+        try:
+            results[name] = job()
+        except Exception:  # one failing job shouldn't stop the others
+            logger.exception("Scheduled job %s failed", name)
+            results[name] = "failed"
+    return results
 
 
 @api.get("/csrf", auth=None, tags=["system"])

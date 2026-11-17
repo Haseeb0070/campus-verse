@@ -32,8 +32,8 @@ class Command(BaseCommand):
     help = "Create a demo institution with courses, sections, people, a timetable and notices."
 
     def handle(self, *args, **options):
-        if not settings.DEBUG:
-            raise CommandError("seed_demo only runs with DEBUG=true.")
+        if not (settings.DEBUG or settings.CAMPUSVERSE_DEMO_SEED):
+            raise CommandError("seed_demo only runs with DEBUG=true or DEMO_SEED=true.")
         if Institution.objects.filter(slug="demo").exists():
             raise CommandError("Demo data already exists. Delete db.sqlite3 and migrate to reseed.")
         with transaction.atomic():

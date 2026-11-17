@@ -10,6 +10,9 @@ environ.Env.read_env(BASE_DIR / ".env")
 DEBUG = env("DEBUG")
 SECRET_KEY = env("SECRET_KEY", default="dev-only-change-me" if DEBUG else environ.Env.NOTSET)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+# Render tells each service its own public hostname; accept it without listing it by hand.
+if RENDER_HOST := env("RENDER_EXTERNAL_HOSTNAME", default=""):
+    ALLOWED_HOSTS.append(RENDER_HOST)
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
 INSTALLED_APPS = [
@@ -45,6 +48,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves the admin's CSS and JS in production (collected into STATIC_ROOT at build time).
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -76,6 +81,9 @@ TEMPLATES = [
 
 # SQLite is the fallback so the project runs without Docker; use Postgres everywhere else.
 DATABASES = {"default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")}
+# Reuse database connections between requests (and check they are still alive) in production.
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=0 if DEBUG else 60)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REDIS_URL = env("REDIS_URL", default="")
@@ -164,6 +172,14 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        if DEBUG
+        else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    },
+}
 # Uploads are private: MEDIA_ROOT is never served directly, only through permission-checked
 # download endpoints.
 MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
@@ -171,11 +187,20 @@ CAMPUSVERSE_MAX_UPLOAD_MB = env.int("MAX_UPLOAD_MB", default=20)
 # Sync sources may only be fetched from public HTTPS addresses, unless this is on (development:
 # a feed on localhost or the office network).
 CAMPUSVERSE_SYNC_ALLOW_PRIVATE = env.bool("SYNC_ALLOW_PRIVATE", default=DEBUG)
+# A test deployment can load the demo university (seed_demo) even with DEBUG off. Never turn this
+# on for a real institution: the demo accounts share one published password.
+CAMPUSVERSE_DEMO_SEED = env.bool("DEMO_SEED", default=False)
+# Hosts without Celery beat run the scheduled jobs by calling POST /api/cron with this secret.
+# Unset (the default, and in development where beat or inline tasks do the work): no endpoint.
+CAMPUSVERSE_CRON_SECRET = env("CRON_SECRET", default="")
 DATA_UPLOAD_MAX_NUMBER_FILES = 10
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[FRONTEND_URL])
+# More addresses allowed to sign in, e.g. a Vercel branch preview
+# "https://campusverse-git-dev-yourname.vercel.app".
+CSRF_TRUSTED_ORIGINS += env.list("EXTRA_TRUSTED_ORIGINS", default=[])
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

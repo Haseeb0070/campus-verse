@@ -1,0 +1,37 @@
+{
+  "client": {
+    "token": {
+      "hmac_secret_key": ""
+    },
+    "allowed_origins": []
+  },
+  "http_api": {
+    "key": ""
+  },
+  "admin": {
+    "enabled": false
+  },
+  "channel": {
+    "namespaces": [
+      {
+        "name": "chat",
+        "presence": true,
+        "allow_presence_for_subscriber": true,
+        "history_size": 100,
+        "history_ttl": "600s",
+        "force_recovery": true
+      },
+      {
+        "name": "typing",
+        "allow_publish_for_subscriber": true
+      },
+      {
+        "name": "user",
+        "allow_user_limited_channels": true,
+        "history_size": 20,
+        "history_ttl": "300s",
+        "force_recovery": true
+      }
+    ]
+  }
+}
