@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { CheckIcon, LogoMark } from "@/components/icons";
+import { CheckIcon, LogoGlyph } from "@/components/icons";
 import { Pushpin } from "@/components/pushpin";
 import AnimatedContent from "@/components/reactbits/AnimatedContent";
 import BlurText from "@/components/reactbits/BlurText";
@@ -65,7 +65,7 @@ function Header() {
     <header className={s.header} style={{ position: "absolute" }}>
       <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
         <span className={s.wordmarkTile}>
-          <LogoMark className="size-5" />
+          <LogoGlyph className="size-[21px]" />
         </span>
         CampusVerse
       </Link>

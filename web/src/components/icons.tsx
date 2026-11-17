@@ -180,15 +180,35 @@ export const VideoIcon = (p: IconProps) => (
   </Icon>
 );
 
+/** The CampusVerse glyph on its own (no tile): an arched college window whose centre bar and round
+ *  light read as a lowercase "i" — a person, or the next thing to know, inside the campus gate.
+ *  The same dot breathes on the Today card and in the landing headline. */
+export function LogoGlyph({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5.75 20V11.25a6.25 6.25 0 0 1 12.5 0V20" />
+      <path d="M12 15v5" />
+      <circle cx="12" cy="10.6" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** The app icon: the glyph in paper on a terracotta tile. */
 export function LogoMark({ className = "" }: { className?: string }) {
   return (
     <span
       className={`inline-flex items-center justify-center rounded-[10px] bg-accent text-on-accent ${className}`}
     >
-      <svg viewBox="0 0 24 24" className="size-[65%]" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-        <ellipse cx="12" cy="12" rx="9" ry="4.2" transform="rotate(-28 12 12)" />
-        <circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" />
-      </svg>
+      <LogoGlyph className="size-[66%]" />
     </span>
   );
 }
