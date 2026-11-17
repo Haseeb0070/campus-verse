@@ -26,6 +26,21 @@ class Conversation(InstitutionScopedModel):
     direct_key = models.CharField(max_length=41, null=True, blank=True, unique=True)
     last_message_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
+    class Request(models.TextChoices):
+        """A one-to-one chat starts as a request and opens once the other person accepts."""
+
+        PENDING = "pending"
+        ACCEPTED = "accepted"
+        DECLINED = "declined"
+
+    # Only used by direct chats; everything else (and chats older than requests) is accepted.
+    request_status = models.CharField(
+        max_length=16, choices=Request.choices, default=Request.ACCEPTED
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
     class Meta:
         constraints = [
             models.CheckConstraint(

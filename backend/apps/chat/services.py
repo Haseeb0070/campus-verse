@@ -97,6 +97,8 @@ def conversations_for(user) -> list[ConversationSummary]:
             | Q(members__user=user),
             institution_id=user.institution_id,
         )
+        # A declined request disappears for the person who declined it.
+        .exclude(Q(request_status=Conversation.Request.DECLINED) & ~Q(requested_by=user))
         .select_related("section__offering__course")
         .distinct()
     )
@@ -199,6 +201,7 @@ def send_message(user, conversation: Conversation, *, body: str, client_id: uuid
     ).first()
     if existing is not None:
         return existing, False
+    check_request_allows_sending(user, conversation)
 
     try:
         with transaction.atomic():
@@ -282,19 +285,90 @@ def contacts(user, q: str = "", limit: int = 20) -> list:
 
 
 def start_direct(user, other) -> Conversation:
+    """Opens (or returns) the one-to-one chat with `other`. A new one starts as a message
+    request from `user`. Reaching out to someone whose request is waiting for you, or whose
+    request you declined, accepts it."""
     if not can_message(user, other):
         raise PermissionDenied("You can only message people you share a class with, or staff.")
     low, high = sorted((user.pk, other.pk))
     with transaction.atomic():
         conversation, created = Conversation.objects.get_or_create(
             direct_key=f"{low}:{high}",
-            defaults={"institution_id": user.institution_id, "kind": Conversation.Kind.DIRECT},
+            defaults={
+                "institution_id": user.institution_id,
+                "kind": Conversation.Kind.DIRECT,
+                "request_status": Conversation.Request.PENDING,
+                "requested_by": user,
+            },
         )
         if created:
             for person in (user, other):
                 ConversationMember.objects.create(
                     institution_id=user.institution_id, conversation=conversation, user=person
                 )
+        elif (
+            conversation.request_status != Conversation.Request.ACCEPTED
+            and conversation.requested_by_id != user.pk
+        ):
+            _set_request(conversation, Conversation.Request.ACCEPTED)
+    return conversation
+
+
+# Message requests ------------------------------------------------------------------------------
+
+REQUEST_MESSAGES = 1  # how many messages a request may carry before it is accepted
+
+
+def awaiting_my_answer(user, conversation: Conversation) -> bool:
+    return (
+        conversation.kind == Conversation.Kind.DIRECT
+        and conversation.request_status == Conversation.Request.PENDING
+        and conversation.requested_by_id not in (None, user.pk)
+    )
+
+
+def check_request_allows_sending(user, conversation: Conversation) -> None:
+    """Until a request is accepted, only the person asking may write, and only a short opener."""
+    if conversation.kind != Conversation.Kind.DIRECT:
+        return
+    conversation.refresh_from_db(fields=["request_status", "requested_by"])  # may have just changed
+    status = conversation.request_status
+    if status == Conversation.Request.DECLINED:
+        raise PermissionDenied("This message request was declined.")
+    if status != Conversation.Request.PENDING:
+        return
+    if conversation.requested_by_id != user.pk:
+        raise PermissionDenied("Accept the message request to reply.")
+    sent = Message.objects.filter(conversation=conversation, sender=user).count()
+    if sent >= REQUEST_MESSAGES:
+        raise PermissionDenied("You can send more once they accept your message request.")
+
+
+def _set_request(conversation: Conversation, status: str) -> None:
+    conversation.request_status = status
+    conversation.save(update_fields=["request_status", "updated_at"])
+    _publish(conversation.channel, {"type": "request.updated", "status": status})
+
+
+def answer_request(user, conversation: Conversation, *, accept: bool) -> Conversation:
+    """The person a request was sent to accepts or declines it."""
+    from apps.notifications.models import Notification
+    from apps.notifications.services import notify
+
+    if not can_access(user, conversation) or not awaiting_my_answer(user, conversation):
+        raise PermissionDenied("There's no message request for you to answer here.")
+    status = Conversation.Request.ACCEPTED if accept else Conversation.Request.DECLINED
+    with transaction.atomic():
+        _set_request(conversation, status)
+        if accept and conversation.requested_by_id:
+            notify(
+                [conversation.requested_by_id], kind=Notification.Kind.DIRECT_MESSAGE,
+                institution_id=conversation.institution_id,
+                title=f"{user.get_full_name() or user.email} accepted your message request",
+                body="You can message each other now.",
+                link=f"/chat/{conversation.pk}", actor_id=user.pk,
+                dedupe_key=f"dm-accepted:{conversation.pk}",
+            )
     return conversation
 
 
@@ -324,10 +398,15 @@ def _notify_direct(sender, conversation: Conversation, message: Message) -> None
 
     for member in conversation.members.exclude(user=sender).filter(muted=False):
         preview = message.body or f"Sent {message.attachments.count()} file(s)"
+        name = sender.get_full_name() or sender.email
         notify(
             [member.user_id], kind=Notification.Kind.DIRECT_MESSAGE,
             institution_id=conversation.institution_id,
-            title=f"Message from {sender.get_full_name() or sender.email}",
+            title=(
+                f"Message request from {name}"
+                if conversation.request_status == Conversation.Request.PENDING
+                else f"Message from {name}"
+            ),
             body=preview if len(preview) <= 140 else preview[:139] + "…",
             link=f"/chat/{conversation.pk}", actor_id=sender.pk,
             dedupe_key=f"dm:{conversation.pk}:{member.last_read_message_id}",

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BellIcon, ChevronLeftIcon, PaperclipIcon, SendIcon } from "@/components/icons";
@@ -42,6 +43,31 @@ export function Thread({ conversationId }: { conversationId: number }) {
   const [openedAt] = useState(() => Date.now());
   const lastMarked = useRef(0);
   const notFound = chat.messages.error instanceof ApiError && chat.messages.error.status === 404;
+  const router = useRouter();
+  const [answering, setAnswering] = useState<"accept" | "decline" | null>(null);
+  const [answerError, setAnswerError] = useState<string | null>(null);
+
+  // Private chats start as a message request (see apps/chat/services.py).
+  const request = conversation?.kind === "direct" ? conversation.request_status : "accepted";
+  const otherName = conversation?.other?.name ?? "They";
+  const askedMe = request === "pending" && !conversation?.requested_by_me;
+  const sentOpener = chat.list.some((m) => m.sender.id === me?.id && !m.failed && !m.deleted);
+  const asking = request === "pending" && Boolean(conversation?.requested_by_me);
+  const waitingOnThem = asking && sentOpener;
+
+  async function answer(choice: "accept" | "decline") {
+    setAnswering(choice);
+    setAnswerError(null);
+    try {
+      await apiFetch(`/api/chat/conversations/${conversationId}/request/${choice}`, { method: "POST" });
+      await queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
+      if (choice === "decline") router.replace("/chat");
+    } catch {
+      setAnswerError("Couldn't save that. Try again.");
+    } finally {
+      setAnswering(null);
+    }
+  }
 
   const newest = [...chat.list].reverse().find((m) => m.id > 0);
   useEffect(() => {
@@ -178,9 +204,15 @@ export function Thread({ conversationId }: { conversationId: number }) {
           {chat.messages.isPending && <p className="py-6 text-center text-body text-ink-2">Loading messages…</p>}
           {chat.messages.isSuccess && chat.list.length === 0 && (
             <div className="py-10 text-center">
-              <p className="text-headline font-semibold">Start the conversation</p>
+              <p className="text-headline font-semibold">
+                {conversation?.other ? "Say hello" : "Start the conversation"}
+              </p>
               <p className="mt-1 text-body text-ink-2">
-                Everyone in this section and its teachers can read it.
+                {conversation?.other
+                  ? asking
+                    ? `Your first message goes to ${otherName} as a request. You can write more once they accept.`
+                    : `Only you and ${otherName} can read this chat.`
+                  : "Everyone in this section and its teachers can read it."}
               </p>
             </div>
           )}
@@ -238,6 +270,40 @@ export function Thread({ conversationId }: { conversationId: number }) {
         </div>
       </div>
 
+      {askedMe ? (
+        <div className="border-t border-divider p-4">
+          <p className="text-headline font-semibold">{otherName} wants to message you</p>
+          <p className="mt-0.5 text-footnote text-ink-2">
+            They can&apos;t send anything else until you accept. If you decline, they won&apos;t be
+            able to message you here.
+          </p>
+          {answerError && <p role="alert" className="mt-2 text-footnote text-danger-ink">{answerError}</p>}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => answer("accept")}
+              disabled={answering !== null}
+              className="press h-10 flex-1 rounded-full bg-accent px-5 text-body font-semibold text-on-accent disabled:opacity-60 sm:flex-none"
+            >
+              {answering === "accept" ? "Accepting…" : "Accept"}
+            </button>
+            <button
+              type="button"
+              onClick={() => answer("decline")}
+              disabled={answering !== null}
+              className="press h-10 flex-1 rounded-full bg-fill-strong px-5 text-body font-semibold disabled:opacity-60 sm:flex-none"
+            >
+              {answering === "decline" ? "Declining…" : "Decline"}
+            </button>
+          </div>
+        </div>
+      ) : waitingOnThem || request === "declined" ? (
+        <p className="border-t border-divider px-4 py-4 text-footnote text-ink-2">
+          {request === "declined"
+            ? `${otherName} didn't accept your message request.`
+            : `Request sent. You can send more once ${otherName} accepts.`}
+        </p>
+      ) : (
       <form
         className="border-t border-divider p-3"
         onSubmit={(e) => {
@@ -298,8 +364,13 @@ export function Thread({ conversationId }: { conversationId: number }) {
             <SendIcon className="size-5" />
           </button>
         </div>
-        <p className="mt-1.5 px-2 text-caption text-ink-3">Enter to send · Shift+Enter for a new line</p>
+        <p className="mt-1.5 px-2 text-caption text-ink-3">
+          {asking
+            ? `Sent as a message request: ${otherName} can accept or decline it.`
+            : "Enter to send · Shift+Enter for a new line"}
+        </p>
       </form>
+      )}
     </section>
   );
 }

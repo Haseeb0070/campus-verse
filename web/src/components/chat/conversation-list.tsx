@@ -10,6 +10,8 @@ import { PageTitle } from "@/components/page-title";
 
 function preview(c: Conversation, myId?: number) {
   const m = c.last_message;
+  if (c.request_status === "declined") return "Request not accepted";
+  if (c.request_status === "pending" && c.requested_by_me && m) return "Request sent";
   if (!m) return "No messages yet. Say hello.";
   if (m.deleted) return "Message removed";
   const text = m.body || (m.attachments?.length ? "Sent a file" : "");
@@ -95,7 +97,14 @@ export function ConversationRow({
       )}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-body font-semibold">{c.title}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-body font-semibold">{c.title}</span>
+            {c.request_status === "pending" && !c.requested_by_me && (
+              <span className="shrink-0 rounded-md bg-accent/12 px-1.5 py-px text-caption font-semibold text-accent-ink">
+                Request
+              </span>
+            )}
+          </span>
           <span className="shrink-0 text-caption text-ink-3">{when(c.last_message_at)}</span>
         </span>
         <span className="flex items-center gap-2">

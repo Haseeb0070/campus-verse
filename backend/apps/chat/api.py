@@ -73,6 +73,9 @@ class ConversationOut(Schema):
     last_message_at: datetime | None
     other: PersonOut | None = None
     muted: bool = False
+    # One-to-one chats: "pending" until the other person accepts, then "accepted" (or "declined").
+    request_status: str = "accepted"
+    requested_by_me: bool = False
 
 
 class MessagePage(Schema):
@@ -135,6 +138,8 @@ def _summary_out(s: services.ConversationSummary, user) -> dict:
         "is_moderator": s.is_moderator,
         "last_message": message_payload(s.last_message, teachers) if s.last_message else None,
         "last_message_at": conv.last_message_at,
+        "request_status": conv.request_status,
+        "requested_by_me": conv.requested_by_id == user.pk,
     }
 
 
@@ -214,6 +219,19 @@ def start_direct(request, payload: DirectIn):
     except PermissionDenied as err:
         return Status(403, {"detail": str(err)})
     return Status(200, get_conversation(request, conv.pk))
+
+
+@router.post("/conversations/{conversation_id}/request/{answer}", response=ConversationOut)
+def answer_request(request, conversation_id: int, answer: str):
+    """Accept or decline a message request sent to you (answer: "accept" or "decline")."""
+    if answer not in ("accept", "decline"):
+        raise HttpError(404, "Not found")
+    conv = _conversation(request, conversation_id)
+    try:
+        services.answer_request(request.user, conv, accept=answer == "accept")
+    except PermissionDenied as err:
+        raise HttpError(403, str(err)) from None
+    return get_conversation(request, conv.pk)
 
 
 @router.post("/conversations/{conversation_id}/mute", response={204: None})

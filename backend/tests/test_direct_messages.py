@@ -60,6 +60,7 @@ def test_each_pair_has_one_private_chat(campus):
 
 def test_one_notification_per_unread_run_and_mute(campus):
     conv = services.start_direct(campus.ayesha, campus.teacher)
+    services.start_direct(campus.teacher, campus.ayesha)  # reaching back accepts the request
     first = send(campus.ayesha, conv, "Can I submit late?")
     send(campus.ayesha, conv, "I was ill on Monday.")
     assert dms(campus.teacher) == ["Message from ayesha@test.edu"]  # not two
@@ -75,6 +76,7 @@ def test_one_notification_per_unread_run_and_mute(campus):
 
 def test_attachments_are_checked_and_private(campus):
     conv = services.start_direct(campus.ayesha, campus.teacher)
+    services.start_direct(campus.teacher, campus.ayesha)
     message = send(campus.ayesha, conv, "", uploads=[pdf()])  # a file alone is fine
     stored = message.attachments.get()
     assert services.downloadable_attachment(campus.teacher, stored.pk) == stored

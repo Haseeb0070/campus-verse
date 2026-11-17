@@ -147,6 +147,9 @@ export interface Conversation {
   /** The other person, in a one-to-one chat. */
   other: ChatPerson | null;
   muted: boolean;
+  /** Private chats start as a request the other person accepts; everything else is "accepted". */
+  request_status: "pending" | "accepted" | "declined";
+  requested_by_me: boolean;
 }
 
 export interface ChatPerson {
