@@ -11,9 +11,10 @@ PY=.venv/bin/python
 
 $PY manage.py migrate --noinput
 
-# A test deployment loads Demo University once. seed_demo refuses to run twice, which is fine.
+# A test deployment sets up Govt. Graduate College of Science once (it replaces any demo data on
+# its first run and does nothing after that). It needs SEED_PASSWORD for the accounts it creates.
 if [ "${DEMO_SEED:-false}" = "true" ]; then
-  $PY manage.py seed_demo || echo "seed_demo skipped (demo data already loaded)."
+  $PY manage.py seed_college || echo "seed_college failed; see the message above."
 fi
 
 # Worker and scheduler in one small process. Without REDIS_URL, tasks run inline instead.
