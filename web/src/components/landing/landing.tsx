@@ -3,48 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckIcon, LogoGlyph } from "@/components/icons";
 import { Pushpin } from "@/components/pushpin";
-import AnimatedContent from "@/components/reactbits/AnimatedContent";
-import BlurText from "@/components/reactbits/BlurText";
 import s from "./landing.module.css";
-
-/** Entrance for the parts of a section: rises a little and fades in as it scrolls into view. */
-function Rise({
-  children,
-  delay = 0,
-  stagger = 0,
-  className,
-}: {
-  children: React.ReactNode;
-  delay?: number;
-  stagger?: number;
-  className?: string;
-}) {
-  return (
-    <AnimatedContent distance={24} duration={0.7} delay={delay} stagger={stagger} threshold={0.15} className={className}>
-      {children}
-    </AnimatedContent>
-  );
-}
-
-/** A section title that settles in word by word (React Bits BlurText). */
-function Title({ text, id, className = "" }: { text: string; id?: string; className?: string }) {
-  return (
-    <h2 id={id} className={`${s.title} ${className}`}>
-      <BlurText text={text} trigger="view" effect="drift" blur={4} distance={10} delay={60} stepDuration={0.4} />
-    </h2>
-  );
-}
 
 export function Landing() {
   return (
     <div className={s.page}>
-      {/* Content that animates in starts hidden; without scripts, show it. */}
-      <noscript>
-        <style>{`.invisible{visibility:visible!important}`}</style>
-      </noscript>
       <Header />
       <main>
         <Hero />
@@ -92,10 +58,8 @@ function Hero() {
       <h1 id="hero-title" className={`${s.display} ${s.heroHeadline}`}>
         <span className={`${s.line} ${s.lineInk}`}>Your campus,</span>
         <span className={`${s.line} ${s.linePaper}`}>
-          <span className={s.slot} aria-label="your 08:30 class in room A-112,">
-            <span className={s.slotDot} aria-hidden="true" />
-            <span aria-hidden="true">08:30</span>
-            <span className={s.slotRoom} aria-hidden="true">· A-112</span>
+          <span className={s.slot} aria-label="your next class in room R-127,">
+            <span aria-hidden="true">R-127</span>
           </span>
           up next.
         </span>
@@ -118,66 +82,42 @@ function Hero() {
   );
 }
 
-/* ---------- Showcase: the Today screen at three distances ---------- */
+/* ---------- Showcase: the Today screen ---------- */
 
-const STAGES = [
-  {
-    zoom: 1,
-    origin: "50% 50%",
-    caption: "Today opens with your next class, your recent chats, what is due and the latest notices.",
-  },
-  {
-    zoom: 1.9,
-    origin: "42% 21%",
-    caption: "The next-class card counts down, shows the room and opens the section chat in one tap.",
-  },
-  {
-    zoom: 2.2,
-    origin: "100% 100%",
-    caption: "Notices from teachers and the department land here first, pinned until they stop mattering.",
-  },
+const NOTES: [string, string][] = [
+  ["Next class", "The room, the time left and the section chat, one tap away."],
+  ["Due soon", "Work still to hand in, soonest first, until you are all caught up."],
+  ["Notices", "Pinned by teachers and the department, newest underneath."],
 ];
 
 function Showcase() {
-  const [step, setStep] = useState(0);
-  const markers = useRef<(HTMLDivElement | null)[]>([]);
-  useEffect(() => {
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) if (e.isIntersecting) setStep(Number((e.target as HTMLElement).dataset.step));
-      },
-      { rootMargin: "-45% 0px -45% 0px" },
-    );
-    markers.current.forEach((m) => m && io.observe(m));
-    return () => io.disconnect();
-  }, []);
-  const stage = STAGES[step];
   return (
     <section id="what" className={s.showcase} aria-labelledby="showcase-title">
-      <div className={s.heroTail} aria-hidden="true" />
-      <div className={s.markers} aria-hidden="true">
-        {STAGES.map((_, i) => (
-          <div key={i} data-step={i} ref={(el) => void (markers.current[i] = el)} />
-        ))}
-      </div>
-      <div className={s.stage} data-step={step + 1}>
-        <h2 id="showcase-title" className={s.stageHeading}>
-          <span className={`${s.title} ${s.stageTitleTop}`}>One screen</span>
-          <span className={`${s.title} ${s.stageTitleBottom}`}> for the whole day</span>
+      <div className={s.showcaseHead}>
+        <h2 id="showcase-title" className={s.title}>
+          One screen for the whole day
         </h2>
-        <div className={s.screen} style={{ ["--zoom" as string]: stage.zoom, ["--ox" as string]: stage.origin.split(" ")[0], ["--oy" as string]: stage.origin.split(" ")[1] }}>
-          <Image
-            src="/landing/today.jpg"
-            width={2880}
-            height={1800}
-            sizes="(max-width: 860px) 92vw, 52vw"
-            alt="The CampusVerse Today screen: the next class, Linear Algebra at 08:30 in A-112, with recent chats, due work and notices."
-          />
-        </div>
-        <p className={s.stageCaption} aria-live="polite">
-          <span key={step}>{stage.caption}</span>
+        <p className={s.showcaseLead}>
+          Today is the first thing everyone sees: what is next, what is due and what changed.
         </p>
       </div>
+      <div className={s.screen}>
+        <Image
+          src="/landing/today.jpg"
+          width={2880}
+          height={1800}
+          sizes="(max-width: 860px) 92vw, 1200px"
+          alt="The CampusVerse Today screen: the next class with its room, recent chats, due work and notices."
+        />
+      </div>
+      <ul className={s.showcaseNotes}>
+        {NOTES.map(([name, text]) => (
+          <li key={name}>
+            <b>{name}</b>
+            {text}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -200,15 +140,13 @@ function Features() {
       <h2 id="features-title" className={s.srOnly}>
         What it does
       </h2>
-      <Rise>
-        <p className={`${s.statement} ${s.featuresText}`}>
+      <p className={`${s.statement} ${s.featuresText}`}>
           Notices pin to a board <Chip kind="pin">Important</Chip> so they stay seen. Each section has its own live chat{" "}
           <Chip kind="bubble">Iterative is fine.</Chip> Coursework shows what is marked <Chip kind="graded">Graded 18.5/20</Chip>{" "}
           and progress keeps attendance <Chip kind="attendance">100%</Chip> beside your marks.
-        </p>
-      </Rise>
+      </p>
       <div className={s.featuresFoot}>
-        <Rise delay={0.1}>
+        <div>
           <p>
             Search finds any notice, course, file or event you are allowed to see, and nothing you are not. The calendar holds
             exams and events with sign-ups and waitlists, and notifications reach you in the app and by email.
@@ -216,9 +154,9 @@ function Features() {
           <Link href="/sign-in" className={s.button}>
             Open CampusVerse
           </Link>
-        </Rise>
+        </div>
       </div>
-      <Rise stagger={0.08} className={s.featuresPair}>
+      <div className={s.featuresPair}>
         <figure>
           <Image
             src="/landing/notices.jpg"
@@ -239,7 +177,7 @@ function Features() {
           />
           <figcaption>Section chat: a question at night, the teacher&apos;s answer by morning.</figcaption>
         </figure>
-      </Rise>
+      </div>
     </section>
   );
 }
@@ -314,7 +252,7 @@ function Fragment({ step }: { step: number }) {
           ))}
         </div>
         <div className={s.uiChange}>
-          <b>CS-301 · 3B</b> Tuesday 10:30
+          <b>CS-301 · 3B</b> Tuesday lecture
           <span className={s.uiMuted} style={{ display: "block" }}>
             Room B-204 → B-210 · Imran Saleem
           </span>
@@ -338,13 +276,13 @@ function Fragment({ step }: { step: number }) {
     );
   return (
     <>
-      <p className={s.uiTitle}>Tuesday, Nov 24</p>
+      <p className={s.uiTitle}>Tuesday</p>
       <div className={s.uiClass}>
         <span className={s.uiClassBar} />
         <span>
-          <b>10:30</b> Data Structures <span className={s.uiBadge}>Room changed</span>
+          Data Structures <span className={s.uiBadge}>Room changed</span>
           <span className={s.uiMuted} style={{ display: "block" }}>
-            CS-301 · 3B · Lecture · B-210 · 10:30–11:50
+            CS-301 · 3B · Lecture · B-210
           </span>
         </span>
       </div>
@@ -431,20 +369,16 @@ const ROLES: [string, string, string][] = [
 function Roles() {
   return (
     <section id="who" className={s.roles} aria-labelledby="who-title">
-      <Title id="who-title" text="Built for every desk on campus" className={s.rolesTitle} />
       <div className={s.rolesGrid}>
-        <Rise className={s.rolesPhoto}>
-          <figure style={{ margin: 0 }}>
-            <Image
-              src="/landing/classroom-archive.jpg"
-              width={1024}
-              height={762}
-              sizes="(max-width: 860px) 64vw, 38vw"
-              alt="A university geology room in the mid-twentieth century: display cases, tall windows and a pinned notice board."
-            />
-            <figcaption>The notice board has always been where a campus talks to itself.</figcaption>
-          </figure>
-        </Rise>
+        <div className={s.rolesHead}>
+          <h2 id="who-title" className={s.title}>
+            Built for every desk on campus
+          </h2>
+          <p className={s.rolesLead}>
+            Everyone signs in to the same place and sees only what belongs to them: their classes, their
+            sections, their work.
+          </p>
+        </div>
         <table className={s.rolesTable}>
           <caption>What each person can do</caption>
           <tbody>
@@ -497,8 +431,10 @@ const FAQ: [string, string][] = [
 function Questions() {
   return (
     <section id="questions" className={s.faq} aria-labelledby="faq-title">
-      <Title id="faq-title" text="Questions people ask" />
-      <Rise stagger={0.06} className={s.faqList}>
+      <h2 id="faq-title" className={s.title}>
+        Questions people ask
+      </h2>
+      <div className={s.faqList}>
         {FAQ.map(([q, a]) => (
           <details key={q}>
             <summary>
@@ -508,7 +444,7 @@ function Questions() {
             <p>{a}</p>
           </details>
         ))}
-      </Rise>
+      </div>
     </section>
   );
 }
@@ -530,8 +466,7 @@ function Closing() {
           router.push(`/sign-in${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`);
         }}
       >
-        <Rise>
-          <p className={s.ctaSentence}>
+        <p className={s.ctaSentence}>
             Sign in with{" "}
             <label>
               <span className={s.srOnly}>Your university email</span>
@@ -548,8 +483,7 @@ function Closing() {
             <button type="submit" className={s.ctaSubmit}>
               Continue
             </button>
-          </p>
-        </Rise>
+        </p>
       </form>
       <p className={s.ctaNote}>Your institution creates your account. No account yet? Ask your administrator.</p>
     </section>
@@ -575,21 +509,11 @@ function Footer() {
         <Link href="/sign-in">Sign in</Link>
         <a href="#timetables">Timetable imports</a>
         <a href="#questions">Questions</a>
-        <a href="https://github.com/Haseeb0070/campus-verse">Source on GitHub</a>
       </nav>
       <div className={s.footerLegal}>
         <span>© {new Date().getFullYear()} CampusVerse</span>
-        <span>
-          Classroom photograph:{" "}
-          <a href="https://www.flickr.com/photos/60455048@N02/25085082737">
-            &ldquo;University of Queensland, Geology Room, St Lucia&rdquo;
-          </a>
-          , Queensland State Archives, public domain.
-        </span>
+        <span>Timetables, notices, coursework and chat for your campus.</span>
       </div>
-      <p className={s.footerName} aria-hidden="true">
-        CampusVerse
-      </p>
     </footer>
   );
 }

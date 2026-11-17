@@ -3,9 +3,9 @@
 
 .page {
   --gutter: clamp(16px, 3vw, 40px);
-  --display: clamp(52px, 9vw, 140px);
-  --title: clamp(38px, 5vw, 76px);
-  --statement: clamp(22px, 2.5vw, 34px);
+  --display: clamp(40px, 5.6vw, 84px);
+  --title: clamp(28px, 3.2vw, 46px);
+  --statement: clamp(19px, 1.7vw, 24px);
   --body: 18px;
   --small: 15px;
   --paper: #f4efe6; /* fixed paper ink for text on the evergreen fields, in both themes */
@@ -187,7 +187,7 @@
 
 .heroBottom {
   top: 50%;
-  bottom: -30svh;
+  bottom: 0;
   background: var(--cv-hero);
 }
 
@@ -237,33 +237,14 @@
   font-size: 1em;
 }
 
-.slotDot {
-  width: 0.36em;
-  height: 0.36em;
-  border-radius: 50%;
-  background: currentColor;
-  animation: breathe 2.4s ease-in-out infinite;
-}
-
-.slotRoom {
-  opacity: 0.85;
-}
-
-@keyframes breathe {
-  50% {
-    opacity: 0.35;
-    transform: scale(0.75);
-  }
-}
-
 .heroSupport {
   position: absolute;
   inset-inline: var(--gutter);
   bottom: 56px;
   margin: 0 auto;
-  max-width: 46ch;
+  max-width: 52ch;
   color: var(--paper);
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.5;
   text-align: center;
 }
@@ -296,7 +277,7 @@
     top: 46%;
   }
   .page {
-    --display: 13vw;
+    --display: 10.5vw;
   }
   .heroSupport {
     font-size: 16px;
@@ -305,135 +286,70 @@
   }
 }
 
-/* The lower field runs past the fold before the next chapter begins. */
-.heroTail {
-  height: 30svh;
-  background: var(--cv-hero);
-}
-
-/* ---------- Showcase: one frame, three distances (pinned) ---------- */
+/* ---------- Showcase: the Today screen ---------- */
 .showcase {
-  position: relative;
-  height: 240vh;
   background: var(--cv-bg);
+  padding: clamp(80px, 8vw, 112px) var(--gutter);
 }
 
-.stage {
-  position: sticky;
-  top: 0;
-  height: 100svh;
+.showcaseHead {
   display: grid;
-  grid-template-columns: 1fr minmax(0, 52vw) 1fr;
-  grid-template-rows: 1fr auto 1fr;
-  align-items: center;
-  padding: 72px var(--gutter) 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px 48px;
+  align-items: end;
+  margin-bottom: 40px;
 }
 
-/* The heading's two halves sit above and below the picture. */
-.stageHeading {
-  display: contents;
+.showcaseLead {
   margin: 0;
-}
-
-.stageTitleTop {
-  display: block;
-  grid-column: 1 / -1;
-  grid-row: 1;
-  align-self: end;
-  text-align: center;
-  margin-bottom: 0.15em;
-}
-
-.stageTitleBottom {
-  display: block;
-  grid-column: 1 / -1;
-  grid-row: 3;
-  align-self: start;
-  text-align: center;
-  margin-top: 0.2em;
-  position: relative;
-  z-index: 2;
-  opacity: 0;
-  transform: translateY(16px);
-  transition:
-    opacity 500ms ease,
-    transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.stage[data-step="2"] .stageTitleBottom,
-.stage[data-step="3"] .stageTitleBottom {
-  opacity: 1;
-  transform: none;
+  max-width: 44ch;
 }
 
 .screen {
-  grid-column: 2;
-  grid-row: 2;
-  aspect-ratio: 16 / 10;
+  max-width: 1200px;
+  border-radius: 16px;
   overflow: hidden;
-  border-radius: 14px;
   background: var(--cv-surface);
 }
 
 .screen img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform-origin: var(--ox, 50%) var(--oy, 50%);
-  transform: scale(var(--zoom, 1));
-  transition: transform 700ms cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-.stageCaption {
-  grid-column: 3;
-  grid-row: 2;
-  align-self: start;
-  margin: 0 0 0 28px;
-  max-width: 28ch;
-  font-size: 18px;
-  line-height: 1.5;
-}
-
-.stageCaption span {
   display: block;
-  transition: opacity 300ms ease;
+  width: 100%;
+  height: auto;
 }
 
-.markers {
-  position: absolute;
-  inset: 0;
+.showcaseNotes {
+  list-style: none;
+  margin: 32px 0 0;
+  padding: 0;
   display: grid;
-  grid-template-rows: repeat(3, 1fr);
-  pointer-events: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px 48px;
+  max-width: 1200px;
+}
+
+.showcaseNotes li {
+  font-size: 16px;
+}
+
+.showcaseNotes b {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--cv-ink);
+  font-size: var(--body);
 }
 
 @media (max-width: 860px) {
-  .stage {
+  .showcaseHead,
+  .showcaseNotes {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
-    align-content: center;
-    gap: 12px;
-  }
-  .screen {
-    grid-column: 1;
-    grid-row: 2;
-  }
-  .stageTitleBottom {
-    grid-row: 3;
-  }
-  .stageCaption {
-    grid-column: 1;
-    grid-row: 4;
-    margin: 8px auto 0;
-    text-align: center;
-    font-size: 16px;
   }
 }
 
 /* ---------- Features: a paragraph with pictures for words ---------- */
 .features {
   background: var(--cv-fill);
-  padding: clamp(120px, 14vw, 200px) var(--gutter) clamp(96px, 9vw, 128px);
+  padding: clamp(88px, 9vw, 128px) var(--gutter) clamp(80px, 7vw, 104px);
 }
 
 .featuresText {
@@ -457,11 +373,6 @@
   vertical-align: 0.08em;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  transition: transform 160ms ease;
-}
-
-.chip:hover {
-  transform: translateY(-2px) rotate(-1deg);
 }
 
 .chipPin {
@@ -543,14 +454,14 @@
 .how {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 88svh;
+  min-height: 72svh;
   position: relative;
 }
 
 .howText {
   background: var(--cv-hero);
   color: var(--paper);
-  padding: clamp(96px, 10vw, 140px) var(--gutter) 160px;
+  padding: clamp(72px, 7vw, 104px) var(--gutter) 140px;
 }
 
 .howTitle {
@@ -568,7 +479,7 @@
   background: var(--cv-bg);
   display: grid;
   place-items: center;
-  padding: clamp(96px, 10vw, 140px) var(--gutter) 160px;
+  padding: clamp(72px, 7vw, 104px) var(--gutter) 140px;
 }
 
 .howControls {
@@ -890,36 +801,20 @@
   background: var(--cv-bg);
 }
 
-.rolesTitle {
-  max-width: 12em;
-  padding-left: 3vw;
-}
-
 .rolesGrid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   column-gap: 24px;
-  margin-top: 96px;
+  align-items: start;
 }
 
-.rolesPhoto {
+.rolesHead {
   grid-column: 1 / span 5;
-  align-self: end;
-  margin: 0;
 }
 
-.rolesPhoto img {
-  width: 100%;
-  height: auto;
-  display: block;
-  border-radius: 14px;
-  filter: sepia(0.25);
-}
-
-.rolesPhoto figcaption {
-  margin-top: 10px;
-  font-size: var(--small);
-  color: var(--cv-ink-2);
+.rolesLead {
+  margin: 20px 0 0;
+  max-width: 38ch;
 }
 
 .rolesTable {
@@ -963,9 +858,6 @@
 }
 
 @media (max-width: 860px) {
-  .rolesTitle {
-    padding-left: 0;
-  }
   .rolesGrid {
     grid-template-columns: 1fr;
     margin-top: 56px;
@@ -973,11 +865,9 @@
   .rolesTable {
     grid-column: 1;
   }
-  .rolesPhoto {
+  .rolesHead {
     grid-column: 1;
-    width: 70%;
-    justify-self: end;
-    margin-top: 40px;
+    margin-bottom: 32px;
   }
   .rolesTable td:last-of-type {
     display: block;
@@ -989,12 +879,12 @@
 
 /* ---------- Questions ---------- */
 .faq {
-  padding: clamp(96px, 9vw, 128px) var(--gutter) clamp(120px, 12vw, 176px);
+  padding: clamp(80px, 8vw, 112px) var(--gutter) clamp(88px, 9vw, 128px);
   background: var(--cv-fill);
 }
 
 .faqList {
-  margin: 80px 0 0 33.33%;
+  margin: 56px 0 0 33.33%;
   display: grid;
   gap: 12px;
 }
@@ -1015,7 +905,7 @@
   display: flex;
   justify-content: space-between;
   gap: 24px;
-  font-size: clamp(19px, 1.7vw, 24px);
+  font-size: clamp(17px, 1.3vw, 20px);
   font-weight: 500;
   cursor: pointer;
   padding: 10px 0;
@@ -1054,14 +944,15 @@ details[open] .chevron {
 
 /* ---------- Closing sentence with a blank ---------- */
 .cta {
-  padding: clamp(120px, 14vw, 200px) var(--gutter);
+  padding: clamp(88px, 9vw, 128px) var(--gutter);
+  text-align: center;
   background: var(--cv-bg);
 }
 
 .ctaSentence {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: clamp(36px, 5.6vw, 88px);
+  font-size: clamp(26px, 3.4vw, 48px);
   letter-spacing: -0.035em;
   line-height: 1.1;
   margin: 0;
@@ -1120,15 +1011,14 @@ details[open] .chevron {
 /* ---------- Footer: invitation over a cropped name ---------- */
 .footer {
   position: relative;
-  min-height: 100svh;
   overflow: hidden;
   background: var(--cv-hero);
   color: var(--paper);
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto;
   column-gap: 24px;
-  padding: clamp(96px, 10vw, 140px) var(--gutter) 0;
+  padding: clamp(72px, 7vw, 104px) var(--gutter) 0;
 }
 
 .footerInvite {
@@ -1159,7 +1049,9 @@ details[open] .chevron {
 
 .footerLegal {
   grid-column: 1 / -1;
-  grid-row: 3;
+  grid-row: 2;
+  margin-top: clamp(64px, 7vw, 96px);
+  padding: 20px 0 28px;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -1173,20 +1065,6 @@ details[open] .chevron {
   color: inherit;
 }
 
-.footerName {
-  grid-column: 1 / -1;
-  grid-row: 4;
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 22vw;
-  letter-spacing: -0.05em;
-  line-height: 0.8;
-  white-space: nowrap;
-  transform: translateY(18%);
-  color: color-mix(in srgb, var(--paper) 92%, var(--cv-hero));
-}
-
 @media (max-width: 860px) {
   .footerInvite,
   .footerLinks {
@@ -1197,29 +1075,12 @@ details[open] .chevron {
     flex-wrap: wrap;
     margin-top: 32px;
   }
-  .footerName {
-    font-size: 30vw;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slotDot {
-    animation: none;
-  }
-  .screen img,
-  .stageTitleBottom,
   .ui,
-  .header {
+  .button,
+  .trackFill {
     transition: none;
-  }
-  .showcase {
-    height: auto;
-  }
-  .stage {
-    position: relative;
-  }
-  .stageTitleBottom {
-    opacity: 1;
-    transform: none;
   }
 }
