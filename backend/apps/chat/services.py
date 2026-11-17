@@ -264,7 +264,7 @@ def can_message(user, other) -> bool:
     return _is_staff(user) or _is_staff(other) or other.pk in _shared_section_people(user)
 
 
-def contacts(user, q: str = "", limit: int = 20) -> list:
+def contacts(user, q: str = "", limit: int = 50) -> list:
     """People you can start a conversation with, best matches first."""
     if user.institution_id is None:
         return []
@@ -275,11 +275,11 @@ def contacts(user, q: str = "", limit: int = 20) -> list:
             .values_list("pk", flat=True)
         )
         qs = qs.filter(pk__in=_shared_section_people(user) | staff_ids)
-    q = (q or "").strip()
-    if q:
+    # Every word has to match somewhere, so "Muhammad Haseeb" finds first + last name.
+    for word in (q or "").split()[:5]:
         qs = qs.filter(
-            Q(first_name__icontains=q) | Q(last_name__icontains=q)
-            | Q(preferred_name__icontains=q) | Q(email__icontains=q)
+            Q(first_name__icontains=word) | Q(last_name__icontains=word)
+            | Q(preferred_name__icontains=word) | Q(email__icontains=word)
         )
     # Teachers and staff first, so they show before the list fills up with classmates.
     rank = Case(

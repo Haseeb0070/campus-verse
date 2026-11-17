@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { useAnchoredPopover } from "@/components/use-anchored-popover";
 import { apiFetch, errorDetail } from "@/lib/api";
+import { useMe } from "@/lib/queries";
 import type { ChatPerson, Conversation } from "@/lib/types";
 
 /** "New message": search the people you're allowed to message, pick one, open the chat. */
@@ -38,6 +39,13 @@ export function NewMessageButton() {
     enabled: open,
   });
   const list = people.data ?? [];
+  const me = useMe().data;
+  /** Every word of the search is in your own name or email (you're never in the list). */
+  const isMe = (text: string) => {
+    const mine = `${me?.full_name ?? ""} ${me?.email ?? ""}`.toLowerCase();
+    const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+    return Boolean(me) && words.length > 0 && words.every((w) => mine.includes(w));
+  };
 
   async function start(person: ChatPerson) {
     setError(null);
@@ -134,7 +142,11 @@ export function NewMessageButton() {
             </ul>
             {people.isSuccess && list.length === 0 && (
               <p className="p-3 text-footnote text-ink-2">
-                {debounced ? "Nobody matches." : "You can message people you share a class with, and staff."}
+                {!debounced
+                  ? "You can message people you share a class with, and staff."
+                  : isMe(debounced)
+                    ? "That's you. You can't message yourself."
+                    : "Nobody matches."}
               </p>
             )}
             {error && <p role="alert" className="p-2 text-footnote text-danger-ink">{error}</p>}

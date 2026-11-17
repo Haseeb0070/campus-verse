@@ -80,6 +80,16 @@ def test_teachers_and_staff_come_first_in_new_message(campus):
     assert kinds == sorted(kinds, key=["teacher", "staff", "student"].index)
 
 
+def test_people_search_matches_every_word(campus):
+    teacher = campus.teacher
+    teacher.first_name, teacher.last_name = "Imran", "Qureshi"
+    teacher.save()
+    assert services.contacts(campus.ayesha, "imran qureshi") == [teacher]
+    assert services.contacts(campus.ayesha, "qureshi IMR") == [teacher]
+    assert services.contacts(campus.ayesha, "imran nobody") == []
+    assert campus.ayesha not in services.contacts(campus.ayesha, "ayesha")  # never yourself
+
+
 def test_section_chats_are_never_requests(campus):
     services.ensure_section_conversations(campus.ayesha)
     section_chat = Conversation.objects.get(section=campus.s3b)
