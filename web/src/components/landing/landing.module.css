@@ -3,10 +3,10 @@
 
 .page {
   --gutter: clamp(16px, 3vw, 40px);
-  --display: clamp(40px, 5.6vw, 84px);
-  --title: clamp(28px, 3.2vw, 46px);
-  --statement: clamp(19px, 1.7vw, 24px);
-  --body: 18px;
+  --display: clamp(34px, 4.2vw, 60px);
+  --title: clamp(24px, 2.6vw, 38px);
+  --statement: clamp(18px, 1.5vw, 22px);
+  --body: 17px;
   --small: 15px;
   --paper: #f4efe6; /* fixed paper ink for text on the evergreen fields, in both themes */
   /* The app's faces (its @theme is inlined, so the names aren't CSS variables at runtime). */
@@ -169,7 +169,7 @@
 /* ---------- Hero: two fields, headline across the seam ---------- */
 .hero {
   position: relative;
-  height: max(100svh, 640px);
+  height: clamp(480px, 74svh, 680px);
   isolation: isolate;
 }
 
@@ -244,7 +244,7 @@
   margin: 0 auto;
   max-width: 52ch;
   color: var(--paper);
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.5;
   text-align: center;
 }
@@ -277,7 +277,7 @@
     top: 46%;
   }
   .page {
-    --display: 10.5vw;
+    --display: 9vw;
   }
   .heroSupport {
     font-size: 16px;
@@ -289,7 +289,7 @@
 /* ---------- Showcase: the Today screen ---------- */
 .showcase {
   background: var(--cv-bg);
-  padding: clamp(80px, 8vw, 112px) var(--gutter);
+  padding: clamp(64px, 6vw, 88px) var(--gutter);
 }
 
 .showcaseHead {
@@ -297,7 +297,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 24px 48px;
   align-items: end;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .showcaseLead {
@@ -349,7 +349,7 @@
 /* ---------- Features: a paragraph with pictures for words ---------- */
 .features {
   background: var(--cv-fill);
-  padding: clamp(88px, 9vw, 128px) var(--gutter) clamp(80px, 7vw, 104px);
+  padding: clamp(64px, 6vw, 88px) var(--gutter) clamp(56px, 5vw, 80px);
 }
 
 .featuresText {
@@ -405,7 +405,7 @@
 .featuresFoot {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  margin-top: 72px;
+  margin-top: 48px;
 }
 
 .featuresFoot > div {
@@ -421,7 +421,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: clamp(16px, 2vw, 28px);
-  margin-top: clamp(64px, 8vw, 120px);
+  margin-top: clamp(48px, 5vw, 72px);
 }
 
 .featuresPair figure {
@@ -454,14 +454,14 @@
 .how {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 72svh;
+  min-height: 60svh;
   position: relative;
 }
 
 .howText {
   background: var(--cv-hero);
   color: var(--paper);
-  padding: clamp(72px, 7vw, 104px) var(--gutter) 140px;
+  padding: clamp(56px, 5vw, 80px) var(--gutter) 120px;
 }
 
 .howTitle {
@@ -479,7 +479,7 @@
   background: var(--cv-bg);
   display: grid;
   place-items: center;
-  padding: clamp(72px, 7vw, 104px) var(--gutter) 140px;
+  padding: clamp(56px, 5vw, 80px) var(--gutter) 120px;
 }
 
 .howControls {
@@ -797,7 +797,7 @@
 
 /* ---------- Who it's for: statement, table pushed right ---------- */
 .roles {
-  padding: clamp(96px, 9vw, 128px) var(--gutter) clamp(96px, 9vw, 128px);
+  padding: clamp(64px, 6vw, 88px) var(--gutter);
   background: var(--cv-bg);
 }
 
@@ -879,7 +879,7 @@
 
 /* ---------- Questions ---------- */
 .faq {
-  padding: clamp(80px, 8vw, 112px) var(--gutter) clamp(88px, 9vw, 128px);
+  padding: clamp(64px, 6vw, 88px) var(--gutter);
   background: var(--cv-fill);
 }
 
@@ -944,7 +944,7 @@ details[open] .chevron {
 
 /* ---------- Closing sentence with a blank ---------- */
 .cta {
-  padding: clamp(88px, 9vw, 128px) var(--gutter);
+  padding: clamp(64px, 6vw, 88px) var(--gutter);
   text-align: center;
   background: var(--cv-bg);
 }
@@ -952,7 +952,7 @@ details[open] .chevron {
 .ctaSentence {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: clamp(26px, 3.4vw, 48px);
+  font-size: clamp(22px, 2.6vw, 38px);
   letter-spacing: -0.035em;
   line-height: 1.1;
   margin: 0;
@@ -1018,7 +1018,7 @@ details[open] .chevron {
   grid-template-columns: repeat(12, 1fr);
   grid-template-rows: auto auto;
   column-gap: 24px;
-  padding: clamp(72px, 7vw, 104px) var(--gutter) 0;
+  padding: clamp(56px, 5vw, 80px) var(--gutter) 0;
 }
 
 .footerInvite {
@@ -1042,6 +1042,13 @@ details[open] .chevron {
   text-decoration: none;
 }
 
+.linkButton {
+  all: unset;
+  cursor: pointer;
+  color: var(--paper);
+}
+
+.linkButton:hover,
 .footerLinks a:hover {
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -1050,7 +1057,7 @@ details[open] .chevron {
 .footerLegal {
   grid-column: 1 / -1;
   grid-row: 2;
-  margin-top: clamp(64px, 7vw, 96px);
+  margin-top: clamp(40px, 4vw, 64px);
   padding: 20px 0 28px;
   display: flex;
   flex-wrap: wrap;

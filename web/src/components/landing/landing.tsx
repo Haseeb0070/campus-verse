@@ -2,14 +2,42 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { CheckIcon, LogoGlyph } from "@/components/icons";
 import { Pushpin } from "@/components/pushpin";
+import { SignInDialog } from "@/components/sign-in-dialog";
 import s from "./landing.module.css";
 
-export function Landing() {
+/** Opens the sign-in popup, optionally with an email filled in. */
+const OpenSignIn = createContext<(email?: string) => void>(() => {});
+
+function SignInButton({ className, children }: { className: string; children: React.ReactNode }) {
+  const open = useContext(OpenSignIn);
   return (
+    <button type="button" className={className} onClick={() => open()}>
+      {children}
+    </button>
+  );
+}
+
+/**
+ * The public landing page. Sign in happens in a small popup over it; /sign-in renders this page
+ * with the popup already open (signIn), and closing it there returns to the plain page (onSignInClose).
+ */
+export function Landing({
+  signIn,
+  onSignInClose,
+}: {
+  signIn?: { email?: string; next?: string | null };
+  onSignInClose?: () => void;
+} = {}) {
+  const [dialog, setDialog] = useState<{ open: boolean; email?: string }>({
+    open: Boolean(signIn),
+    email: signIn?.email,
+  });
+  const openSignIn = (email?: string) => setDialog({ open: true, email });
+  return (
+    <OpenSignIn.Provider value={openSignIn}>
     <div className={s.page}>
       <Header />
       <main>
@@ -22,7 +50,17 @@ export function Landing() {
         <Closing />
       </main>
       <Footer />
+      <SignInDialog
+        open={dialog.open}
+        email={dialog.email}
+        next={signIn?.next}
+        onClose={() => {
+          setDialog({ open: false });
+          onSignInClose?.();
+        }}
+      />
     </div>
+    </OpenSignIn.Provider>
   );
 }
 
@@ -41,9 +79,7 @@ function Header() {
         <a href="#who">Who it&apos;s for</a>
         <a href="#questions">Questions</a>
       </nav>
-      <Link href="/sign-in" className={s.button}>
-        Sign in
-      </Link>
+      <SignInButton className={s.button}>Sign in</SignInButton>
     </header>
   );
 }
@@ -70,9 +106,7 @@ function Hero() {
           attendance and live section chat, for students, teachers and staff.
         </p>
         <div className={s.heroActions}>
-          <Link href="/sign-in" className={`${s.button} ${s.buttonPaper}`}>
-            Sign in
-          </Link>
+          <SignInButton className={`${s.button} ${s.buttonPaper}`}>Sign in</SignInButton>
           <a href="#what" className={`${s.button} ${s.heroGhost}`}>
             See how it works
           </a>
@@ -151,9 +185,7 @@ function Features() {
             Search finds any notice, course, file or event you are allowed to see, and nothing you are not. The calendar holds
             exams and events with sign-ups and waitlists, and notifications reach you in the app and by email.
           </p>
-          <Link href="/sign-in" className={s.button}>
-            Open CampusVerse
-          </Link>
+          <SignInButton className={s.button}>Sign in to CampusVerse</SignInButton>
         </div>
       </div>
       <div className={s.featuresPair}>
@@ -452,7 +484,7 @@ function Questions() {
 /* ---------- Closing: a sentence with a blank ---------- */
 
 function Closing() {
-  const router = useRouter();
+  const openSignIn = useContext(OpenSignIn);
   const [email, setEmail] = useState("");
   return (
     <section className={s.cta} aria-labelledby="cta-title">
@@ -463,7 +495,7 @@ function Closing() {
         action="/sign-in"
         onSubmit={(e) => {
           e.preventDefault();
-          router.push(`/sign-in${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`);
+          openSignIn(email.trim());
         }}
       >
         <p className={s.ctaSentence}>
@@ -506,7 +538,7 @@ function Footer() {
         </Link>
       </div>
       <nav aria-label="More" className={s.footerLinks}>
-        <Link href="/sign-in">Sign in</Link>
+        <SignInButton className={s.linkButton}>Sign in</SignInButton>
         <a href="#timetables">Timetable imports</a>
         <a href="#questions">Questions</a>
       </nav>

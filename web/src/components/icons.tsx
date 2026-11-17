@@ -180,6 +180,12 @@ export const VideoIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const CloseIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </Icon>
+);
+
 /** The CampusVerse glyph on its own (no tile): an arched college window whose centre bar and round
  *  light read as a lowercase "i" — a person, or the next thing to know, inside the campus gate.
  *  The same dot breathes on the Today card and in the landing headline. */
