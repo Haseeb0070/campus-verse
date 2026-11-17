@@ -2,7 +2,8 @@
 
 (college roll number, university roll number, name), in college roll order. Each student signs in
 with <university roll number>@gcslahore.edu.pk. Corrections from the class list: roll 510 is Anusha
-Qaiser (university roll 126188), and Abu Huraira is spelled Abu Haraira.
+Qaiser (university roll 126188); Abu Huraira is spelled Abu Haraira; and the spellings of Qureshi
+(518), Muhammad Haseeb (550) and Irum Akhtar (583) are fixed.
 """
 
 STUDENTS = [
@@ -16,7 +17,7 @@ STUDENTS = [
     (513, 126176, "Abeeha Wajid"),
     (514, 126122, "Malaika Sohail"),
     (517, 126174, "Ayesha Saeed"),
-    (518, 126120, "Muhammad Hassan Queshi"),
+    (518, 126120, "Muhammad Hassan Qureshi"),
     (519, 126173, "Maria Afzal"),
     (520, 126209, "Umer Farooq"),
     (523, 126151, "Amna Kashif"),
@@ -39,7 +40,7 @@ STUDENTS = [
     (546, 126196, "Hafiz Muhammad Abdullah"),
     (547, 126235, "Nimra Tanveer"),
     (549, 126205, "Ahsan Ali"),
-    (550, 126139, "Muhamma Haseeb"),
+    (550, 126139, "Muhammad Haseeb"),
     (552, 126219, "Talha Khan"),
     (553, 126204, "Areeba Mubashir"),
     (554, 126217, "Zainab Shahzad"),
@@ -61,7 +62,7 @@ STUDENTS = [
     (579, 126275, "M. Ikram"),
     (580, 126115, "Rohma Ali Naqvi"),
     (581, 126276, "Yasir Raza"),
-    (583, 126179, "Irum Ikhter"),
+    (583, 126179, "Irum Akhtar"),
     (584, 126156, "Muhammad Faheem"),
     (585, 126269, "M. Khazaima"),
     (587, 126249, "Sara Ali"),

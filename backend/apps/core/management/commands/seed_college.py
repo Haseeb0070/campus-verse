@@ -77,11 +77,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--domain", default=os.environ.get("SEED_EMAIL_DOMAIN", "gcs.test"),
-            help="Email domain for the accounts (default gcs.test, or SEED_EMAIL_DOMAIN).",
+            "--domain", default=os.environ.get("SEED_EMAIL_DOMAIN", STUDENT_EMAIL_DOMAIN),
+            help="Email domain for staff accounts (default gcslahore.edu.pk; SEED_EMAIL_DOMAIN).",
+        )
+        parser.add_argument(
+            "--reset", action="store_true",
+            help="Rebuild from scratch even if the college exists (empties the database first).",
         )
 
-    def handle(self, *args, domain, **options):
+    def handle(self, *args, domain, reset=False, **options):
         if not (settings.DEBUG or settings.CAMPUSVERSE_DEMO_SEED):
             raise CommandError("seed_college only runs with DEBUG=true or DEMO_SEED=true.")
         password = os.environ.get("SEED_PASSWORD", "")
@@ -91,7 +95,7 @@ class Command(BaseCommand):
             ))
             return
 
-        inst = Institution.objects.filter(slug=SLUG).first()
+        inst = None if reset else Institution.objects.filter(slug=SLUG).first()
         if inst is None:
             # Start from an empty database: no demo university, test users or test messages left.
             call_command("flush", interactive=False, verbosity=0)
@@ -126,6 +130,10 @@ class Command(BaseCommand):
             email = f"{uni_roll}@{STUDENT_EMAIL_DOMAIN}"
             first, last = split_name(name)
             student = User.objects.filter(email=email).first()
+            if student is not None and (student.first_name, student.last_name) != (first, last):
+                # The class list is the source of truth for names (spelling fixes reach everyone).
+                student.first_name, student.last_name = first, last
+                student.save(update_fields=["first_name", "last_name"])
             if student is None:
                 student = User.objects.create_user(
                     email=email, password=password, first_name=first, last_name=last,

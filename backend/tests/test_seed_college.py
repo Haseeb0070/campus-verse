@@ -35,7 +35,7 @@ def teacher_of(code):
 
 def test_replaces_the_demo_and_builds_the_bscs_timetable(campus):
     assert Institution.objects.filter(slug="test-u").exists()  # stand-in for the demo data
-    call_command("seed_college", domain="gcs.test")
+    call_command("seed_college", domain="gcslahore.edu.pk")
 
     assert list(Institution.objects.values_list("slug", flat=True)) == ["gcs-lahore"]
 
@@ -55,44 +55,49 @@ def test_replaces_the_demo_and_builds_the_bscs_timetable(campus):
     assert teacher_of("DC-322") == "Rawa"
     assert teacher_of("CC-320") == "Sadaf"
     assert set(User.objects.exclude(kind="student").values_list("email", flat=True)) == {
-        "admin@gcs.test", "nabeel@gcs.test", "mati.urrehman@gcs.test", "rawa@gcs.test",
-        "sadaf@gcs.test",
+        "admin@gcslahore.edu.pk", "nabeel@gcslahore.edu.pk", "mati.urrehman@gcslahore.edu.pk",
+        "rawa@gcslahore.edu.pk",
+        "sadaf@gcslahore.edu.pk",
     }
-    assert User.objects.get(email="sadaf@gcs.test").check_password("test-seed-password")
+    assert User.objects.get(email="sadaf@gcslahore.edu.pk").check_password("test-seed-password")
 
 
 def test_every_student_is_enrolled_in_all_seven_subjects():
-    call_command("seed_college", domain="gcs.test")
+    call_command("seed_college", domain="gcslahore.edu.pk")
     students = User.objects.filter(kind="student")
     assert students.count() == 66
     assert SectionEnrollment.objects.count() == 66 * 7
     assert all(s.enrollments.count() == 7 for s in students)
 
     haseeb = User.objects.get(email="126139@gcslahore.edu.pk")  # college roll 550
-    assert (haseeb.first_name, haseeb.last_name) == ("Muhamma", "Haseeb")
+    assert (haseeb.first_name, haseeb.last_name) == ("Muhammad", "Haseeb")
     assert haseeb.external_id == "126139"
     assert haseeb.check_password("test-seed-password")
     assert User.objects.get(email="126188@gcslahore.edu.pk").get_full_name() == "Anusha Qaiser"
     assert User.objects.get(email="126189@gcslahore.edu.pk").get_full_name() == "Abu Haraira"
     assert User.objects.get(email="126180@gcslahore.edu.pk").get_full_name() == "Faiza"
     assert Course.objects.get(code="EC-330").title == "Web Development"
+    assert User.objects.get(email="126120@gcslahore.edu.pk").last_name == "Qureshi"
+    assert User.objects.get(email="126179@gcslahore.edu.pk").get_full_name() == "Irum Akhtar"
 
 
 def test_a_rerun_adds_missing_students_and_fixes_titles():
-    call_command("seed_college", domain="gcs.test")
+    call_command("seed_college", domain="gcslahore.edu.pk")
     User.objects.filter(email="126139@gcslahore.edu.pk").delete()
     Course.objects.filter(code="EC-330").update(title="Web Engineering")
-    call_command("seed_college", domain="gcs.test")
+    User.objects.filter(email="126179@gcslahore.edu.pk").update(last_name="Ikhter")
+    call_command("seed_college", domain="gcslahore.edu.pk")
     assert User.objects.filter(email="126139@gcslahore.edu.pk").exists()
     assert SectionEnrollment.objects.count() == 66 * 7
     assert Course.objects.get(code="EC-330").title == "Web Development"
+    assert User.objects.get(email="126179@gcslahore.edu.pk").last_name == "Akhtar"
 
 
 def test_a_second_run_changes_nothing():
-    call_command("seed_college", domain="gcs.test")
-    User.objects.filter(email="nabeel@gcs.test").update(first_name="Nabeel A.")
-    call_command("seed_college", domain="gcs.test")
-    assert User.objects.get(email="nabeel@gcs.test").first_name == "Nabeel A."
+    call_command("seed_college", domain="gcslahore.edu.pk")
+    User.objects.filter(email="nabeel@gcslahore.edu.pk").update(first_name="Nabeel A.")
+    call_command("seed_college", domain="gcslahore.edu.pk")
+    assert User.objects.get(email="nabeel@gcslahore.edu.pk").first_name == "Nabeel A."
 
 
 def test_without_a_password_nothing_is_touched(campus, monkeypatch):
