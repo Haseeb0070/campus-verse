@@ -5,8 +5,8 @@ from datetime import time
 import pytest
 from django.core.management import call_command
 
-from apps.academic.models import Institution, Section
-from apps.enrollment.models import TeacherAssignment
+from apps.academic.models import Course, Institution, Section
+from apps.enrollment.models import SectionEnrollment, TeacherAssignment
 from apps.identity.models import User
 from apps.scheduling.models import ClassMeeting
 
@@ -54,11 +54,38 @@ def test_replaces_the_demo_and_builds_the_bscs_timetable(campus):
     assert teacher_of("HQ-005") == "Mati ur Rehman"
     assert teacher_of("DC-322") == "Rawa"
     assert teacher_of("CC-320") == "Sadaf"
-    assert set(User.objects.values_list("email", flat=True)) == {
+    assert set(User.objects.exclude(kind="student").values_list("email", flat=True)) == {
         "admin@gcs.test", "nabeel@gcs.test", "mati.urrehman@gcs.test", "rawa@gcs.test",
         "sadaf@gcs.test",
     }
     assert User.objects.get(email="sadaf@gcs.test").check_password("test-seed-password")
+
+
+def test_every_student_is_enrolled_in_all_seven_subjects():
+    call_command("seed_college", domain="gcs.test")
+    students = User.objects.filter(kind="student")
+    assert students.count() == 66
+    assert SectionEnrollment.objects.count() == 66 * 7
+    assert all(s.enrollments.count() == 7 for s in students)
+
+    haseeb = User.objects.get(email="126139@gcslahore.edu.pk")  # college roll 550
+    assert (haseeb.first_name, haseeb.last_name) == ("Muhamma", "Haseeb")
+    assert haseeb.external_id == "126139"
+    assert haseeb.check_password("test-seed-password")
+    assert User.objects.get(email="126188@gcslahore.edu.pk").get_full_name() == "Anusha Qaiser"
+    assert User.objects.get(email="126189@gcslahore.edu.pk").get_full_name() == "Abu Haraira"
+    assert User.objects.get(email="126180@gcslahore.edu.pk").get_full_name() == "Faiza"
+    assert Course.objects.get(code="EC-330").title == "Web Development"
+
+
+def test_a_rerun_adds_missing_students_and_fixes_titles():
+    call_command("seed_college", domain="gcs.test")
+    User.objects.filter(email="126139@gcslahore.edu.pk").delete()
+    Course.objects.filter(code="EC-330").update(title="Web Engineering")
+    call_command("seed_college", domain="gcs.test")
+    assert User.objects.filter(email="126139@gcslahore.edu.pk").exists()
+    assert SectionEnrollment.objects.count() == 66 * 7
+    assert Course.objects.get(code="EC-330").title == "Web Development"
 
 
 def test_a_second_run_changes_nothing():

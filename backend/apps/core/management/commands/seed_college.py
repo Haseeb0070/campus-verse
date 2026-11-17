@@ -5,9 +5,11 @@ Only the BS CS row is used; G1 and G2 sit together as one class. On the timetabl
 first three days of the week (Monday to Wednesday) and "(4-6)" means Thursday to Saturday.
 
 The first run replaces everything in the database (the demo university, test chats, everyone) with
-the college. Later runs see the college is there and do nothing, so it is safe in a start script.
+the college. Every run then makes sure the course titles match and that each student on the class
+list (apps/core/gcs_students.py) has an account and is enrolled in all seven subjects. Nothing else
+is touched on later runs, so it is safe in a start script.
 
-Every account gets the password in SEED_PASSWORD; without it, nothing is changed.
+New accounts get the password in SEED_PASSWORD; without it, no account is created.
 """
 
 import os
@@ -28,7 +30,8 @@ from apps.academic.models import (
     Program,
     Section,
 )
-from apps.enrollment.models import TeacherAssignment
+from apps.core.gcs_students import STUDENT_EMAIL_DOMAIN, STUDENTS, split_name
+from apps.enrollment.models import SectionEnrollment, TeacherAssignment
 from apps.identity.models import RoleAssignment, User
 from apps.scheduling.models import ClassMeeting, Room
 
@@ -48,7 +51,7 @@ TEACHERS = {
 C = Course.Color
 # code: (title, colour, teacher). Titles expand the timetable's short names.
 COURSES = {
-    "EC-330": ("Web Engineering", C.SKY, "nabeel"),
+    "EC-330": ("Web Development", C.SKY, "nabeel"),
     "HQ-005": ("Translation of the Holy Quran", C.GOLD, "mati"),
     "CC-310": ("Artificial Intelligence", C.ORCHID, "nabeel"),
     "DC-322": ("Computer Architecture", C.SLATE, "rawa"),
@@ -81,23 +84,61 @@ class Command(BaseCommand):
     def handle(self, *args, domain, **options):
         if not (settings.DEBUG or settings.CAMPUSVERSE_DEMO_SEED):
             raise CommandError("seed_college only runs with DEBUG=true or DEMO_SEED=true.")
-        if Institution.objects.filter(slug=SLUG).exists():
-            self.stdout.write("Govt. Graduate College of Science is already set up; nothing to do.")
-            return
         password = os.environ.get("SEED_PASSWORD", "")
         if len(password) < 10:
             self.stdout.write(self.style.WARNING(
-                "Set SEED_PASSWORD (10 characters or more) to create the college; nothing changed."
+                "Set SEED_PASSWORD (10 characters or more) to set up the college; nothing changed."
             ))
             return
 
-        # Start from an empty database: no demo university, test users or test messages left.
-        call_command("flush", interactive=False, verbosity=0)
+        inst = Institution.objects.filter(slug=SLUG).first()
+        if inst is None:
+            # Start from an empty database: no demo university, test users or test messages left.
+            call_command("flush", interactive=False, verbosity=0)
+            with transaction.atomic():
+                accounts = self.seed(domain, password)
+            self.stdout.write(self.style.SUCCESS("Govt. Graduate College of Science is set up."))
+            for email, who in accounts:
+                self.stdout.write(f"  {email}  {who}")
+            inst = Institution.objects.get(slug=SLUG)
+
         with transaction.atomic():
-            accounts = self.seed(domain, password)
-        self.stdout.write(self.style.SUCCESS("Govt. Graduate College of Science is set up."))
-        for email, who in accounts:
-            self.stdout.write(f"  {email}  {who}")
+            for code, (title, _, _) in COURSES.items():
+                Course.objects.filter(institution=inst, code=code).exclude(title=title).update(
+                    title=title
+                )
+            created, enrolled = self.enroll_students(inst, password)
+        self.stdout.write(
+            f"Students: {len(STUDENTS)} on the class list, {created} new accounts, "
+            f"{enrolled} new enrolments."
+        )
+
+    def enroll_students(self, inst, password):
+        """Every student on the class list has an account and sits in all seven G1+G2 sections."""
+        sections = list(
+            Section.objects.filter(
+                institution=inst, code=SECTION, offering__course__code__in=COURSES,
+                offering__term__is_current=True,
+            )
+        )
+        created = enrolled = 0
+        for _college_roll, uni_roll, name in STUDENTS:
+            email = f"{uni_roll}@{STUDENT_EMAIL_DOMAIN}"
+            first, last = split_name(name)
+            student = User.objects.filter(email=email).first()
+            if student is None:
+                student = User.objects.create_user(
+                    email=email, password=password, first_name=first, last_name=last,
+                    kind=User.Kind.STUDENT, institution=inst, external_id=str(uni_roll),
+                )
+                EmailAddress.objects.create(user=student, email=email, verified=True, primary=True)
+                created += 1
+            for section in sections:
+                _, new = SectionEnrollment.objects.get_or_create(
+                    institution=inst, section=section, student=student
+                )
+                enrolled += new
+        return created, enrolled
 
     def seed(self, domain, password):
         inst = Institution.objects.create(
