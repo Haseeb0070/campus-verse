@@ -111,7 +111,7 @@ export default function TodayPage() {
               distance={10}
               delay={70}
               stepDuration={0.45}
-              className="gap-x-[0.2em]"
+             
             />
           </h1>
           <p className="mt-1 text-body text-ink-2">

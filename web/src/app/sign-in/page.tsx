@@ -12,7 +12,8 @@ function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState("");
+  // The landing page's closing sentence sends people here with the email they typed.
+  const [email, setEmail] = useState(() => params.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
