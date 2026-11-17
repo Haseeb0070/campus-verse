@@ -28,3 +28,10 @@ infra/bin/
 Thumbs.db
 .vscode/
 .idea/
+
+# Local AI and design-tool folders (not part of the app)
+.claude/
+.impeccable/
+.superduper/
+.taste-skill/
+skills-lock.json
