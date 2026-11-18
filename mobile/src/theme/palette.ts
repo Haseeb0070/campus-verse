@@ -35,6 +35,8 @@ export interface Palette {
   dangerSoft: string;
   success: string;
   shadow: string;
+  /** Verse, the guide: its name, colours, and whether the admin left it on (Manage → Theme). */
+  guide: { name: string; body: string; cap: string; tassel: string; signedOut: boolean; inApp: boolean };
 }
 
 type Accent = { accent: string; accentInk: string; onAccent: string; field: string; fieldLine: string; side: string };
@@ -66,6 +68,16 @@ const PRESETS: Record<string, { light: Accent; dark: Accent }> = {
   },
 };
 
+/** Verse's colours for each preset, when the admin hasn't chosen their own. */
+const GUIDE: Record<string, { body: string; cap: string; tassel: string }> = {
+  evergreen: { body: "#c4602f", cap: "#243329", tassel: "#e3a33b" },
+  indus: { body: "#c06a12", cap: "#1e2f47", tassel: "#e8c25a" },
+  maroon: { body: "#9e2b3a", cap: "#3b1d22", tassel: "#d9a63a" },
+  olive: { body: "#a26a10", cap: "#343820", tassel: "#f0d27a" },
+  teal: { body: "#c4513a", cap: "#17393a", tassel: "#f2c14e" },
+  slate: { body: "#2f6fae", cap: "#262b33", tassel: "#e3a33b" },
+};
+
 const PAPER: Record<Mode, { bg: string; surface: string; fill: string; ink: string }> = {
   light: { bg: "#f4efe6", surface: "#fffdf8", fill: "#f3ede2", ink: "#241e18" },
   dark: { bg: "#171512", surface: "#201d19", fill: "#2a2621", ink: "#f2ebe0" },
@@ -75,6 +87,12 @@ const PAPER: Record<Mode, { bg: string; surface: string; fill: string; ink: stri
 export interface SiteTheme {
   preset: string;
   custom?: Partial<Record<Mode, Partial<Record<string, string>>>>;
+  guide_enabled?: boolean;
+  helper_enabled?: boolean;
+  guide_name?: string;
+  guide_body?: string;
+  guide_cap?: string;
+  guide_tassel?: string;
 }
 
 export function mix(a: string, b: string, weightOfA: number) {
@@ -152,6 +170,24 @@ export function buildPalette(mode: Mode, site?: SiteTheme | null): Palette {
     dangerSoft: light ? "#f8dcd8" : "#43201c",
     success: light ? "#2f6b3f" : "#8fd19e",
     shadow: light ? "#4a341c" : "#000000",
+    guide: guideOf(site),
+  };
+}
+
+function guideOf(site?: SiteTheme | null): Palette["guide"] {
+  const lightCustom = site?.preset === "custom" ? site.custom?.light : undefined;
+  const fallback =
+    lightCustom && HEX.test(lightCustom.accent ?? "")
+      ? { body: lightCustom.accent!, cap: HEX.test(lightCustom.field ?? "") ? lightCustom.field! : GUIDE.evergreen.cap, tassel: "#e3a33b" }
+      : GUIDE[site?.preset ?? ""] ?? GUIDE.evergreen;
+  const own = (v: string | undefined, f: string) => (HEX.test(v ?? "") ? v! : f);
+  return {
+    name: site?.guide_name?.trim() || "Verse",
+    body: own(site?.guide_body, fallback.body),
+    cap: own(site?.guide_cap, fallback.cap),
+    tassel: own(site?.guide_tassel, fallback.tassel),
+    signedOut: site?.guide_enabled !== false,
+    inApp: site?.helper_enabled !== false,
   };
 }
 

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import { changeOf, isOff, place } from "@/components/classes";
 import { conversationAvatar } from "@/components/conversations";
 import { Icon } from "@/components/Icon";
 import { StackHeader } from "@/components/StackHeader";
+import { ChatVerse, PEEK } from "@/components/verse/ChatVerse";
 import { Avatar, Button, Failed, IconButton, Press, Skeleton, T } from "@/components/ui";
 import { apiFetch, errorDetail, type UploadFile } from "@/lib/api";
 import { useChat, useConversation } from "@/lib/chat";
@@ -71,6 +72,21 @@ export default function Thread() {
     }
   }
 
+  // Verse, peeking over the composer (components/verse/ChatVerse).
+  const verseOn = p.guide.inApp;
+  const [draft, setDraft] = useState({ text: "", focused: false });
+  const [sent, setSent] = useState(0);
+  const [received, setReceived] = useState(0);
+  const [away, setAway] = useState(false);
+  const [barWidth, setBarWidth] = useState(0);
+  const seenNewest = useRef<number | null>(null);
+  useEffect(() => {
+    if (!newest || newest.id <= 0) return;
+    // Not on opening the chat: only messages that arrive while it is open.
+    if (seenNewest.current !== null && newest.id > seenNewest.current && newest.sender.id !== me?.id) setReceived((n) => n + 1);
+    seenNewest.current = Math.max(seenNewest.current ?? 0, newest.id);
+  }, [newest, me?.id]);
+
   const waitingOnMe = c?.kind === "direct" && c.request_status === "pending" && !c.requested_by_me;
   const declined = c?.request_status === "declined";
 
@@ -117,6 +133,8 @@ export default function Thread() {
           onDelete={chat.remove}
           onLoadOlder={() => chat.messages.hasNextPage && !chat.messages.isFetchingNextPage && chat.messages.fetchNextPage()}
           loadingOlder={chat.messages.isFetchingNextPage}
+          reserve={verseOn ? PEEK : 0}
+          onAway={setAway}
         />
       )}
 
@@ -137,12 +155,29 @@ export default function Thread() {
           </T>
         </View>
       ) : (
+        <View onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}>
+          {verseOn && barWidth ? (
+            <ChatVerse
+              width={barWidth}
+              focused={draft.focused}
+              text={draft.text}
+              sent={sent}
+              received={received}
+              othersTyping={chat.typists.length > 0}
+              away={away}
+            />
+          ) : null}
         <Composer
           placeholder={c ? `Message ${c.title}` : "Message"}
           note={c?.kind === "direct" && c.request_status === "pending" ? "They'll see your messages once they accept." : null}
           onTyping={chat.notifyTyping}
-          onSend={(body, files) => chat.send(body, undefined, files)}
+          onSend={(body, files) => {
+            chat.send(body, undefined, files);
+            setSent((n) => n + 1);
+          }}
+          onDraft={setDraft}
         />
+        </View>
       )}
     </KeyboardAvoidingView>
   );
@@ -194,6 +229,8 @@ function Messages({
   onDelete,
   onLoadOlder,
   loadingOlder,
+  reserve,
+  onAway,
 }: {
   list: ChatMessage[];
   meId?: number;
@@ -203,7 +240,12 @@ function Messages({
   onDelete: (m: ChatMessage) => Promise<void>;
   onLoadOlder: () => void;
   loadingOlder: boolean;
+  /** Room kept under the newest message for Verse, so it never sits over one. */
+  reserve: number;
+  /** Whether the list is scrolled up away from the newest messages. */
+  onAway: (away: boolean) => void;
 }) {
+  const away = useRef(false);
   // Newest first, for an inverted list that starts at the bottom and keeps its place.
   const rows = useMemo(() => {
     const out: Row[] = [];
@@ -241,7 +283,16 @@ function Messages({
       inverted
       data={rows}
       keyExtractor={(r) => (r.type === "day" ? r.key : r.m.client_id || String(r.m.id))}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}
+      // Inverted: the top padding is the room at the bottom, under the newest message.
+      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 12 + reserve }}
+      onScroll={(e) => {
+        const now = e.nativeEvent.contentOffset.y > 24;
+        if (now !== away.current) {
+          away.current = now;
+          onAway(now);
+        }
+      }}
+      scrollEventThrottle={64}
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
       onEndReached={onLoadOlder}
@@ -444,17 +495,22 @@ function Composer({
   note,
   onSend,
   onTyping,
+  onDraft,
 }: {
   placeholder: string;
   note: string | null;
   onSend: (body: string, files: UploadFile[]) => void;
   onTyping: () => void;
+  /** What is in the field and whether it has focus, for Verse to read along. */
+  onDraft: (draft: { text: string; focused: boolean }) => void;
 }) {
   const p = useTheme();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const [files, setFiles] = useState<UploadFile[]>([]);
+  const [focused, setFocused] = useState(false);
   const canSend = text.trim().length > 0 || files.length > 0;
+  useEffect(() => onDraft({ text, focused }), [text, focused, onDraft]);
 
   function send() {
     if (!canSend) return;
@@ -496,6 +552,8 @@ function Composer({
             if (v) onTyping();
           }}
           placeholder={placeholder}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholderTextColor={p.ink3}
           accessibilityLabel={placeholder}
           multiline

@@ -12,6 +12,7 @@ import { fileSize, formatDateTime, relativeTime } from "@/lib/format";
 import { useAssignment, useMe, useSubmit, useUploadRules } from "@/lib/queries";
 import type { Assignment, StoredFileInfo } from "@/lib/types";
 import { font, radius, useTheme } from "@/theme";
+import { Verse } from "@/components/verse/Verse";
 
 export default function AssignmentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -145,6 +146,12 @@ function FileRow({ f, onRemove }: { f: StoredFileInfo | UploadFile; onRemove?: (
   );
 }
 
+/** How Verse takes a mark. Never sad at a low one: it stays calm. */
+function markMood(points: number, max: number) {
+  const share = max > 0 ? points / max : 0;
+  return share >= 0.85 ? "celebrate" : share >= 0.6 ? "happy" : "calm";
+}
+
 function StudentSide({ a, tz }: { a: Assignment; tz?: string }) {
   const p = useTheme();
   const submit = useSubmit(a.id);
@@ -193,15 +200,27 @@ function StudentSide({ a, tz }: { a: Assignment; tz?: string }) {
     <>
       {a.my_grade && a.grades_released ? (
         <Card style={{ gap: 8, borderColor: p.accent }}>
-          <T variant="caption" tone="accentInk">
-            Your mark
-          </T>
-          <T style={{ fontFamily: font.display, fontSize: 34, color: p.ink }}>
-            {a.my_grade.points}
-            <T variant="headline" tone="ink3">
-              {` / ${a.max_points}`}
-            </T>
-          </T>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ flex: 1, gap: 8 }}>
+              <T variant="caption" tone="accentInk">
+                Your mark
+              </T>
+              <T style={{ fontFamily: font.display, fontSize: 34, color: p.ink }}>
+                {a.my_grade.points}
+                <T variant="headline" tone="ink3">
+                  {` / ${a.max_points}`}
+                </T>
+              </T>
+            </View>
+            {p.guide.inApp ? (
+              // Verse beside the mark: delighted by a great one, pleased by a good one, calm otherwise.
+              <Verse
+                size={64}
+                state={markMood(Number(a.my_grade.points), a.max_points)}
+                settleAfterMs={2500}
+              />
+            ) : null}
+          </View>
           {a.my_grade.feedback ? (
             <T variant="body" tone="ink2" selectable>
               {a.my_grade.feedback}
@@ -234,7 +253,11 @@ function StudentSide({ a, tz }: { a: Assignment; tz?: string }) {
       {done ? (
         <Animated.View entering={FadeIn}>
           <Card style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-            <Icon name="check" size={20} color={p.success} />
+            {p.guide.inApp ? (
+              <Verse size={44} state="celebrate" settleAfterMs={2500} />
+            ) : (
+              <Icon name="check" size={20} color={p.success} />
+            )}
             <T variant="bodyStrong" style={{ flex: 1 }}>
               Handed in. Your teacher can see it now.
             </T>

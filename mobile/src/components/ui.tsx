@@ -25,6 +25,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { courseTone, font, radius, useTheme } from "@/theme";
 import { Icon, type IconName } from "./Icon";
+import { Verse } from "./verse/Verse";
 
 /* ---------- Type ---------- */
 
@@ -497,13 +498,48 @@ export function Skeleton({ height = 72, style }: { height?: number; style?: Styl
   );
 }
 
-export function Empty({ icon, title, body, action }: { icon: IconName; title: string; body?: string; action?: ReactNode }) {
+/** How Verse looks over an empty page, by its icon, when the page doesn't say. */
+const EMPTY_MOOD: Partial<Record<IconName, string>> = {
+  refresh: "sad",
+  search: "curious",
+  calendar: "sleeping",
+  clipboard: "happy",
+  chart: "waiting",
+  bell: "calm",
+  pin: "calm",
+  user: "confused",
+};
+
+/**
+ * An empty page. Verse stands in the middle of it, above the words (never on them), wearing a
+ * mood that fits: `mood`, or one picked from the icon. The icon shows instead when the admin
+ * turned the guide off.
+ */
+export function Empty({
+  icon,
+  title,
+  body,
+  action,
+  mood,
+}: {
+  icon: IconName;
+  title: string;
+  body?: string;
+  action?: ReactNode;
+  mood?: string;
+}) {
   const p = useTheme();
   return (
     <View style={{ alignItems: "center", paddingVertical: 40, paddingHorizontal: 24, gap: 10 }}>
-      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: p.fill, alignItems: "center", justifyContent: "center" }}>
-        <Icon name={icon} size={26} color={p.ink3} />
-      </View>
+      {p.guide.inApp ? (
+        <View accessible={false} style={{ width: 84, height: 84, marginBottom: -4 }}>
+          <Verse size={84} state={mood ?? EMPTY_MOOD[icon] ?? "calm"} settleAfterMs={2000} />
+        </View>
+      ) : (
+        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: p.fill, alignItems: "center", justifyContent: "center" }}>
+          <Icon name={icon} size={26} color={p.ink3} />
+        </View>
+      )}
       <T variant="headline" style={{ textAlign: "center" }}>
         {title}
       </T>

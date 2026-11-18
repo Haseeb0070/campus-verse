@@ -26,12 +26,15 @@ export default function Today() {
   const notices = useNotices(3);
 
   const firstName = me?.preferred_name || me?.first_name;
+  // Verse perks up when a class is about to start.
+  const soon = next.data && new Date(next.data.starts_at).getTime() > now && minutesUntil(next.data.starts_at, now) <= 15;
 
   return (
     <Screen
       eyebrow={formatDay(today, { weekday: undefined })}
       title={formatDay(today, { day: undefined, month: undefined })}
       actions={<HeaderActions profile />}
+      verse={soon ? "excited" : "happy"}
       refreshKeys={[["timetable"], ["assignments"], ["chat"], ["notices"], ["notifications"]]}
     >
       <View style={{ paddingHorizontal: 16, gap: 26 }}>

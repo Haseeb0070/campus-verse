@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { HeaderActions, Screen } from "@/components/Screen";
 import { Card, CourseTag, Empty, Failed, Press, Segmented, Skeleton, T } from "@/components/ui";
 import { formatDateTime, relativeTime } from "@/lib/format";
+import { useNow } from "@/lib/now";
 import { useAssignments, useMe } from "@/lib/queries";
 import type { Assignment } from "@/lib/types";
 import { useTheme } from "@/theme";
@@ -53,12 +54,17 @@ export default function Work() {
     { key: "marked", label: "Marked" },
   ];
   const list = lists[tab];
+  // Verse: worried by anything overdue, proud of a clear list.
+  const now = useNow();
+  const overdue = lists.due.some((a) => new Date(a.due_at).getTime() < now);
+  const verse = overdue ? "scared" : !teaches && query.data && !lists.due.length ? "proud" : "calm";
 
   return (
     <Screen
       eyebrow={courses ? `${courses} ${courses === 1 ? "course" : "courses"}` : undefined}
       title="Coursework"
       actions={<HeaderActions />}
+      verse={verse}
       refreshKeys={[["assignments"], ["progress"]]}
       below={
         <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
@@ -77,6 +83,7 @@ export default function Work() {
         ) : list.length === 0 ? (
           <Empty
             icon="clipboard"
+            mood={tab === "due" ? "proud" : "calm"}
             title={{ teaching: "No assignments yet", due: "You're all caught up", in: "Nothing handed in yet", marked: "No marks yet" }[tab]}
             body={
               {

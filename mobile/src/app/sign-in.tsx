@@ -4,6 +4,7 @@ import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LogoGlyph } from "@/components/Logo";
 import { Button, Field, T } from "@/components/ui";
+import { SignInVerse } from "@/components/verse/SignInVerse";
 import { useAuth } from "@/lib/auth";
 import { intro, useIntroRunning } from "@/lib/intro";
 import { font, radius, useTheme } from "@/theme";
@@ -27,6 +28,12 @@ export default function SignIn() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
+  // Which field has focus, for Verse: it reads along the email and looks away from the password.
+  const [focus, setFocus] = useState<"email" | "password" | "other" | null>(null);
+  const watch = (field: "email" | "password" | "other") => ({
+    onFocus: () => setFocus(field),
+    onBlur: () => setFocus((f) => (f === field ? null : f)),
+  });
 
   async function submit() {
     setError(null);
@@ -118,6 +125,13 @@ export default function SignIn() {
 
         <View style={{ flex: 1, minHeight: 32 }} />
 
+        <SignInVerse
+          field={step === "password" || step === "reset" ? focus : focus ? "other" : null}
+          email={email}
+          passwordLength={password.length}
+          busy={busy}
+          error={!!error}
+        />
         <Animated.View
           entering={FadeInDown.delay(160).springify().damping(22)}
           style={{ backgroundColor: paper.bg, borderRadius: radius.xl, padding: 20, gap: 14 }}
@@ -141,6 +155,7 @@ export default function SignIn() {
                   textContentType="username"
                   returnKeyType="next"
                   onSubmitEditing={() => passwordRef.current?.focus()}
+                  {...watch("email")}
                 />
                 <Field
                   ref={passwordRef}
@@ -152,6 +167,7 @@ export default function SignIn() {
                   textContentType="password"
                   returnKeyType="go"
                   onSubmitEditing={submit}
+                  {...watch("password")}
                 />
             </View>
           )}
@@ -173,6 +189,7 @@ export default function SignIn() {
                   returnKeyType="go"
                   onSubmitEditing={submit}
                   style={{ letterSpacing: 4, fontFamily: font.semibold }}
+                  {...watch("other")}
                 />
               </View>
             </>
@@ -194,6 +211,7 @@ export default function SignIn() {
                   autoFocus
                   returnKeyType="send"
                   onSubmitEditing={submit}
+                  {...watch("email")}
                 />
               </View>
             </>

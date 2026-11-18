@@ -8,6 +8,7 @@ import { useMe } from "@/lib/queries";
 import { initials } from "@/lib/format";
 import { font, useTheme } from "@/theme";
 import { Avatar, IconButton, Press, T } from "./ui";
+import { HeaderVerse } from "./verse/HeaderVerse";
 
 /** Search and notifications, top right of every tab, as in the design. */
 export function HeaderActions({ profile = false }: { profile?: boolean }) {
@@ -39,6 +40,7 @@ export function Screen({
   below,
   children,
   refreshKeys,
+  verse,
 }: {
   eyebrow?: string;
   title: string;
@@ -48,8 +50,17 @@ export function Screen({
   children: ReactNode;
   /** Query keys a pull-to-refresh reloads. */
   refreshKeys?: readonly (readonly unknown[])[];
+  /** Verse stands at the end of the title wearing this mood; false leaves it out. */
+  verse?: string | false;
 }) {
   const p = useTheme();
+  const unread = useNotifications().data?.unread ?? 0;
+  const withVerse = p.guide.inApp && verse !== false;
+  // Verse stands at the end of the title when the title still fits on one line beside it; if the
+  // title has to wrap, Verse moves up to the small line above, so the title keeps its full width.
+  const [wrapped, setWrapped] = useState<string | null>(null);
+  const inline = withVerse && wrapped !== title;
+  const verseEl = withVerse ? <HeaderVerse mood={verse || "calm"} unread={unread} /> : null;
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -79,15 +90,32 @@ export function Screen({
           gap: 12,
         }}
       >
-        <View style={{ flexShrink: 1 }}>
-          {eyebrow ? (
-            <T variant="eyebrow" tone="ink3" style={{ marginBottom: 2 }}>
-              {eyebrow}
-            </T>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          {eyebrow || (withVerse && !inline) ? (
+            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, marginBottom: 2 }}>
+              {eyebrow ? (
+                <T variant="eyebrow" tone="ink3" style={{ flexShrink: 1, marginBottom: inline ? 0 : 6 }}>
+                  {eyebrow}
+                </T>
+              ) : null}
+              {inline ? null : verseEl}
+            </View>
           ) : null}
-          <T variant="display" accessibilityRole="header" style={{ fontFamily: font.display }}>
-            {title}
-          </T>
+          {/* Beside the title, Verse has its own place: the title is never under it. */}
+          <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, minWidth: 0 }}>
+            <T
+              variant="display"
+              accessibilityRole="header"
+              style={{ fontFamily: font.display, flexShrink: 1, minWidth: 0 }}
+              onLayout={(e) => {
+                // More than one line (38px each): give the title the room, move Verse up.
+                if (inline && e.nativeEvent.layout.height > 38 * 1.5) setWrapped(title);
+              }}
+            >
+              {title}
+            </T>
+            {inline ? verseEl : null}
+          </View>
         </View>
         {actions}
       </View>

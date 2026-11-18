@@ -31,6 +31,7 @@ export default function Notices() {
       eyebrow="Your board"
       title="Notices"
       actions={<HeaderActions />}
+      verse="reading"
       refreshKeys={[["notices"]]}
       below={
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 16 }}>

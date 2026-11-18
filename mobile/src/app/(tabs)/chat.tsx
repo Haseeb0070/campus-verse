@@ -29,6 +29,7 @@ export default function Chats() {
     <Screen
       title="Chat"
       actions={<HeaderActions />}
+      verse={unread("sections") + unread("direct") + unread("requests") ? "curious" : "calm"}
       refreshKeys={[conversationsKey]}
       below={
         <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
