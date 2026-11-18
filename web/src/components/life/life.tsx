@@ -78,11 +78,13 @@ function createBody(el: HTMLElement, shadow: HTMLElement | null) {
   let lean = 0;
   let walking = false;
   let sleeping = false;
-  let nextStep = 0;
-  let shiverUntil = 0;
+  const stride: Spring = { x: 0, v: 0 }; // 0 standing, 1 in full stride: eases the bob in and out
+  let phase = 0; // where in its stride it is, in turns
+  let shiverStart = -1e9;
   let frame = 0;
   let last = 0;
   const timers = new Set<number>();
+  let jellySide = 1;
 
   const later = (ms: number, fn: () => void) => {
     const t = window.setTimeout(() => {
@@ -101,13 +103,26 @@ function createBody(el: HTMLElement, shadow: HTMLElement | null) {
     if (!airborne()) launch(h);
   };
 
-  const draw = () => {
+  const SHIVER_S = 0.65;
+  const shiverAt = (now: number) => {
+    // A smooth, fast side-to-side tremble that dies away; no random noise, so no shudder.
+    const t = (now - shiverStart) / 1000;
+    if (t < 0 || t > SHIVER_S) return 0;
+    return Math.sin(t * Math.PI * 2 * 14) * 2.2 * (1 - t / SHIVER_S);
+  };
+
+  const draw = (now: number) => {
+    // The walk: a soft, continuous bob with a slight squash at the bottom of each step.
+    const bob = (1 - Math.cos(phase * Math.PI * 2)) / 2; // 0 on the ground, 1 at the top
+    const walkY = -3.5 * bob * stride.x;
+    const walkSq = (bob - 0.5) * 0.05 * stride.x;
     const stretch = airborne() ? Math.min(0.16, Math.abs(vy) / 2600) : 0;
-    const sy = Math.max(0.55, (1 + squash.x) * (1 + stretch));
+    const sy = Math.max(0.55, (1 + squash.x + walkSq) * (1 + stretch));
     const sx = 1 / Math.sqrt(sy); // keeps its volume: flatter is wider
-    el.style.transform = `translate3d(${shift.x.toFixed(2)}px, ${y.toFixed(2)}px, 0) rotate(${tilt.x.toFixed(2)}deg) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
+    const top = y + walkY;
+    el.style.transform = `translate3d(${(shift.x + shiverAt(now)).toFixed(2)}px, ${top.toFixed(2)}px, 0) rotate(${tilt.x.toFixed(2)}deg) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
     if (shadow) {
-      const lift = Math.min(1, -y / 50);
+      const lift = Math.min(1, -top / 50);
       shadow.style.transform = `translateX(-50%) scale(${((1 - lift * 0.45) * sx).toFixed(3)}, 1)`;
       shadow.style.opacity = (1 - lift * 0.6).toFixed(3);
     }
@@ -116,10 +131,7 @@ function createBody(el: HTMLElement, shadow: HTMLElement | null) {
   const tick = (now: number) => {
     const elapsed = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (walking && now >= nextStep && !airborne()) {
-      launch(9); // a skip in its step
-      nextStep = now + 290;
-    }
+    phase = (phase + elapsed * 2.6) % 1; // 2.6 steps a second
     const target = walking ? lean : sleeping ? 7 : 0;
     const steps = Math.max(1, Math.ceil(elapsed * 120));
     const dt = elapsed / steps;
@@ -127,7 +139,7 @@ function createBody(el: HTMLElement, shadow: HTMLElement | null) {
       spring(squash, squashTarget, 0.28, 0.3, dt);
       spring(tilt, target, 0.45, 0.4, dt);
       spring(shift, 0, 0.3, 0.5, dt);
-      if (now < shiverUntil) shift.v += (Math.random() - 0.5) * 14000 * dt;
+      spring(stride, walking ? 1 : 0, 0.35, 1, dt);
       if (airborne()) {
         vy += GRAVITY * dt;
         y += vy * dt;
@@ -135,16 +147,16 @@ function createBody(el: HTMLElement, shadow: HTMLElement | null) {
           // Touch down: the fall turns into a squash, and a little wobble.
           y = 0;
           squash.v -= Math.min(7, vy / 105);
-          tilt.v += (Math.random() - 0.5) * 50;
           vy = 0;
         }
       }
     }
-    draw();
+    draw(now);
     const resting =
       !walking &&
       !airborne() &&
-      now >= shiverUntil &&
+      stride.x < 0.002 &&
+      now - shiverStart > SHIVER_S * 1000 &&
       Math.abs(squash.x - squashTarget) < 0.001 &&
       Math.abs(squash.v) < 0.01 &&
       Math.abs(tilt.x - target) < 0.05 &&
@@ -175,7 +187,7 @@ function createBody(el: HTMLElement, shadow: HTMLElement | null) {
     },
     jelly: () => {
       squash.v -= 5;
-      tilt.v += (Math.random() - 0.5) * 140;
+      tilt.v += (jellySide = -jellySide) * 70;
     },
     perk: () => {
       squash.v += 3.4;
@@ -187,7 +199,7 @@ function createBody(el: HTMLElement, shadow: HTMLElement | null) {
       [0, 420, 840, 1260].forEach((ms, i) => later(ms, () => (tilt.v += (i % 2 ? -1 : 1) * 85)));
     },
     shiver: () => {
-      shiverUntil = performance.now() + 650;
+      shiverStart = performance.now();
       squash.v -= 1.5;
     },
     dizzy: () => {
@@ -196,7 +208,7 @@ function createBody(el: HTMLElement, shadow: HTMLElement | null) {
     },
     flinch: () => {
       squash.v -= 4;
-      tilt.v += (Math.random() < 0.5 ? -1 : 1) * 180;
+      tilt.v += (jellySide = -jellySide) * 160;
       later(70, () => hop(11));
     },
     stretch: () => {
@@ -220,7 +232,6 @@ function createBody(el: HTMLElement, shadow: HTMLElement | null) {
       wake();
     },
     setWalk(on: boolean, facing: 1 | -1) {
-      if (on && !walking) nextStep = 0;
       walking = on;
       lean = facing * 8;
       wake();
@@ -623,7 +634,7 @@ export function useLife({
       lx = e.clientX;
       ly = e.clientY;
       lt = now;
-      if (speed < 4 || now < quiet || asleepRef.current || busyRef.current) return;
+      if (speed < 6 || now < quiet || asleepRef.current || busyRef.current) return;
       const r = target.current?.getBoundingClientRect();
       if (!r) return;
       const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
@@ -643,13 +654,17 @@ export function useLife({
     let ly = window.scrollY;
     let lt = performance.now();
     let quiet = 0;
+    let fast = 0;
     const onScroll = () => {
       const now = performance.now();
       const dt = now - lt;
       const speed = dt > 0 ? Math.abs(window.scrollY - ly) / dt : 0;
       ly = window.scrollY;
       lt = now;
-      if (speed < 5 || now < quiet || asleepRef.current || dt > 120) return;
+      // A real fling, kept up for a moment: one wheel notch or a jump link is not one.
+      fast = speed > 9 && dt > 4 && dt < 120 ? fast + 1 : 0;
+      if (fast < 3 || now < quiet || asleepRef.current) return;
+      fast = 0;
       quiet = now + 9000;
       react("scared", 1300);
       body.current?.act("shiver");
@@ -722,8 +737,13 @@ export function useLife({
     [react, say, body],
   );
 
+  // A perk when the pointer comes over it, at most once a second, so a pointer resting on its edge
+  // does not set it twitching.
+  const perked = useRef(0);
   const onPointerEnter = useCallback(() => {
-    if (asleepRef.current) return;
+    const now = performance.now();
+    if (asleepRef.current || now - perked.current < 1200) return;
+    perked.current = now;
     body.current?.act("perk");
     avatar.current?.poke("nod");
   }, [avatar, body]);
