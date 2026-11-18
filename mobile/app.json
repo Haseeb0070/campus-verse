@@ -42,7 +42,13 @@
       "expo-secure-store",
       "expo-sharing",
       "expo-font",
-      "./plugins/with-short-native-paths"
+      "./plugins/with-short-native-paths",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

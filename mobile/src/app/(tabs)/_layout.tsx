@@ -1,7 +1,8 @@
 import type { BottomTabBarProps } from "expo-router/tabs";
 import { Tabs } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
 import { useUnreadTotal } from "@/lib/chat";
@@ -39,6 +40,7 @@ function TabBar({ state, navigateToTab }: BottomTabBarProps) {
         backgroundColor: p.side,
         paddingTop: 6,
         paddingHorizontal: 8,
+        // Above the phone's own navigation: the gesture handle, or the three buttons, whichever it has.
         paddingBottom: Math.max(insets.bottom, 10),
         borderTopLeftRadius: 22,
         borderTopRightRadius: 22,
@@ -62,16 +64,16 @@ function TabBar({ state, navigateToTab }: BottomTabBarProps) {
             }}
             style={{ flex: 1, alignItems: "center", gap: 4, paddingTop: 8, paddingBottom: 4, minHeight: 52 }}
           >
-            <View
-              style={{
-                width: 52,
-                height: 30,
-                borderRadius: 15,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: focused ? p.active : "transparent",
-              }}
-            >
+            <View style={{ width: 56, height: 32, alignItems: "center", justifyContent: "center" }}>
+              {/* The pill is its own view, mounted on the tab that's chosen: Android drops the rounded
+                  corners of a view whose background changes after it first draws, which left a square. */}
+              {focused ? (
+                <Animated.View
+                  key={p.active}
+                  entering={ZoomIn.springify().damping(18).stiffness(260)}
+                  style={[StyleSheet.absoluteFill, { borderRadius: 16, borderCurve: "continuous", backgroundColor: p.active }]}
+                />
+              ) : null}
               <Icon name={tab.icon} color={focused ? p.onActive : p.onSideMuted} />
               {badge ? (
                 <View

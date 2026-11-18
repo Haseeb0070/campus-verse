@@ -7,7 +7,8 @@ import {
 } from "@expo-google-fonts/plus-jakarta-sans";
 import { focusManager, onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useSegments } from "expo-router";
+import { NavigationBar } from "expo-navigation-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
@@ -79,6 +80,8 @@ function Themed() {
 function Navigator() {
   const { status } = useAuth();
   const p = useTheme();
+  // On a tab, the deep green tab bar sits over the phone's navigation buttons.
+  const onTabs = useSegments()[0] === "(tabs)";
 
   useEffect(() => {
     if (status !== "loading") SplashScreen.hideAsync().catch(() => {});
@@ -90,6 +93,9 @@ function Navigator() {
   return (
     <>
       <StatusBar style={signedIn && p.mode === "light" ? "dark" : "light"} />
+      {/* Android's own navigation buttons (on phones that use them, not gestures): light over the
+          deep green tab bar and the sign-in screen, and matching the page everywhere else. */}
+      <NavigationBar style={!signedIn || onTabs || p.mode === "dark" ? "dark" : "light"} />
       <Stack
         screenOptions={{
           headerShown: false,
