@@ -255,6 +255,64 @@ def current(request, term_id: int):
     return _call(lambda: Status(200, structure.make_current(request.user, term)))
 
 
+class NextSemesterIn(Schema):
+    name: str
+    code: str
+    starts_on: date
+    ends_on: date
+    copy_sections: bool = False
+    copy_teachers: bool = False
+    carry_students: bool = True
+    close_old: bool = True
+    make_current: bool = True
+
+
+class NextSemesterOut(Schema):
+    term: TermOut
+    sections_copied: int
+    teachers_copied: int
+    students_carried: int
+    sections_closed: int
+
+
+@router.post("/terms/{term_id}/next", response={201: NextSemesterOut, 403: ErrorOut, 422: ErrorOut})
+def start_next(request, term_id: int, payload: NextSemesterIn):
+    """Starts the semester after this one (see rollover.start_semester)."""
+    from .rollover import start_semester
+
+    term = _mine(request, AcademicTerm, term_id)
+    p = payload
+
+    def go():
+        r = start_semester(
+            request.user, term, name=p.name, code=p.code, starts_on=p.starts_on,
+            ends_on=p.ends_on, copy_sections=p.copy_sections, copy_teachers=p.copy_teachers,
+            carry=p.carry_students, close_old=p.close_old, make_new_current=p.make_current,
+        )
+        return Status(201, {"term": r.term, "sections_copied": r.sections_copied,
+                            "teachers_copied": r.teachers_copied,
+                            "students_carried": r.students_carried,
+                            "sections_closed": r.sections_closed})
+
+    return _call(go)
+
+
+class CarryOut(Schema):
+    students_carried: int
+
+
+@router.post("/terms/{term_id}/carry-from/{from_id}",
+             response={200: CarryOut, 403: ErrorOut, 422: ErrorOut})
+def carry(request, term_id: int, from_id: int):
+    """After importing a new semester's subjects: each class joins the sections named alike."""
+    from .rollover import carry_students
+
+    to_term = _mine(request, AcademicTerm, term_id)
+    from_term = _mine(request, AcademicTerm, from_id)
+    return _call(lambda: Status(200, {"students_carried": carry_students(request.user, from_term,
+                                                                          to_term)}))
+
+
 @router.post("/departments", response={201: DepartmentOut, 403: ErrorOut, 422: ErrorOut})
 def add_department(request, payload: DepartmentIn):
     def go():

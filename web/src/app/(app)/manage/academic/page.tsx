@@ -291,16 +291,26 @@ function DepartmentsCard({ s }: { s: Structure }) {
 function TermsCard({ s }: { s: Structure }) {
   const { save, error, busy } = useSave();
   const [adding, setAdding] = useState(false);
+  const [rolling, setRolling] = useState(false);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const current = s.terms.find((t) => t.is_current);
   return (
     <section aria-labelledby="terms-h" className="glass flex flex-col gap-3 rounded-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="terms-h" className="text-headline font-semibold">Terms</h2>
-        <button className={quiet} onClick={() => setAdding((a) => !a)}>Add term</button>
+        <span className="flex flex-wrap gap-2">
+          {s.terms.some((t) => t.is_current) && (
+            <button className={primary} onClick={() => { setRolling((r) => !r); setAdding(false); }} aria-expanded={rolling}>
+              Start next semester
+            </button>
+          )}
+          <button className={quiet} onClick={() => { setAdding((a) => !a); setRolling(false); }}>Add term</button>
+        </span>
       </div>
+      {rolling && <NextSemester s={s} onDone={() => setRolling(false)} />}
       {adding && (
         <FormBox error={error} onSubmit={() => save("POST", "/terms", { name, code, starts_on: start, ends_on: end }, () => setAdding(false))}>
           <div className="grid gap-3 sm:grid-cols-4">
@@ -321,6 +331,18 @@ function TermsCard({ s }: { s: Structure }) {
             </span>
             {t.is_current ? (
               <span className="rounded-full bg-success/12 px-2.5 py-1 text-caption font-semibold text-success-ink">Current</span>
+            ) : current && t.starts_on > current.starts_on ? (
+              <span className="flex flex-wrap gap-1">
+                <button className="rounded-full px-3 py-1.5 text-footnote font-semibold text-accent-ink hover:bg-fill"
+                  title={`Each class in ${current.name} joins this term's sections with the same name`}
+                  onClick={() => save("POST", `/terms/${t.id}/carry-from/${current.id}`, {})}>
+                  Carry students from {current.name}
+                </button>
+                <button className="rounded-full px-3 py-1.5 text-footnote font-semibold text-accent-ink hover:bg-fill"
+                  onClick={() => save("POST", `/terms/${t.id}/current`, {})}>
+                  Make current
+                </button>
+              </span>
             ) : (
               <button className="rounded-full px-3 py-1.5 text-footnote font-semibold text-accent-ink hover:bg-fill"
                 onClick={() => save("POST", `/terms/${t.id}/current`, {})}>
@@ -331,6 +353,111 @@ function TermsCard({ s }: { s: Structure }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+/** Starts the semester after the current one: a new term, the classes carried over, and
+ *  (optionally) the subjects and teachers copied when they repeat. */
+function NextSemester({ s, onDone }: { s: Structure; onDone: () => void }) {
+  const queryClient = useQueryClient();
+  const current = s.terms.find((t) => t.is_current)!;
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [copySections, setCopySections] = useState(false);
+  const [copyTeachers, setCopyTeachers] = useState(false);
+  const [carry, setCarry] = useState(true);
+  const [closeOld, setCloseOld] = useState(true);
+  const [makeCurrent, setMakeCurrent] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  async function go() {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await apiFetch<{ sections_copied: number; teachers_copied: number; students_carried: number; sections_closed: number }>(
+        `/api/manage/structure/terms/${current.id}/next`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            name, code, starts_on: start, ends_on: end, copy_sections: copySections,
+            copy_teachers: copySections && copyTeachers, carry_students: carry, close_old: closeOld,
+            make_current: makeCurrent,
+          }),
+        },
+      );
+      await queryClient.invalidateQueries();
+      setDone(
+        [
+          r.sections_copied && `${r.sections_copied} sections copied`,
+          r.teachers_copied && `${r.teachers_copied} teachers kept`,
+          `${r.students_carried} enrollments carried over`,
+          r.sections_closed && `${r.sections_closed} old sections closed`,
+        ].filter(Boolean).join(", ") + ".",
+      );
+    } catch (err) {
+      setError(errorDetail(err, "Couldn't start the semester. Try again."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="flex flex-col gap-2 rounded-row bg-success/10 p-4 text-footnote">
+        <p className="text-body font-semibold">{name} has started.</p>
+        <p>{done}</p>
+        {!copySections && (
+          <p className="text-ink-2">
+            Next: import the new semester&apos;s timetable and subjects, then use “Carry students” on
+            the new term so each class joins its new sections.
+          </p>
+        )}
+        <button className={`${quiet} self-start`} onClick={onDone}>Done</button>
+      </div>
+    );
+  }
+
+  const option = (checked: boolean, set: (v: boolean) => void, title: string, detail: string, disabled = false) => (
+    <span className={`flex items-start gap-3 ${disabled ? "opacity-50" : ""}`}>
+      <Switch checked={checked} onChange={set} label={title} disabled={disabled} />
+      <span>
+        <span className="block text-body font-medium text-ink">{title}</span>
+        <span className="block text-footnote font-normal">{detail}</span>
+      </span>
+    </span>
+  );
+
+  return (
+    <FormBox error={error} onSubmit={go}>
+      <p className="text-footnote text-ink-2">Follows {current.name}.</p>
+      <div className="grid gap-3 sm:grid-cols-4">
+        <label className={label}>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Spring 2027" className={field} /></label>
+        <label className={label}>Code<input value={code} maxLength={32} onChange={(e) => setCode(e.target.value)} placeholder="S27" className={field} /></label>
+        <label className={label}>Starts<DatePicker value={start} onChange={setStart} label="Starts" className={field} /></label>
+        <label className={label}>Ends<DatePicker value={end} onChange={setEnd} label="Ends" min={start || undefined} className={field} /></label>
+      </div>
+      <div className="flex flex-col gap-3 text-ink-2">
+        {option(carry, setCarry, "Carry the students over",
+          "Each class joins the new term's sections with the same name (G1+G2 stays G1+G2).")}
+        {option(copySections, setCopySections, "Copy the subjects and sections",
+          "Only when the same subjects run again. Otherwise import the new timetable afterwards.")}
+        {option(copyTeachers, setCopyTeachers, "Keep the same teachers on copied sections",
+          "Each copied section keeps its teachers.", !copySections)}
+        {option(closeOld, setCloseOld, `Close ${current.name}`,
+          "Its sections are archived and enrollments marked completed. Nothing is deleted.")}
+        {option(makeCurrent, setMakeCurrent, "Make it the current semester",
+          "Timetables and Today switch to the new term.")}
+      </div>
+      <div className="flex justify-end">
+        <button type="submit" className={primary} disabled={busy || !name.trim() || !code.trim() || !start || !end}>
+          {busy ? "Starting…" : "Start semester"}
+        </button>
+      </div>
+    </FormBox>
   );
 }
 
