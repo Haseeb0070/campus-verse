@@ -29,7 +29,7 @@ interface Results {
   results: Partial<Record<Kind, Hit[]>>;
 }
 
-type Kind = "notices" | "courses" | "resources" | "posts" | "events" | "assignments";
+type Kind = "notices" | "courses" | "resources" | "posts" | "events" | "assignments" | "people" | "messages";
 
 const KINDS: { key: Kind; label: string }[] = [
   { key: "notices", label: "Notices" },
@@ -38,6 +38,8 @@ const KINDS: { key: Kind; label: string }[] = [
   { key: "posts", label: "Feed" },
   { key: "events", label: "Events" },
   { key: "assignments", label: "Assignments" },
+  { key: "people", label: "People" },
+  { key: "messages", label: "Messages" },
 ];
 const PER_KIND = 6;
 
@@ -117,7 +119,7 @@ function SearchInner() {
       <form role="search" onSubmit={(e) => { e.preventDefault(); go({ q: q.trim() }); }} className="flex flex-col gap-3">
         <label className="sr-only" htmlFor="search-box">Search CampusVerse</label>
         <input id="search-box" ref={input} type="search" value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder="Notices, courses, resources, events, assignments…"
+          placeholder="Notices, people, messages, assignments, events…"
           className="glass h-12 w-full rounded-full px-5 text-headline outline-none focus:ring-2 focus:ring-accent/50" />
         <div className="flex flex-wrap items-center gap-3">
           <ChipGroup label="Show" value={kind} onChange={(k) => go({ type: k })}

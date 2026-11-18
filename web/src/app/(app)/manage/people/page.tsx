@@ -2,7 +2,7 @@
 
 import { ChipGroup } from "@/components/chip-group";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 import { type ManagedPerson, roleLabel, useDepartments, usePeople } from "@/lib/manage";
@@ -22,6 +22,11 @@ const field =
 
 export default function PeoplePage() {
   const [q, setQ] = useState("");
+  // A link from search opens the list already searched (?q=).
+  useEffect(() => {
+    const fromLink = new URLSearchParams(window.location.search).get("q");
+    if (fromLink) setQ(fromLink);
+  }, []);
   const [kind, setKind] = useState("");
   const [inviting, setInviting] = useState(false);
   const people = usePeople(q.trim(), kind);

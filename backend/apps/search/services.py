@@ -23,7 +23,7 @@ from apps.notices.models import Notice
 from apps.resources.services import visible_resources
 from apps.scheduling.services import member_section_ids
 
-TYPES = ("notices", "courses", "resources", "posts", "events", "assignments")
+TYPES = ("notices", "courses", "resources", "posts", "events", "assignments", "people", "messages")
 MIN_QUERY = 2
 PER_TYPE = 6
 SNIPPET = 160
@@ -151,6 +151,57 @@ def search(user, q: str, *, types=TYPES, course_id: int | None = None, days: int
              "draft": a.status == Assignment.Status.DRAFT}
             for a in qs.order_by("-due_at")[:limit]
         ]
+
+    if "people" in types:
+        # Only people you could message (classmates, your teachers, staff); admins see everyone.
+        from apps.chat.services import contacts
+
+        admin = is_institution_admin(user)
+        people = contacts(user, q, limit=limit)
+        results["people"] = [
+            {"id": u.pk, "title": u.get_full_name() or u.email,
+             "snippet": f"{u.get_kind_display()} · {u.email}",
+             "link": f"/manage/people?q={u.email}" if admin else f"/chat?to={u.pk}",
+             "date": None, "course": None}
+            for u in people
+        ]
+
+    if "messages" in types:
+        # Messages in the chats you're in: your sections' chats and your own conversations.
+        from apps.chat.models import Conversation, Message
+        from apps.chat.services import other_member
+
+        convs = Conversation.objects.filter(
+            Q(kind=Conversation.Kind.SECTION, section_id__in=member_section_ids(user))
+            | Q(members__user=user),
+            institution_id=user.institution_id,
+        ).exclude(request_status=Conversation.Request.DECLINED)
+        qs = (
+            Message.objects.filter(conversation__in=convs, deleted_at__isnull=True)
+            .filter(matches("body"))
+            .select_related("sender", "conversation__section__offering__course")
+        )
+        if course_id:
+            qs = qs.filter(conversation__section__offering__course_id=course_id)
+        if since:
+            qs = qs.filter(created_at__gte=since)
+        hits = []
+        for m in qs.order_by("-created_at")[:limit]:
+            conv = m.conversation
+            if conv.section_id:
+                course = conv.section.offering.course
+                where = f"{course.code} · {conv.section.code}"
+                code, color = course.code, course.color
+            else:
+                other = other_member(user, conv)
+                where = (other.get_full_name() or other.email) if other else "a private chat"
+                code, color = None, None
+            sender = m.sender.get_full_name() or m.sender.email
+            hits.append({
+                "id": m.pk, "title": f"{sender} in {where}", "snippet": snippet(m.body, words[0]),
+                "link": f"/chat/{conv.pk}", "date": m.created_at, "course": code, "color": color,
+            })
+        results["messages"] = hits
 
     return {"query": q, "results": results,
             "total": sum(len(v) for v in results.values())}

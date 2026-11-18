@@ -103,3 +103,33 @@ def test_search_api(client, campus, content):
     assert [c["code"] for c in client.get("/api/search/courses").json()] == ["CS-301"]
     client.force_login(campus.hamza)
     assert client.get("/api/search", {"q": "graphs"}).json()["total"] == 0
+
+
+def test_people_and_messages_follow_who_can_see_them(campus, monkeypatch):
+    import uuid
+
+    from apps.chat import services as chat
+    from apps.chat.models import Conversation
+
+    monkeypatch.setattr("apps.core.realtime.publish", lambda channel, data: None)
+    monkeypatch.setattr("apps.core.realtime.broadcast", lambda channels, data: None)
+
+    # People: only those you could message (3C's Hamza shares no class with Ayesha).
+    found = services.search(campus.ayesha, "test.edu", types=("people",), limit=50)
+    emails = {hit["snippet"].split(" · ")[1] for hit in found["results"]["people"]}
+    assert "imran@test.edu" in emails and "hamza@test.edu" not in emails
+    admin_view = services.search(campus.admin, "hamza", types=("people",))
+    assert admin_view["results"]["people"][0]["link"].startswith("/manage/people")
+
+    # Messages: from the chats you're in, never deleted ones.
+    chat.ensure_section_conversations(campus.ayesha)
+    room = Conversation.objects.get(section=campus.s3b)
+    chat.send_message(campus.ayesha, room, body="Is the quiz on recursion?", client_id=uuid.uuid4())
+    gone = chat.send_message(campus.ayesha, room, body="recursion typo", client_id=uuid.uuid4())[0]
+    chat.delete_message(campus.ayesha, gone)
+
+    mine = services.search(campus.teacher, "recursion", types=("messages",))["results"]["messages"]
+    assert [m["snippet"] for m in mine] == ["Is the quiz on recursion?"]
+    assert mine[0]["link"] == f"/chat/{room.pk}"
+    hidden = services.search(campus.hamza, "recursion", types=("messages",))
+    assert hidden["results"]["messages"] == []
