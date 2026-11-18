@@ -148,6 +148,38 @@
   opacity: 1;
 }
 
+/* Puts Verse, the guide, away or brings it back. */
+.guideSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(244 239 230 / 0.12);
+  color: var(--on-ground);
+  font: 600 var(--small) / 1 var(--font-sans);
+  cursor: pointer;
+  transition: background-color 160ms var(--ease);
+}
+
+.guideSwitch:hover {
+  background: rgb(244 239 230 / 0.2);
+}
+
+.guideDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgb(244 239 230 / 0.4);
+  transition: background-color 160ms var(--ease);
+}
+
+.guideSwitch[aria-pressed="true"] .guideDot {
+  background: #e3a33b; /* the tassel's gold */
+}
+
 .navButton {
   height: 40px;
   padding: 0 20px;
@@ -964,6 +996,10 @@ details[open] .chevron {
 
   .navLinks {
     display: none;
+  }
+
+  .guideSwitch {
+    margin-left: auto;
   }
 
   .week,

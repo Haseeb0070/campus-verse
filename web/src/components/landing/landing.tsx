@@ -63,10 +63,11 @@ export function Landing({
     open: Boolean(signIn),
     email: signIn?.email,
   });
+  const [guide, setGuide] = useGuideSwitch();
   return (
     <OpenSignIn.Provider value={(email) => setDialog({ open: true, email })}>
       <div className={s.page}>
-        <NavBar />
+        <NavBar guide={guide} onGuide={() => setGuide(!guide)} />
         <main>
           <Hero />
           <Week />
@@ -75,7 +76,7 @@ export function Landing({
           <Reply />
         </main>
         <Footer />
-        <Guide />
+        <Guide on={guide} />
         <SignInDialog
           open={dialog.open}
           email={dialog.email}
@@ -91,6 +92,27 @@ export function Landing({
 }
 
 /* ---------- Navigation bar ---------- */
+
+/** Whether Verse, the guide, is out. On by default; the choice is remembered on this device. */
+function useGuideSwitch(): [boolean, (on: boolean) => void] {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("cv-guide") === "off") setOn(false);
+    } catch {
+      // Storage blocked: the guide just starts out.
+    }
+  }, []);
+  const set = (next: boolean) => {
+    setOn(next);
+    try {
+      localStorage.setItem("cv-guide", next ? "on" : "off");
+    } catch {
+      // Storage blocked: the choice lasts for this visit only.
+    }
+  };
+  return [on, set];
+}
 
 const SECTIONS = [
   ["week", "Your week"],
@@ -126,10 +148,10 @@ function useCurrentSection() {
 
 /** A plain bar on the evergreen ground: the name, the page's sections and sign in. It stays at the
  *  top while the page scrolls. */
-function NavBar() {
+function NavBar({ guide, onGuide }: { guide: boolean; onGuide: () => void }) {
   const current = useCurrentSection();
   return (
-    <header className={s.nav}>
+    <header className={s.nav} data-solid>
       <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
         <span className={s.wordmarkTile}>
           <LogoGlyph className="size-[60%]" />
@@ -143,6 +165,16 @@ function NavBar() {
           </a>
         ))}
       </nav>
+      <button
+        type="button"
+        className={s.guideSwitch}
+        aria-pressed={guide}
+        onClick={onGuide}
+        title={guide ? "Put Verse, the guide, away" : "Bring Verse, the guide, back"}
+      >
+        <span className={s.guideDot} aria-hidden="true" />
+        Guide
+      </button>
       <SignInButton className={`${s.button} ${s.navButton}`}>Sign in</SignInButton>
     </header>
   );
@@ -191,7 +223,7 @@ function HeroTitle() {
 function Hero() {
   return (
     <section className={s.hero} aria-labelledby="hero-title">
-      <div className={s.heroCard}>
+      <div className={s.heroCard} data-solid>
         <div className={s.heroCardBody}>
           <HeroTitle />
           <p className={s.heroLead}>
@@ -342,7 +374,7 @@ function Menu() {
   const ref = useRise<HTMLElement>();
   return (
     <section ref={ref} id="menu" className={s.menu} aria-labelledby="menu-title">
-      <div className={s.sheet} data-rise>
+      <div className={s.sheet} data-rise data-solid>
         <h2 id="menu-title" className={s.title}>
           What it does
         </h2>
@@ -478,7 +510,7 @@ function Reply() {
         Your classes, notices and section chats are already in it. Sign in once and keep it open on
         your phone.
       </p>
-      <div className={s.replyCard} data-rise>
+      <div className={s.replyCard} data-rise data-solid>
         <h2 id="reply-title" className={s.title}>
           Sign in
         </h2>
@@ -498,7 +530,7 @@ function Reply() {
 function Footer() {
   return (
     <footer id="end" className={s.footer}>
-      <div className={s.back}>
+      <div className={s.back} data-solid>
         <div className={s.scallops} aria-hidden="true">
           {Array.from({ length: 12 }, (_, i) => (
             <span key={i} />
