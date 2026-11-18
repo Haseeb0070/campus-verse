@@ -69,20 +69,14 @@ class Comment(InstitutionScopedModel):
 
 
 class Reaction(InstitutionScopedModel):
-    """A deliberately small set (FR-FEED-05): useful signals, not a popularity contest."""
-
-    class Kind(models.TextChoices):
-        HELPFUL = "helpful"
-        THANKS = "thanks"
-        AGREE = "agree"
+    """One like per person per post (FR-FEED-05): one quiet signal, not a set of near-synonyms."""
 
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="reactions")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
-    kind = models.CharField(max_length=16, choices=Kind.choices)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["post", "user", "kind"], name="uniq_reaction")
+            models.UniqueConstraint(fields=["post", "user"], name="one_reaction_per_person")
         ]
 
 

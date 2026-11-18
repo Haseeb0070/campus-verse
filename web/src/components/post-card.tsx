@@ -1,15 +1,13 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import PulseHeart, { type PulseHeartIcon } from "@/components/reactbits/PulseHeart";
+import PulseHeart from "@/components/reactbits/PulseHeart";
 import { useState } from "react";
 import { apiFetch, errorDetail } from "@/lib/api";
 import {
   type FeedComment,
   type FeedPerson,
   type FeedPost,
-  type ReactionKind,
-  reactionLabels,
   useComments,
 } from "@/lib/feed";
 import { relativeTime } from "@/lib/format";
@@ -40,9 +38,6 @@ async function moderate(type: "post" | "comment", id: number, action: "hide" | "
     body: JSON.stringify({ target_type: type, target_id: id, action }),
   });
 }
-
-/** Each reaction drawn as an icon: a star for helpful, a heart for thanks, a thumb for agree. */
-const reactionIcon: Record<ReactionKind, PulseHeartIcon> = { helpful: "star", thanks: "heart", agree: "thumb" };
 
 export function PostCard({ post }: { post: FeedPost }) {
   const queryClient = useQueryClient();
@@ -155,33 +150,23 @@ export function PostCard({ post }: { post: FeedPost }) {
       )}
 
       <footer className="mt-4 flex flex-wrap items-center gap-2">
-        {(Object.keys(reactionLabels) as ReactionKind[]).map((kind) => {
-          const on = post.my_reactions.includes(kind);
-          const count = post.reactions[kind] ?? 0;
-          return (
-            // React Bits PulseHeart: the icon shrinks to a dot, changes colour and pulses back while
-            // the count rolls over. The name shows on hover and is read out with the count.
-            <span key={kind} title={reactionLabels[kind]} className="inline-flex">
-              <PulseHeart
-                liked={on}
-                count={count}
-                icon={reactionIcon[kind]}
-                label={reactionLabels[kind]}
-                disabled={post.visibility !== "visible"}
-                onChange={() =>
-                  run(() => apiFetch(`/api/feed/posts/${post.id}/reactions`, { method: "POST", body: JSON.stringify({ kind }) }))
-                }
-                size={18}
-                corner={999}
-                className="[&_.tabular-nums]:!text-[12px]"
-                likedColor="var(--cv-accent)"
-                idleColor="var(--cv-ink-3)"
-                pillColor="var(--cv-fill)"
-                textColor="var(--cv-ink-2)"
-              />
-            </span>
-          );
-        })}
+        {/* One like per person: React Bits PulseHeart shrinks the heart to a dot, changes colour
+            and pulses back while the count rolls over. */}
+        <PulseHeart
+          liked={post.reacted}
+          count={post.reaction_count}
+          icon="heart"
+          label="Like"
+          disabled={post.visibility !== "visible"}
+          onChange={() => run(() => apiFetch(`/api/feed/posts/${post.id}/reactions`, { method: "POST" }))}
+          size={18}
+          corner={999}
+          className="[&_.tabular-nums]:!text-[12px]"
+          likedColor="var(--cv-accent)"
+          idleColor="var(--cv-ink-3)"
+          pillColor="var(--cv-fill)"
+          textColor="var(--cv-ink-2)"
+        />
         <button onClick={() => setOpen((o) => !o)} aria-expanded={open}
           className="press ml-auto h-8 rounded-full px-3 text-footnote font-semibold text-ink-2 hover:bg-fill-strong">
           {post.comment_count === 0 ? "Comment" : `${post.comment_count} ${post.comment_count === 1 ? "comment" : "comments"}`}

@@ -1,10 +1,11 @@
 import pytest
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError, transaction
 
 from apps.enrollment.models import SectionEnrollment
 from apps.feed import services
-from apps.feed.models import Visibility
+from apps.feed.models import Reaction, Visibility
 from apps.governance.models import AuditLog
 from apps.identity.models import RoleAssignment
 from apps.notifications.models import Notification
@@ -103,12 +104,16 @@ def test_comments_and_replies_notify_the_right_people(campus, classmate):
         services.add_comment(classmate, post, body="nested", parent_id=reply.pk)
 
 
-def test_reactions_toggle(campus, classmate):
+def test_reactions_toggle_one_per_person(campus, classmate):
     post = post_3b(campus)
-    assert services.toggle_reaction(classmate, post, "helpful") is True
-    assert services.toggle_reaction(classmate, post, "helpful") is False
-    with pytest.raises(ValidationError):
-        services.toggle_reaction(classmate, post, "angry")
+    assert services.toggle_reaction(classmate, post) is True
+    assert services.toggle_reaction(campus.teacher, post) is True
+    assert Reaction.objects.filter(post=post).count() == 2
+    assert services.toggle_reaction(classmate, post) is False
+    assert list(Reaction.objects.filter(post=post).values_list("user", flat=True)) == [
+        campus.teacher.pk]
+    with pytest.raises(IntegrityError), transaction.atomic():
+        Reaction.objects.create(institution_id=post.institution_id, post=post, user=campus.teacher)
 
 
 # Reports and moderation ----------------------------------------------------------------------
@@ -193,13 +198,11 @@ def test_feed_api_round_trip(client, campus, classmate):
     assert shown.status_code == 200 and shown["Content-Disposition"].startswith("inline")
 
     client.force_login(classmate)
-    assert client.post(f"/api/feed/posts/{post['id']}/reactions", {"kind": "thanks"},
-                       content_type="application/json").json() == {"on": True}
+    assert client.post(f"/api/feed/posts/{post['id']}/reactions").json() == {"on": True}
     assert client.post(f"/api/feed/posts/{post['id']}/comments", {"body": "Thanks!"},
                        content_type="application/json").status_code == 201
     [seen] = client.get("/api/feed/posts").json()
-    assert (seen["reactions"], seen["my_reactions"], seen["comment_count"]) == (
-        {"thanks": 1}, ["thanks"], 1)
+    assert (seen["reaction_count"], seen["reacted"], seen["comment_count"]) == (1, True, 1)
     assert client.post("/api/feed/reports", {"target_type": "post", "target_id": post["id"],
                                              "reason": "spam"},
                        content_type="application/json").status_code == 201

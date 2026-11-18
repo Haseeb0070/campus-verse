@@ -218,16 +218,14 @@ def delete_comment(user, comment: Comment) -> None:
     comment.save(update_fields=["deleted_at", "updated_at"])
 
 
-def toggle_reaction(user, post: Post, kind: str) -> bool:
-    if kind not in Reaction.Kind.values:
-        raise ValidationError("Unknown reaction.")
+def toggle_reaction(user, post: Post) -> bool:
+    """Like or unlike a post. Each person has at most one reaction on a post."""
     if post.visibility != Visibility.VISIBLE:
         raise ValidationError("This post isn't open for reactions.")
-    existing = Reaction.objects.filter(post=post, user=user, kind=kind)
-    if existing.exists():
-        existing.delete()
+    deleted, _ = Reaction.objects.filter(post=post, user=user).delete()
+    if deleted:
         return False
-    Reaction.objects.create(institution_id=post.institution_id, post=post, user=user, kind=kind)
+    Reaction.objects.create(institution_id=post.institution_id, post=post, user=user)
     return True
 
 

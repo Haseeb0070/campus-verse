@@ -1,4 +1,4 @@
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime
 from typing import Literal
 
@@ -41,8 +41,8 @@ class PostOut(Schema):
     attachments: list[FileOut]
     created_at: datetime
     visibility: str
-    reactions: dict[str, int]
-    my_reactions: list[str]
+    reaction_count: int
+    reacted: bool
     comment_count: int
     mine: bool
     can_moderate: bool
@@ -68,10 +68,6 @@ class AudienceOut(Schema):
 class CommentIn(Schema):
     body: str
     parent_id: int | None = None
-
-
-class ReactionIn(Schema):
-    kind: Literal["helpful", "thanks", "agree"]
 
 
 class ReportIn(Schema):
@@ -129,14 +125,14 @@ def _file(f: StoredFile) -> dict:
 
 def _posts_out(user, posts: list[Post]) -> list[dict]:
     ids = [p.pk for p in posts]
-    counts: dict[int, Counter] = defaultdict(Counter)
-    mine: dict[int, list[str]] = defaultdict(list)
-    for post_id, user_id, kind in Reaction.objects.filter(post_id__in=ids).values_list(
-        "post_id", "user_id", "kind"
+    counts: Counter = Counter()
+    mine: set[int] = set()
+    for post_id, user_id in Reaction.objects.filter(post_id__in=ids).values_list(
+        "post_id", "user_id"
     ):
-        counts[post_id][kind] += 1
+        counts[post_id] += 1
         if user_id == user.pk:
-            mine[post_id].append(kind)
+            mine.add(post_id)
     comments = dict(
         Comment.objects.filter(post_id__in=ids, deleted_at__isnull=True,
                                visibility=Visibility.VISIBLE)
@@ -153,8 +149,8 @@ def _posts_out(user, posts: list[Post]) -> list[dict]:
             else [_file(f) for f in p.attachments.all()],
             "created_at": p.created_at,
             "visibility": p.visibility,
-            "reactions": dict(counts[p.pk]),
-            "my_reactions": mine[p.pk],
+            "reaction_count": counts[p.pk],
+            "reacted": p.pk in mine,
             "comment_count": comments.get(p.pk, 0),
             "mine": p.author_id == user.pk,
             "can_moderate": services.can_moderate(user, p),
@@ -259,10 +255,9 @@ def delete_comment(request, comment_id: int):
 
 
 @router.post("/posts/{post_id}/reactions", response={200: dict, 422: ErrorOut})
-def react(request, post_id: int, payload: ReactionIn):
+def react(request, post_id: int):
     post = _get(request, post_id)
-    return _call(lambda: Status(200, {
-        "on": services.toggle_reaction(request.user, post, payload.kind)}))
+    return _call(lambda: Status(200, {"on": services.toggle_reaction(request.user, post)}))
 
 
 @router.post("/reports", response={201: dict, 422: ErrorOut})

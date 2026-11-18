@@ -18,8 +18,9 @@ export interface FeedPost {
   attachments: { id: number; name: string; size: number; content_type: string }[];
   created_at: string;
   visibility: "visible" | "hidden" | "removed";
-  reactions: Partial<Record<ReactionKind, number>>;
-  my_reactions: ReactionKind[];
+  /** How many people liked the post; each person can like it once. */
+  reaction_count: number;
+  reacted: boolean;
   comment_count: number;
   mine: boolean;
   can_moderate: boolean;
@@ -49,14 +50,6 @@ export interface QueuedReport {
   visibility: string;
   reports_on_target: number;
 }
-
-export type ReactionKind = "helpful" | "thanks" | "agree";
-
-export const reactionLabels: Record<ReactionKind, string> = {
-  helpful: "Helpful",
-  thanks: "Thanks",
-  agree: "Agree",
-};
 
 export const reasonLabels: Record<string, string> = {
   spam: "Spam or advertising",
