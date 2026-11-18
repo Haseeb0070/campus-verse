@@ -20,6 +20,10 @@ export interface ManagedPerson {
   id: number;
   email: string;
   name: string;
+  first_name: string;
+  last_name: string;
+  external_id: string;
+  two_step: boolean;
   initials: string;
   kind: "student" | "teacher" | "staff";
   is_active: boolean;

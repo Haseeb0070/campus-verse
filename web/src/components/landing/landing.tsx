@@ -459,7 +459,7 @@ const FAQ: [string, string][] = [
   ],
   [
     "I forgot my password.",
-    "Ask the college office to reset it. If you turned on two-step sign-in, keep your recovery codes somewhere safe.",
+    "Press “Forgot password?” in the sign-in box and we’ll email you a link to choose a new one. No email? The college office can give you a reset link, and can reset two-step sign-in if you lose your phone.",
   ],
 ];
 

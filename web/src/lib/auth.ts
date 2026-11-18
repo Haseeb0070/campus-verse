@@ -121,3 +121,20 @@ export async function totpSetup(): Promise<TotpSetup | null> {
 }
 
 export { firstMessage as allauthError };
+
+/** Asks for a reset link by email. Says the same whether or not the address has an account, so
+ *  nobody can use it to find out who's registered. Returns an error message, or null. */
+export async function requestPasswordReset(email: string): Promise<string | null> {
+  await ensureCsrfCookie();
+  try {
+    await apiFetch(`${BASE}/auth/password/request`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+    return null;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 429) return "Too many requests. Wait a few minutes, then try again.";
+    if (err instanceof ApiError && err.status === 400) return firstMessage(err, "Enter a valid email address.");
+    return null; // never reveal more than "if it has an account, a link is on its way"
+  }
+}

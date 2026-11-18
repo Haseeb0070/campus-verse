@@ -153,7 +153,8 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
   const queryClient = useQueryClient();
   const me = useMe().data;
   const departments = useDepartments();
-  const [mode, setMode] = useState<"idle" | "role" | "deactivate">("idle");
+  const [mode, setMode] = useState<"idle" | "role" | "deactivate" | "edit" | "reset">("idle");
+  const [resetLink, setResetLink] = useState<string | null>(null);
   const [role, setRole] = useState("department_coordinator");
   const [dept, setDept] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -215,10 +216,39 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
               Resend invite
             </button>
           )}
+          <button onClick={() => setMode(mode === "edit" ? "idle" : "edit")} aria-expanded={mode === "edit"}
+            className="press rounded-full bg-fill-strong px-3 py-1.5">
+            Edit
+          </button>
           <button onClick={() => setMode(mode === "role" ? "idle" : "role")} aria-expanded={mode === "role"}
             className="press rounded-full bg-fill-strong px-3 py-1.5">
             Add role
           </button>
+          {!p.invited && p.is_active && (
+            <button
+              onClick={async () => {
+                setError(null);
+                try {
+                  const res = await apiFetch<{ link: string }>(`/api/manage/people/${p.id}/password-reset`, { method: "POST" });
+                  setResetLink(res.link);
+                  setMode("reset");
+                } catch (err) {
+                  setError(errorDetail(err, "Couldn't make a reset link. Try again."));
+                }
+              }}
+              className="press rounded-full bg-fill-strong px-3 py-1.5"
+            >
+              Reset password
+            </button>
+          )}
+          {p.two_step && (
+            <button
+              onClick={() => run(`/api/manage/people/${p.id}/reset-two-step`, undefined, "Two-step sign-in is off. They can set it up again from Profile.")}
+              className="press rounded-full bg-fill-strong px-3 py-1.5"
+            >
+              Reset two-step
+            </button>
+          )}
           {p.id !== me?.id &&
             (p.is_active ? (
               <button onClick={() => setMode("deactivate")} className="press rounded-full px-3 py-1.5 text-danger-ink hover:bg-danger/10">
@@ -231,6 +261,28 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
             ))}
         </span>
       </div>
+
+      {mode === "edit" && <EditPerson person={p} onDone={(msg) => { setMode("idle"); if (msg) setNotice(msg); }} />}
+
+      {mode === "reset" && resetLink && (
+        <div className="mt-3 flex flex-col gap-2 rounded-row bg-fill p-3 text-footnote">
+          <span>
+            A reset link was emailed to {p.email}. If email isn&apos;t set up yet, give them this link
+            yourself. It works once and expires in a few days.
+          </span>
+          <span className="flex flex-wrap items-center gap-2">
+            <input readOnly value={resetLink} onFocus={(e) => e.currentTarget.select()} aria-label="Reset link"
+              className="h-9 min-w-0 flex-1 rounded-full bg-[var(--cv-bg)] px-3 font-mono text-caption outline-none" />
+            <button
+              onClick={() => navigator.clipboard?.writeText(resetLink).then(() => setNotice("Link copied."))}
+              className="press rounded-full bg-accent px-3 py-1.5 font-semibold text-on-accent"
+            >
+              Copy
+            </button>
+            <button onClick={() => setMode("idle")} className="font-semibold">Done</button>
+          </span>
+        </div>
+      )}
 
       {mode === "deactivate" && (
         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-row bg-danger/8 p-3 text-footnote">
@@ -281,5 +333,73 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
       {error && <p role="alert" className="mt-2 text-footnote text-danger-ink">{error}</p>}
       {notice && <p role="status" className="mt-2 text-footnote text-success-ink">{notice}</p>}
     </li>
+  );
+}
+
+/** Fix someone's details: names, email, student/teacher/staff and their college ID. */
+function EditPerson({ person: p, onDone }: { person: ManagedPerson; onDone: (message?: string) => void }) {
+  const queryClient = useQueryClient();
+  const [first, setFirst] = useState(p.first_name);
+  const [last, setLast] = useState(p.last_name);
+  const [email, setEmail] = useState(p.email);
+  const [kind, setKind] = useState<string>(p.kind);
+  const [externalId, setExternalId] = useState(p.external_id);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await apiFetch(`/api/manage/people/${p.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ first_name: first, last_name: last, email, kind, external_id: externalId }),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["manage"] });
+      onDone("Saved.");
+    } catch (err) {
+      setError(errorDetail(err, "Couldn't save. Try again."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const input = `${field} bg-[var(--cv-bg)]`;
+  return (
+    <form onSubmit={save} className="mt-3 grid gap-3 rounded-row bg-fill p-3 sm:grid-cols-2">
+      <label className="flex flex-col gap-1 text-footnote font-semibold text-ink-2">
+        First name
+        <input value={first} onChange={(e) => setFirst(e.target.value)} className={input} required />
+      </label>
+      <label className="flex flex-col gap-1 text-footnote font-semibold text-ink-2">
+        Last name
+        <input value={last} onChange={(e) => setLast(e.target.value)} className={input} />
+      </label>
+      <label className="flex flex-col gap-1 text-footnote font-semibold text-ink-2">
+        Email (they sign in with it)
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={input} required />
+      </label>
+      <label className="flex flex-col gap-1 text-footnote font-semibold text-ink-2">
+        College ID (roll number)
+        <input value={externalId} onChange={(e) => setExternalId(e.target.value)} className={input} />
+      </label>
+      <label className="flex flex-col gap-1 text-footnote font-semibold text-ink-2">
+        Type
+        <Select value={kind} onChange={setKind} label="Type" className={input} options={[
+          { value: "student", label: "Student" },
+          { value: "teacher", label: "Teacher" },
+          { value: "staff", label: "Staff" },
+        ]} />
+      </label>
+      <span className="flex items-end gap-3">
+        <button type="submit" disabled={busy}
+          className="press h-11 rounded-full bg-accent px-5 text-body font-semibold text-on-accent disabled:opacity-60">
+          {busy ? "Saving…" : "Save"}
+        </button>
+        <button type="button" onClick={() => onDone()} className="font-semibold">Cancel</button>
+      </span>
+      {error && <p role="alert" className="text-footnote text-danger-ink sm:col-span-2">{error}</p>}
+    </form>
   );
 }

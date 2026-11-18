@@ -56,6 +56,10 @@ class PersonOut(Schema):
     id: int
     email: str
     name: str
+    first_name: str = ""
+    last_name: str = ""
+    external_id: str = ""
+    two_step: bool = False
     initials: str
     kind: str
     is_active: bool
@@ -169,6 +173,10 @@ def _person_out(u: User) -> dict:
         "id": u.pk,
         "email": u.email,
         "name": u.get_full_name() or u.email,
+        "first_name": u.first_name,
+        "last_name": u.last_name,
+        "external_id": u.external_id,
+        "two_step": u.authenticator_set.exists(),
         "initials": initials(u),
         "kind": u.kind,
         "is_active": u.is_active,
@@ -282,6 +290,46 @@ def resend(request, person_id: int):
     _admin(request)
     person = _person(request, person_id)
     return _call(lambda: (people.resend_invite(request.user, person), Status(204, None))[1])
+
+
+class PersonUpdateIn(Schema):
+    first_name: str
+    last_name: str = ""
+    email: str
+    kind: str
+    external_id: str = ""
+
+
+@router.patch("/people/{person_id}", response=PERSON)
+def update_person(request, person_id: int, payload: PersonUpdateIn):
+    _admin(request)
+    person = _person(request, person_id)
+
+    def go():
+        people.update_person(request.user, person, **payload.dict())
+        return _person_out(User.objects.get(pk=person.pk))
+
+    return _call(go)
+
+
+class ResetLinkOut(Schema):
+    link: str
+
+
+@router.post("/people/{person_id}/password-reset", response={200: ResetLinkOut, 403: ErrorOut,
+                                                            422: ErrorOut})
+def password_reset(request, person_id: int):
+    """Emails the person a link to choose a new password, and returns it to pass on in person."""
+    _admin(request)
+    person = _person(request, person_id)
+    return _call(lambda: {"link": people.password_reset_link(request.user, person)})
+
+
+@router.post("/people/{person_id}/reset-two-step", response=DONE)
+def reset_two_step(request, person_id: int):
+    _admin(request)
+    person = _person(request, person_id)
+    return _call(lambda: (people.reset_two_step(request.user, person), Status(204, None))[1])
 
 
 @router.post("/people/{person_id}/deactivate", response=PERSON)

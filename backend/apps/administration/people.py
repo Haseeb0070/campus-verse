@@ -145,3 +145,80 @@ def revoke_role(admin, assignment: RoleAssignment) -> None:
     audit.record(actor=admin, action="role.revoked", target=assignment.user,
                  changes={"role": assignment.role, "department": assignment.department_id})
     assignment.delete()
+
+
+@transaction.atomic
+def update_person(admin, person, *, first_name: str, last_name: str, email: str, kind: str,
+                  external_id: str = "") -> None:
+    """Fix someone's details: names, email, student/teacher/staff and their ID in the college's
+    own records (a roll number)."""
+    require_admin(admin)
+    _same_institution(admin, person)
+    email = email.strip().lower()
+    try:
+        validate_email(email)
+    except ValidationError:
+        raise ValidationError("Enter a valid email address.") from None
+    if User.objects.filter(email__iexact=email).exclude(pk=person.pk).exists():
+        raise ValidationError("Someone else already has that email.")
+    if kind not in User.Kind.values:
+        raise ValidationError("Choose student, teacher or staff.")
+    first_name, last_name, external_id = first_name.strip(), last_name.strip(), external_id.strip()
+    if not first_name:
+        raise ValidationError("Enter a first name.")
+    if external_id and User.objects.filter(
+        institution_id=person.institution_id, external_id=external_id
+    ).exclude(pk=person.pk).exists():
+        raise ValidationError("Someone else already has that ID.")
+
+    before = {"first_name": person.first_name, "last_name": person.last_name,
+              "email": person.email, "kind": person.kind, "external_id": person.external_id}
+    after = {"first_name": first_name, "last_name": last_name, "email": email, "kind": kind,
+             "external_id": external_id}
+    changed = {k: [before[k], v] for k, v in after.items() if before[k] != v}
+    if not changed:
+        return
+    for k, v in after.items():
+        setattr(person, k, v)
+    person.save(update_fields=list(after))
+    if "email" in changed:
+        # Sign-in uses the new address from now on; the admin vouches for it.
+        EmailAddress.objects.filter(user=person).delete()
+        EmailAddress.objects.create(user=person, email=email, verified=True, primary=True)
+    audit.record(actor=admin, action="person.updated", target=person, changes=changed)
+
+
+def password_reset_link(admin, person) -> str:
+    """A link that lets this person choose a new password, emailed to them and handed to the admin
+    (to pass on in person while email isn't set up). It works once and expires."""
+    require_admin(admin)
+    _same_institution(admin, person)
+    if not person.is_active:
+        raise ValidationError("Reactivate this person first.")
+    link = invite_link(person)
+    send_mail(
+        subject="Reset your CampusVerse password",
+        message=(
+            f"Hi {person.first_name or 'there'},\n\n"
+            f"{admin.get_full_name() or admin.email} sent you a link to choose a new password:\n"
+            f"{link}\n\nIt works once and expires in a few days."
+        ),
+        from_email=None,
+        recipient_list=[person.email],
+    )
+    audit.record(actor=admin, action="person.password_reset_sent", target=person)
+    return link
+
+
+@transaction.atomic
+def reset_two_step(admin, person) -> int:
+    """Turns off two-step sign-in for someone who lost their phone and recovery codes. They sign
+    in with their password and can set it up again."""
+    from allauth.mfa.models import Authenticator
+
+    require_admin(admin)
+    _same_institution(admin, person)
+    removed, _ = Authenticator.objects.filter(user=person).delete()
+    if removed:
+        audit.record(actor=admin, action="person.two_step_reset", target=person)
+    return removed

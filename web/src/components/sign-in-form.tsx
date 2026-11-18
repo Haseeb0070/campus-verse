@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { signIn, signOut, verifyCode } from "@/lib/auth";
+import { requestPasswordReset, signIn, signOut, verifyCode } from "@/lib/auth";
 
 type FieldErrors = { email?: string; password?: string };
 
@@ -24,7 +24,7 @@ export function SignInForm({ initialEmail = "", next }: { initialEmail?: string;
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [step, setStep] = useState<"password" | "code">("password");
+  const [step, setStep] = useState<"password" | "code" | "forgot" | "sent">("password");
   const [code, setCode] = useState("");
   const [recovery, setRecovery] = useState(false);
 
@@ -89,6 +89,76 @@ export function SignInForm({ initialEmail = "", next }: { initialEmail?: string;
       {formError}
     </p>
   );
+
+  async function handleForgot(event: React.FormEvent) {
+    event.preventDefault();
+    if (!/^S+@S+.S+$/.test(email.trim())) {
+      setFieldErrors({ email: "Enter the email you sign in with." });
+      return;
+    }
+    setFieldErrors({});
+    setFormError(null);
+    setPending(true);
+    const error = await requestPasswordReset(email.trim());
+    setPending(false);
+    if (error) return setFormError(error);
+    setStep("sent");
+  }
+
+  if (step === "sent") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div>
+          <p className="text-headline font-semibold">Check your email</p>
+          <p className="mt-1 text-footnote text-ink-2">
+            If {email.trim()} has an account, a link to choose a new password is on its way. It
+            works once and expires in a few days. No email? Ask the college office: they can give
+            you a reset link.
+          </p>
+        </div>
+        <button type="button" onClick={() => setStep("password")}
+          className="press h-11 rounded-full bg-fill-strong text-body font-semibold">
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
+
+  if (step === "forgot") {
+    return (
+      <form onSubmit={handleForgot} noValidate className="flex flex-col gap-4">
+        <div>
+          <p className="text-headline font-semibold">Forgot your password?</p>
+          <p className="mt-1 text-footnote text-ink-2">We&apos;ll email you a link to choose a new one.</p>
+        </div>
+        {errorBox}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="forgot-email" className="text-footnote font-semibold text-ink-2">
+            Email
+          </label>
+          <input
+            id="forgot-email"
+            type="email"
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={Boolean(fieldErrors.email)}
+            className={`${inputClass} ${fieldErrors.email ? "border-danger" : "border-transparent"}`}
+          />
+          {fieldErrors.email && <p className="text-footnote text-danger-ink">{fieldErrors.email}</p>}
+        </div>
+        <button type="submit" disabled={pending}
+          className="press h-11 rounded-full bg-accent text-body font-semibold text-on-accent disabled:opacity-70">
+          {pending ? "Sending…" : "Send reset link"}
+        </button>
+        <button type="button" onClick={() => { setStep("password"); setFormError(null); }}
+          className="text-footnote font-semibold text-ink-2">
+          Back to sign in
+        </button>
+      </form>
+    );
+  }
 
   if (step === "code") {
     return (
@@ -205,6 +275,13 @@ export function SignInForm({ initialEmail = "", next }: { initialEmail?: string;
         className="press mt-1 h-11 rounded-full bg-accent text-body font-semibold text-on-accent disabled:opacity-70"
       >
         {pending ? "Signing in…" : "Sign in"}
+      </button>
+      <button
+        type="button"
+        onClick={() => { setStep("forgot"); setFormError(null); setFieldErrors({}); }}
+        className="self-center text-footnote font-semibold text-accent-ink"
+      >
+        Forgot password?
       </button>
     </form>
   );
