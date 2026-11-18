@@ -231,6 +231,47 @@ def create(request, payload: AssignmentIn):
     return _errors(go)
 
 
+class AssignmentUpdateIn(Schema):
+    title: str
+    instructions: str = ""
+    available_from: datetime
+    due_at: datetime
+    submission_type: Literal["text", "file", "both"] = "file"
+    max_points: int = 10
+    allow_late: bool = False
+    late_until: datetime | None = None
+    max_attempts: int = 1
+
+
+@router.patch("/{assignment_id}", response={200: AssignmentOut, 403: ErrorOut, 422: ErrorOut})
+def update(request, assignment_id: int, payload: AssignmentUpdateIn):
+    a = _get(request, assignment_id)
+    return _errors(lambda: _assignment_out(
+        services.update_assignment(request.user, a, **payload.dict()), request.user, detail=True))
+
+
+@router.post(
+    "/{assignment_id}/publish", response={200: AssignmentOut, 403: ErrorOut, 422: ErrorOut}
+)
+def publish(request, assignment_id: int):
+    a = _get(request, assignment_id)
+    return _errors(lambda: _assignment_out(
+        services.publish_assignment(request.user, a), request.user, detail=True))
+
+
+@router.delete("/{assignment_id}", response={204: None, 403: ErrorOut, 422: ErrorOut})
+def delete(request, assignment_id: int):
+    a = _get(request, assignment_id)
+    return _errors(lambda: (services.delete_assignment(request.user, a), Status(204, None))[1])
+
+
+@router.delete("/{assignment_id}/attachments/{file_id}", response={204: None, 403: ErrorOut})
+def remove_attachment(request, assignment_id: int, file_id: int):
+    a = _get(request, assignment_id)
+    return _errors(lambda: (services.remove_attachment(request.user, a, file_id),
+                            Status(204, None))[1])
+
+
 @router.get("/{assignment_id}", response=AssignmentOut)
 def detail(request, assignment_id: int):
     return _assignment_out(_get(request, assignment_id), request.user, detail=True)

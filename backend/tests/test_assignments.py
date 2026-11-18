@@ -220,3 +220,41 @@ def test_seed_demo_runs_on_a_fresh_database(db, settings):
     settings.DEBUG = True
     call_command("seed_demo", stdout=StringIO())
     assert Assignment.objects.count() == 3
+
+
+# Editing, publishing and deleting ------------------------------------------------------------
+
+
+def test_drafts_are_published_and_details_can_change(campus):
+    draft = make(campus, status=Assignment.Status.DRAFT)
+    assert services.visible_assignments(campus.ayesha).filter(pk=draft.pk).count() == 0
+    services.publish_assignment(campus.teacher, draft)
+    assert services.visible_assignments(campus.ayesha).filter(pk=draft.pk).count() == 1
+
+    new_due = draft.due_at + timedelta(days=3)
+    services.update_assignment(campus.teacher, draft, title="Linked list lab (v2)", due_at=new_due)
+    draft.refresh_from_db()
+    assert draft.title == "Linked list lab (v2)" and draft.due_at == new_due
+    assert AuditLog.objects.filter(action="assignment.updated").exists()
+
+    with pytest.raises(PermissionDenied):
+        services.update_assignment(campus.ayesha, draft, title="Hacked")
+    with pytest.raises(ValidationError, match="after it opens"):
+        services.update_assignment(campus.teacher, draft, due_at=draft.available_from)
+
+
+def test_handed_in_work_protects_the_assignment(campus):
+    a = make(campus)
+    services.submit(campus.ayesha, a, uploads=[pdf()])
+    services.record_grade(campus.teacher, a, campus.ayesha, points=Decimal("8"))
+
+    with pytest.raises(ValidationError, match="how they hand in"):
+        services.update_assignment(campus.teacher, a, submission_type="text")
+    with pytest.raises(ValidationError, match="can't go lower"):
+        services.update_assignment(campus.teacher, a, max_points=5)
+    with pytest.raises(ValidationError, match="can't be deleted"):
+        services.delete_assignment(campus.teacher, a)
+
+    empty = make(campus, title="Spare")
+    services.delete_assignment(campus.teacher, empty)
+    assert not Assignment.objects.filter(pk=empty.pk).exists()

@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AssignmentStatusChip } from "@/components/assignment-status";
 import { ChevronLeftIcon, PaperclipIcon } from "@/components/icons";
@@ -74,7 +74,10 @@ export default function AssignmentPage() {
               </p>
               <h1 className="mt-1 text-title-1 font-bold">{a.title}</h1>
             </div>
-            <AssignmentStatusChip assignment={a} />
+            <span className="flex flex-wrap items-center gap-2">
+              <AssignmentStatusChip assignment={a} />
+              {a.can_manage && <ManageActions a={a} />}
+            </span>
           </header>
 
           <section aria-label="Details" className="glass grid gap-4 rounded-card p-5 sm:grid-cols-4">
@@ -389,5 +392,59 @@ function GradeRow({ a, row, tz }: { a: Assignment; row: AssignmentRosterRow; tz?
         </form>
       )}
     </li>
+  );
+}
+
+/** For the section's teachers: change it, publish a draft, or delete it while nobody has handed in. */
+function ManageActions({ a }: { a: Assignment }) {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function act(path: string, method: string, after?: () => void) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiFetch(path, { method });
+      await queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      after?.();
+    } catch (err) {
+      setError(errorDetail(err, "That didn't work. Try again."));
+    } finally {
+      setBusy(false);
+      setConfirming(false);
+    }
+  }
+
+  return (
+    <span className="flex flex-wrap items-center gap-2 text-footnote font-semibold">
+      <Link href={`/assignments/${a.id}/edit`} className="press rounded-full bg-fill-strong px-3 py-1.5">
+        Edit
+      </Link>
+      {a.status === "draft" && (
+        <button disabled={busy} onClick={() => act(`/api/assignments/${a.id}/publish`, "POST")}
+          className="press rounded-full bg-accent px-3 py-1.5 text-on-accent disabled:opacity-60">
+          Publish
+        </button>
+      )}
+      {confirming ? (
+        <span className="flex items-center gap-2 rounded-full bg-danger/10 py-1 pr-1 pl-3">
+          Delete it?
+          <button disabled={busy}
+            onClick={() => act(`/api/assignments/${a.id}`, "DELETE", () => router.push("/assignments"))}
+            className="press rounded-full bg-danger px-3 py-1 text-on-accent">
+            Delete
+          </button>
+          <button onClick={() => setConfirming(false)} className="px-2">Cancel</button>
+        </span>
+      ) : (
+        <button onClick={() => setConfirming(true)} className="press rounded-full px-3 py-1.5 text-danger-ink hover:bg-danger/10">
+          Delete
+        </button>
+      )}
+      {error && <span role="alert" className="basis-full text-danger-ink">{error}</span>}
+    </span>
   );
 }

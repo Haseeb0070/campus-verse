@@ -252,3 +252,73 @@ def roster(assignment: Assignment) -> list[RosterRow]:
         )
         for e in enrollments
     ]
+
+
+EDITABLE = (
+    "title", "instructions", "available_from", "due_at", "submission_type", "max_points",
+    "allow_late", "late_until", "max_attempts",
+)
+
+
+@transaction.atomic
+def update_assignment(user, assignment: Assignment, **fields) -> Assignment:
+    """Change an assignment's details. Once students have handed in, how they hand in stays as it
+    is, and points can't drop below a grade already given."""
+    if not can_manage(user, assignment):
+        raise PermissionDenied("Only the section's teachers can edit this.")
+    has_work = Submission.objects.filter(assignment=assignment).exists()
+    if (has_work and "submission_type" in fields
+            and fields["submission_type"] != assignment.submission_type):
+        raise ValidationError("Students have handed in already, so how they hand in can't change.")
+    if "max_points" in fields:
+        top = Grade.objects.filter(assignment=assignment).order_by("-points").first()
+        if top and fields["max_points"] < top.points:
+            raise ValidationError(
+                f"A grade of {top.points} is already given; points can't go lower."
+            )
+    before = {k: getattr(assignment, k) for k in EDITABLE}
+    for k, v in fields.items():
+        if k in EDITABLE:
+            setattr(assignment, k, v)
+    _validate_settings(assignment)
+    assignment.save()
+    changed = {k: [str(before[k]), str(getattr(assignment, k))]
+               for k in EDITABLE if before[k] != getattr(assignment, k)}
+    if changed:
+        audit.record(actor=user, action="assignment.updated", target=assignment, changes=changed)
+    return assignment
+
+
+@transaction.atomic
+def publish_assignment(user, assignment: Assignment) -> Assignment:
+    """A draft goes out to its section (announced now if it's open, else when it opens)."""
+    if not can_manage(user, assignment):
+        raise PermissionDenied("Only the section's teachers can publish this.")
+    if assignment.status == Assignment.Status.PUBLISHED:
+        return assignment
+    _validate_settings(assignment)
+    assignment.status = Assignment.Status.PUBLISHED
+    assignment.save(update_fields=["status", "updated_at"])
+    audit.record(actor=user, action="assignment.published", target=assignment)
+    after_commit("assignment_opened", assignment.pk)
+    return assignment
+
+
+@transaction.atomic
+def delete_assignment(user, assignment: Assignment) -> None:
+    """Only while nobody has handed in: students' work is never thrown away."""
+    if not can_manage(user, assignment):
+        raise PermissionDenied("Only the section's teachers can delete this.")
+    if Submission.objects.filter(assignment=assignment).exists():
+        raise ValidationError(
+            "Students have handed in work for this assignment, so it can't be deleted."
+        )
+    audit.record(actor=user, action="assignment.deleted", target=assignment,
+                 changes={"title": assignment.title})
+    assignment.delete()  # its files are removed by the cleanup job once nothing uses them
+
+
+def remove_attachment(user, assignment: Assignment, file_id: int) -> None:
+    if not can_manage(user, assignment):
+        raise PermissionDenied("Only the section's teachers can remove files.")
+    assignment.attachments.remove(file_id)
