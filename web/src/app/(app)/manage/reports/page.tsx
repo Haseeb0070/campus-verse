@@ -56,6 +56,7 @@ export default function ReportsPage() {
           <p className="text-body font-semibold text-ink-2">Counts and rates only, never who did what</p>
           <PageTitle className="mt-1 text-large-title font-bold" text="Reports" />
         </div>
+        <a href={`/api/manage/reports.csv?days=${days}`} download className="press inline-flex h-9 items-center rounded-full bg-fill-strong px-3.5 text-footnote font-semibold">Download (Excel)</a>
       </header>
 
       {/* One filter, above everything it scopes, so every number agrees. */}

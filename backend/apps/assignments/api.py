@@ -364,3 +364,33 @@ def download(request, file_id: int):
     )
     response["Cache-Control"] = "private, no-store"
     return response
+
+
+@router.get("/{assignment_id}/grades.csv", response={200: None})
+def grades_csv(request, assignment_id: int):
+    """Who handed in, when, late or not, and their grade: for the section's teachers."""
+    from apps.core.exports import csv_response
+
+    a = _get(request, assignment_id)
+    if not services.can_manage(request.user, a):
+        raise HttpError(404, "Assignment not found")
+    tz = timezone.get_current_timezone()
+    if request.user.institution:
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo(request.user.institution.timezone)
+    rows = []
+    for r in services.roster(a):
+        latest = r.latest
+        rows.append([
+            r.student.external_id, r.student.get_full_name() or r.student.email, r.student.email,
+            r.attempts,
+            latest.submitted_at.astimezone(tz).strftime("%Y-%m-%d %H:%M") if latest else "",
+            ("Late" if latest.is_late else "On time") if latest else "Not handed in",
+            "" if r.grade is None else r.grade.points,
+            a.max_points,
+            r.grade.feedback if r.grade else "",
+        ])
+    header = ["College ID", "Name", "Email", "Attempts", "Handed in", "On time",
+              "Points", "Out of", "Feedback"]
+    return csv_response(f"{a.title} grades.csv", header, rows)

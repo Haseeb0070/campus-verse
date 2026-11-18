@@ -38,6 +38,10 @@ export default function PeoplePage() {
           <p className="text-body font-semibold text-ink-2">Accounts, invites and roles</p>
           <PageTitle className="mt-1 text-large-title font-bold" text="People" />
         </div>
+        <span className="flex flex-wrap items-center gap-2">
+        <a href={`/api/manage/people.csv${kind ? `?kind=${kind}` : ""}`} download className="press inline-flex h-9 items-center rounded-full bg-fill-strong px-3.5 text-footnote font-semibold">
+          Download (Excel)
+        </a>
         <button
           onClick={() => setInviting((v) => !v)}
           aria-expanded={inviting}
@@ -45,6 +49,7 @@ export default function PeoplePage() {
         >
           Invite someone
         </button>
+        </span>
       </header>
 
       {inviting && <InviteForm onDone={() => setInviting(false)} />}

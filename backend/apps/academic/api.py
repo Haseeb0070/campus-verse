@@ -99,3 +99,64 @@ def roster(request, section_id: int):
         "teachers": [_person(t) for t in teachers],
         "students": [_person(s) for s in students],
     }
+
+
+def _managed_section(request, section_id: int) -> Section:
+    section = (
+        Section.objects.select_related("offering__course", "offering__term")
+        .filter(pk=section_id, institution_id=request.user.institution_id)
+        .first()
+    )
+    if section is None or not can_target(request.user, "section", section.pk):
+        raise HttpError(404, "Section not found")
+    return section
+
+
+def _students(section: Section):
+    return [
+        e.student
+        for e in SectionEnrollment.objects.filter(
+            section=section, status=SectionEnrollment.Status.ACTIVE
+        )
+        .select_related("student")
+        .order_by("student__external_id", "student__first_name", "student__last_name")
+    ]
+
+
+def _name_of(section: Section) -> str:
+    return f"{section.offering.course.code} {section.code}"
+
+
+@router.get("/{section_id}/roster.csv", response={200: None})
+def roster_csv(request, section_id: int):
+    """The class list, for the section's teachers, its coordinators and admins."""
+    from apps.core.exports import csv_response
+
+    section = _managed_section(request, section_id)
+    rows = [(s.external_id, s.first_name, s.last_name, s.email) for s in _students(section)]
+    return csv_response(f"{_name_of(section)} class list.csv",
+                        ["College ID", "First name", "Last name", "Email"], rows)
+
+
+@router.get("/{section_id}/marks.csv", response={200: None})
+def marks_csv(request, section_id: int):
+    """Every published assignment's grade for every student: one row each, a column each."""
+    from apps.assignments.models import Assignment, Grade
+    from apps.core.exports import csv_response
+
+    section = _managed_section(request, section_id)
+    assignments = list(
+        Assignment.objects.filter(section=section, status=Assignment.Status.PUBLISHED)
+        .order_by("due_at")
+    )
+    grades = {(g.assignment_id, g.student_id): g.points
+              for g in Grade.objects.filter(assignment__in=assignments)}
+    header = ["College ID", "Name", "Email"] + [f"{a.title} (/{a.max_points})" for a in assignments]
+    header.append("Total")
+    rows = []
+    for s in _students(section):
+        marks = [grades.get((a.pk, s.pk)) for a in assignments]
+        total = sum(m for m in marks if m is not None)
+        rows.append([s.external_id, s.get_full_name() or s.email, s.email,
+                     *[("" if m is None else m) for m in marks], total])
+    return csv_response(f"{_name_of(section)} marks.csv", header, rows)

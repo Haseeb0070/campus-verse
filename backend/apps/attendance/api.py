@@ -204,3 +204,24 @@ def settings(request, payload: SettingsIn):
 @progress_router.get("", response=list[CourseProgressOut])
 def my_progress(request):
     return progress.my_progress(request.user)
+
+
+@router.get("/sections/{section_id}/report.csv", response={200: None, 403: ErrorOut})
+def report_csv(request, section_id: int):
+    from apps.core.exports import csv_response
+
+    section = _section(request, section_id)
+    try:
+        data = services.section_report(request.user, section)
+    except PermissionDenied as err:
+        return Status(403, {"detail": str(err)})
+    except ValidationError as err:
+        return Status(403, {"detail": err.messages[0]})
+    rows = [
+        (s.external_id, s.get_full_name() or s.email, m["sessions"], m["present"], m["late"],
+         m["absent"], m["excused"], "" if m["rate"] is None else f"{m['rate']}%")
+        for s, m in data["students"]
+    ]
+    name = f"{section.offering.course.code} {section.code} attendance.csv"
+    return csv_response(name, ["College ID", "Name", "Classes", "Present", "Late", "Absent",
+                               "Excused", "Attendance"], rows)

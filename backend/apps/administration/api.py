@@ -561,6 +561,60 @@ def set_theme(request, payload: ThemeIO):
     return Status(200, cleaned)
 
 
+@router.get("/people.csv", response={200: None, 403: ErrorOut})
+def people_csv(request, kind: str = ""):
+    """Everyone at the institution (or one kind), with their roles and when they last signed in."""
+    from apps.core.exports import csv_response
+
+    _admin(request)
+    qs = User.objects.filter(institution_id=request.user.institution_id)
+    if kind in User.Kind.values:
+        qs = qs.filter(kind=kind)
+    rows = []
+    for u in qs.prefetch_related("roles__department").order_by("kind", "first_name", "last_name"):
+        roles = ", ".join(
+            r.role.replace("_", " ") + (f" ({r.department.name})" if r.department else "")
+            for r in u.roles.all()
+        )
+        rows.append([u.external_id, u.first_name, u.last_name, u.email, u.kind,
+                     "Active" if u.is_active else "Deactivated",
+                     "Invited" if not u.has_usable_password() else "Signed up", roles,
+                     u.last_login.strftime("%Y-%m-%d") if u.last_login else "Never"])
+    return csv_response("people.csv", ["College ID", "First name", "Last name", "Email", "Type",
+                                       "Status", "Account", "Roles", "Last signed in"], rows)
+
+
+@router.get("/reports.csv", response={200: None, 403: ErrorOut})
+def reports_csv(request, days: int = 30):
+    """The report as rows: each part of it under its own name, ready for a spreadsheet."""
+    from apps.core.exports import csv_response
+
+    from .reports import build
+
+    _admin(request)
+    data = build(request.user, days)
+    rows = [("Period", f"Last {data['days']} days", "", "")]
+    p = data["people"]
+    rows += [("People", "Students", p["students"], f"{p['active']['students']} active"),
+             ("People", "Teachers", p["teachers"], f"{p['active']['teachers']} active"),
+             ("People", "Staff", p["staff"], f"{p['active']['staff']} active"),
+             ("People", "Invited, not signed up", p["invited"], "")]
+    for n in data["notices"]:
+        rate = "" if n["read_rate"] is None else f"{n['read_rate']}% read"
+        rows.append(("Notice", n["title"], n["reached"], rate))
+    for a in data["assignments"]["rows"]:
+        rate = "" if a["submission_rate"] is None else f"{a['submission_rate']}% handed in"
+        rows.append(("Assignment", f"{a['title']} ({a['section']})", a["submitted"], rate))
+    for s in (data["attendance"] or {}).get("sections", []):
+        rate = "" if s["rate"] is None else f"{s['rate']}%"
+        rows.append(("Attendance", s["section"], s["records"], rate))
+    for r in data["resources"]["top"]:
+        rows.append(("Resource", f"{r['title']} ({r['course']})", r["downloads"],
+                     f"{r['people']} people"))
+    return csv_response(f"report last {data['days']} days.csv",
+                        ["Part", "Item", "Count", "Detail"], rows)
+
+
 @router.get("/reports", response=dict)
 def get_reports(request, days: int = 30):
     """Summaries for one period (7, 30 or 90 days); counts and rates only (SRS 12.1)."""

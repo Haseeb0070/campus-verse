@@ -112,12 +112,17 @@ function SectionReport({ sectionId }: { sectionId: number }) {
   if (!report.data) return null;
   return (
     <section aria-labelledby="report-h" className="glass rounded-card p-3">
-      <h2 id="report-h" className="px-3 pt-2 pb-1 text-headline font-semibold">
-        This term{" "}
-        <span className="text-ink-3">
-          {report.data.sessions.length} {report.data.sessions.length === 1 ? "class" : "classes"} recorded
-        </span>
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-2 pb-1">
+        <h2 id="report-h" className="text-headline font-semibold">
+          This term{" "}
+          <span className="text-ink-3">
+            {report.data.sessions.length} {report.data.sessions.length === 1 ? "class" : "classes"} recorded
+          </span>
+        </h2>
+        <a href={`/api/attendance/sections/${sectionId}/report.csv`} download className="press inline-flex h-9 items-center rounded-full bg-fill-strong px-3.5 text-footnote font-semibold">
+          Download (Excel)
+        </a>
+      </div>
       <ul>
         {report.data.students.map((s) => (
           <li key={s.student_id} className="flex items-center gap-3 rounded-row p-2.5">

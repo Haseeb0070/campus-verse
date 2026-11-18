@@ -64,6 +64,10 @@ export default function RosterPage() {
                 {roster.data.section.term}
               </p>
             </div>
+            <span className="ml-auto flex flex-wrap gap-2">
+              <a href={`/api/sections/${id}/roster.csv`} download className="press inline-flex h-9 items-center rounded-full bg-fill-strong px-3.5 text-footnote font-semibold">Class list (Excel)</a>
+              <a href={`/api/sections/${id}/marks.csv`} download className="press inline-flex h-9 items-center rounded-full bg-fill-strong px-3.5 text-footnote font-semibold">Marks (Excel)</a>
+            </span>
           </header>
 
           <section aria-labelledby="teachers-h" className="glass rounded-card p-5">

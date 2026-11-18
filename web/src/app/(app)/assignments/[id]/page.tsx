@@ -265,7 +265,10 @@ function TeacherPanel({ a, tz }: { a: Assignment; tz?: string }) {
         <div>
           <h2 id="subs-h" className="text-headline font-semibold">Submissions</h2>
           <p className="text-footnote text-ink-2">
-            {a.submitted_count}/{a.student_count} submitted · {a.graded_count} graded
+            {a.submitted_count}/{a.student_count} submitted · {a.graded_count} graded ·{" "}
+            <a href={`/api/assignments/${a.id}/grades.csv`} download className="font-semibold text-accent-ink underline">
+              Download (Excel)
+            </a>
           </p>
         </div>
         {a.grades_released ? (
