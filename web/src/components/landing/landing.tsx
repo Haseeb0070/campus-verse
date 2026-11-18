@@ -157,7 +157,7 @@ function NavBar({ guide, onGuide }: { guide: boolean; onGuide: () => void }) {
     <header className={s.nav} data-solid>
       <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
         <span className={s.wordmarkTile}>
-          <LogoGlyph className="size-[60%]" />
+          <LogoGlyph className="size-[74%]" />
         </span>
         CampusVerse
       </Link>

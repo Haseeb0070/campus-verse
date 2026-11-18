@@ -74,6 +74,10 @@ export default function ThemeSettings() {
     onSuccess: (theme) => {
       qc.setQueryData(["manage", "theme"], theme);
       qc.setQueryData(siteThemeKey, theme);
+      // The admin may have their own name for the guide, and the profile shows its card only when
+      // renaming is allowed: fetch both again.
+      qc.invalidateQueries({ queryKey: siteThemeKey });
+      qc.invalidateQueries({ queryKey: ["me"] });
       setDraft(theme);
       setMessage({ ok: true, text: "Saved. Everyone sees the new look on their next page." });
     },
@@ -254,6 +258,24 @@ export default function ThemeSettings() {
                 {nameError ?? "Up to 24 characters. It greets visitors by this name."}
               </span>
             </label>
+
+            <div className="flex max-w-xl items-start justify-between gap-4">
+              <span>
+                <span id="guide-rename-h" className="block text-body font-medium">
+                  Let people name their own guide
+                </span>
+                <span className="block text-caption text-ink-3">
+                  Off: everyone sees {draft.guide_name.trim() || "this name"}. On: each person can
+                  pick a name on their profile, and {draft.guide_name.trim() || "this name"} stays
+                  for everyone who doesn&apos;t.
+                </span>
+              </span>
+              <Switch
+                checked={draft.guide_rename}
+                onChange={(v) => set({ guide_rename: v })}
+                label="Let people name their own guide"
+              />
+            </div>
 
             {PARTS.map((part) => (
               <ColourRow

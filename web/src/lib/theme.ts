@@ -91,7 +91,10 @@ export function themeByKey(key: string | undefined): BuiltInTheme {
 export interface SiteTheme {
   preset: PresetKey;
   guide_enabled: boolean;
+  /** The admin's name for the guide; from /api/theme, the signed-in person's own name when allowed. */
   guide_name: string;
+  /** Whether each person may give the guide their own name. Off by default. */
+  guide_rename: boolean;
   guide_body: string;
   guide_cap: string;
   guide_tassel: string;
@@ -226,6 +229,7 @@ export const DEFAULT_SITE_THEME: SiteTheme = {
   preset: DEFAULT_THEME_KEY,
   guide_enabled: true,
   guide_name: "Verse",
+  guide_rename: false,
   guide_body: "",
   guide_cap: "",
   guide_tassel: "",

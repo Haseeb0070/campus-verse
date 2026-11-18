@@ -61,6 +61,32 @@ def test_everyone_chooses_light_or_dark(client, campus):
     assert put(client, "/api/me/appearance", {"appearance": "system"}).status_code == 422
 
 
+def test_people_name_the_guide_only_when_allowed(client, campus):
+    client.force_login(campus.ayesha)
+    me = client.get("/api/me").json()
+    assert me["guide_rename"] is False and me["guide_name_default"] == "Verse"
+    # By default the guide has the one name the admin gave it.
+    assert put(client, "/api/me/guide-name", {"guide_name": "Pip"}).status_code == 403
+
+    client.force_login(campus.admin)
+    assert put(client, "/api/manage/theme", {**GOOD, "guide_rename": True}).status_code == 200
+
+    client.force_login(campus.ayesha)
+    assert put(client, "/api/me/guide-name", {"guide_name": "<b>"}).status_code == 422
+    assert put(client, "/api/me/guide-name", {"guide_name": "  Pip  "}).status_code == 204
+    assert client.get("/api/me").json()["guide_name"] == "Pip"
+    assert client.get("/api/theme").json()["guide_name"] == "Pip"
+
+    client.force_login(campus.hamza)  # everyone else still sees the admin's name
+    assert client.get("/api/theme").json()["guide_name"] == "Noor"
+
+    client.force_login(campus.admin)  # turning it off brings back the one name
+    put(client, "/api/manage/theme", GOOD)
+    client.force_login(campus.ayesha)
+    assert client.get("/api/theme").json()["guide_name"] == "Noor"
+    assert put(client, "/api/me/guide-name", {"guide_name": ""}).status_code == 403
+
+
 LIGHT = {
     "bg": "#f6f1ea", "surface": "#ffffff", "fill": "#efe7dc", "ink": "#1f1a16",
     "accent": "#1d6f5f", "on_accent": "#ffffff", "accent_ink": "#145244", "active": "#1d6f5f",

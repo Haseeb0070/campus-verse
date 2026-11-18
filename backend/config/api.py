@@ -112,11 +112,12 @@ def cron(request):
 @api.get("/theme", auth=None, tags=["system"])
 def theme(request):
     """The site's look for whoever asks: their institution's theme, or the public one."""
-    from apps.academic.theme import public_institution, theme_of
+    from apps.academic.theme import guide_name_for, public_institution, theme_of
 
     # Open to everyone, so no auth runs first: read the mobile app's token here, if it sent one.
     user = request.user if request.user.is_authenticated else AppSessionAuth()(request)
-    return theme_of(public_institution(user or request.user))
+    out = theme_of(public_institution(user or request.user))
+    return {**out, "guide_name": guide_name_for(user, out)}
 
 
 @api.get("/csrf", auth=None, tags=["system"])

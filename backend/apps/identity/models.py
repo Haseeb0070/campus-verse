@@ -62,6 +62,9 @@ class User(AbstractUser):
         max_length=8, choices=Appearance.choices, default=Appearance.LIGHT
     )
 
+    # Their own name for the guide; only used when the institution lets people rename it.
+    guide_name = models.CharField(max_length=24, blank=True)
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 

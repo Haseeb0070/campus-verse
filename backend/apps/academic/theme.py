@@ -30,6 +30,8 @@ DEFAULT_THEME = {
     "preset": "evergreen",
     "guide_enabled": True,
     "guide_name": "Verse",
+    # Off: everyone sees the guide_name above. On: each person may give the guide their own name.
+    "guide_rename": False,
     # Empty: the guide takes its colours from the theme.
     "guide_body": "",
     "guide_cap": "",
@@ -65,7 +67,20 @@ def clean_theme(data: dict) -> dict:
     out["helper_enabled"] = bool(data.get("helper_enabled", True))
     out["custom"] = _clean_custom(data.get("custom") or {}, required=preset == "custom")
 
-    name = " ".join(str(data.get("guide_name", "")).split())
+    out["guide_rename"] = bool(data.get("guide_rename", False))
+    out["guide_name"] = clean_guide_name(data.get("guide_name", ""))
+
+    for key, label in (("guide_body", "body"), ("guide_cap", "cap"), ("guide_tassel", "tassel")):
+        value = str(data.get(key, "") or "").strip().lower()
+        if value and not _HEX.match(value):
+            raise ValidationError(f"The guide's {label} colour must look like #b4532a.")
+        out[key] = value
+    return out
+
+
+def clean_guide_name(value) -> str:
+    """A name for the guide, tidied; raises ValidationError if it can't be used."""
+    name = " ".join(str(value or "").split())
     if not name:
         raise ValidationError("Give the guide a name.")
     if len(name) > 24:
@@ -74,14 +89,14 @@ def clean_theme(data: dict) -> dict:
         raise ValidationError(
             "Use letters, numbers, spaces, dots, dashes or apostrophes in the name."
         )
-    out["guide_name"] = name
+    return name
 
-    for key, label in (("guide_body", "body"), ("guide_cap", "cap"), ("guide_tassel", "tassel")):
-        value = str(data.get(key, "") or "").strip().lower()
-        if value and not _HEX.match(value):
-            raise ValidationError(f"The guide's {label} colour must look like #b4532a.")
-        out[key] = value
-    return out
+
+def guide_name_for(user, theme: dict) -> str:
+    """What this person calls the guide: their own name for it when the institution allows
+    that and they chose one, else the institution's."""
+    own = getattr(user, "guide_name", "") if user is not None else ""
+    return own if theme.get("guide_rename") and own else theme["guide_name"]
 
 
 def public_institution(user=None):

@@ -16,6 +16,12 @@ export interface Me {
   preferred_name: string;
   two_step: boolean;
   appearance: "light" | "dark";
+  /** Their own name for the guide; empty means the institution's. */
+  guide_name: string;
+  /** Whether the institution lets people rename the guide. */
+  guide_rename: boolean;
+  /** The institution's name for the guide. */
+  guide_name_default: string;
   full_name: string;
   kind: "student" | "teacher" | "staff";
   institution: {

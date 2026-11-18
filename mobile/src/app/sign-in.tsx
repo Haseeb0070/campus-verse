@@ -2,9 +2,10 @@ import { type ComponentRef, useRef, useState } from "react";
 import { KeyboardAvoidingView, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Icon } from "@/components/Icon";
+import { LogoGlyph } from "@/components/Logo";
 import { Button, Field, T } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
+import { intro, useIntroRunning } from "@/lib/intro";
 import { font, radius, useTheme } from "@/theme";
 
 type Step = "password" | "code" | "reset" | "resetSent";
@@ -15,6 +16,9 @@ export default function SignIn() {
   const paper = site;
   const insets = useSafeAreaInsets();
   const auth = useAuth();
+  // The intro flies Verse into this tile, so the tile waits until it lands.
+  const introRunning = useIntroRunning();
+  const tileRef = useRef<ComponentRef<typeof View>>(null);
 
   const [step, setStep] = useState<Step>("password");
   const [email, setEmail] = useState("");
@@ -77,8 +81,22 @@ export default function SignIn() {
         }}
       >
         <Animated.View entering={FadeIn.duration(400)} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: site.accent, alignItems: "center", justifyContent: "center" }}>
-            <Icon name="arch" size={24} strokeWidth={2} color={site.onAccent} />
+          <View
+            ref={tileRef}
+            onLayout={() =>
+              tileRef.current?.measureInWindow((x, y, width, height) => intro.setSpot({ x, y, width, height }))
+            }
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              backgroundColor: site.accent,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: introRunning ? 0 : 1,
+            }}
+          >
+            <LogoGlyph size={36} color={site.onAccent} />
           </View>
           <T variant="headline" tone="onField" style={{ fontSize: 20, fontFamily: font.bold }}>
             CampusVerse

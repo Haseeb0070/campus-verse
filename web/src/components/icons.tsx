@@ -186,35 +186,28 @@ export const CloseIcon = (p: IconProps) => (
   </Icon>
 );
 
-/** The CampusVerse glyph on its own (no tile): an arched college window whose centre bar and round
- *  light read as a lowercase "i" — a person, or the next thing to know, inside the campus gate.
- *  The same dot breathes on the Today card and in the landing headline. */
+/** The CampusVerse logo without its tile: Verse, the guide, in its graduation cap (concept 3 in
+ *  docs/brand/logo-concepts). The face takes the text colour, the eyes are cut out so the tile shows
+ *  through, and the cap keeps its evergreen. Keep in step with docs/brand/verse-buddy.svg. */
 export function LogoGlyph({ className = "" }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M5.75 20V11.25a6.25 6.25 0 0 1 12.5 0V20" />
-      <path d="M12 15v5" />
-      <circle cx="12" cy="10.6" r="2" fill="currentColor" stroke="none" />
+    <svg viewBox="12 12 42 42" className={className} aria-hidden="true">
+      <path fill="currentColor" fillRule="evenodd" d="M18 39a14 14 0 1 0 28 0a14 14 0 1 0-28 0ZM24.8 39a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0ZM34.8 39a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0Z" />
+      <g fill="#1f2b24">
+        <path d="M32 13 49 20.5 32 28 15 20.5z" />
+        <path d="M49 20.5v9" stroke="#1f2b24" strokeWidth={2} strokeLinecap="round" />
+        <circle cx="49" cy="31" r="2.2" />
+      </g>
     </svg>
   );
 }
 
-/** The app icon: the glyph in paper on a terracotta tile. */
 export function LogoMark({ className = "" }: { className?: string }) {
   return (
     <span
       className={`inline-flex items-center justify-center rounded-[10px] bg-accent text-on-accent ${className}`}
     >
-      <LogoGlyph className="size-[66%]" />
+      <LogoGlyph className="size-[78%]" />
     </span>
   );
 }

@@ -524,6 +524,7 @@ class ThemeIO(Schema):
     preset: str
     guide_enabled: bool
     guide_name: str
+    guide_rename: bool = False
     guide_body: str = ""
     guide_cap: str = ""
     guide_tassel: str = ""

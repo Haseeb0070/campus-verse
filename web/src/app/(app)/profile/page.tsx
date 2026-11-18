@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Select } from "@/components/select";
 import { Switch } from "@/components/switch";
+import { siteThemeKey } from "@/components/theme-provider";
 import { TwoStepCard } from "@/components/two-step-card";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { courseBg, relativeTime } from "@/lib/format";
@@ -74,6 +75,70 @@ function NameCard({ me }: { me: Me }) {
       <p className="text-caption text-ink-3">
         Shown instead of your first name in chat, the feed and class lists. Leave it empty to use{" "}
         {me.first_name}.
+      </p>
+      {status && (
+        <p role={status.ok ? "status" : "alert"} className={`text-footnote ${status.ok ? "text-success-ink" : "text-danger-ink"}`}>
+          {status.text}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** Shown only when the institution lets people give the guide their own name. */
+function GuideNameCard({ me }: { me: Me }) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState(me.guide_name);
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function save(value: string) {
+    setBusy(true);
+    setStatus(null);
+    try {
+      await apiFetch("/api/me/guide-name", {
+        method: "PUT",
+        body: JSON.stringify({ guide_name: value }),
+      });
+      const tidy = value.split(/\s+/).filter(Boolean).join(" ");
+      setName(tidy);
+      queryClient.setQueryData<Me>(["me"], (m) => (m ? { ...m, guide_name: tidy } : m));
+      await queryClient.invalidateQueries({ queryKey: siteThemeKey });
+      setStatus({ ok: true, text: tidy ? `Your guide is now ${tidy}.` : `Back to ${me.guide_name_default}.` });
+    } catch (err) {
+      setStatus({ ok: false, text: errorDetail(err, "Couldn't save. Try again.") });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section aria-labelledby="guide-name-h" className="glass flex flex-col gap-4 rounded-card p-5">
+      <div>
+        <h2 id="guide-name-h" className="text-headline font-semibold">Your guide</h2>
+        <p className="text-footnote text-ink-2">
+          Give the little helper in the corner a name of your own. Only you see it.
+        </p>
+      </div>
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          save(name);
+        }}
+        className="flex flex-wrap items-end gap-3"
+      >
+        <label className={`${label} min-w-[14rem] flex-1`}>
+          Guide&apos;s name
+          <input value={name} maxLength={24} onChange={(e) => setName(e.target.value)}
+            placeholder={me.guide_name_default} className={field} />
+        </label>
+        <button type="submit" disabled={busy || name.trim() === me.guide_name} className={primary}>
+          {busy ? "Saving…" : "Save"}
+        </button>
+      </form>
+      <p className="text-caption text-ink-3">
+        Up to 24 characters. Leave it empty to use {me.guide_name_default}.
       </p>
       {status && (
         <p role={status.ok ? "status" : "alert"} className={`text-footnote ${status.ok ? "text-success-ink" : "text-danger-ink"}`}>
@@ -359,6 +424,7 @@ export default function ProfilePage() {
       </header>
 
       <NameCard me={me} />
+      {me.guide_rename && <GuideNameCard me={me} />}
       <PasswordCard />
       <TwoStepCard on={me.two_step} />
       <NotificationsCard />

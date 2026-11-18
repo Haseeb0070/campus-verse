@@ -41,6 +41,9 @@ class MeOut(Schema):
     kind: str
     two_step: bool
     appearance: str
+    guide_name: str
+    guide_rename: bool
+    guide_name_default: str
     institution: InstitutionOut | None
     roles: list[str]
     sections: list[SectionOut]
@@ -48,7 +51,10 @@ class MeOut(Schema):
 
 @router.get("", response=MeOut)
 def me(request):
+    from apps.academic.theme import theme_of
+
     user = request.user
+    theme = theme_of(user.institution)
     taught = set(user.teaching.values_list("section_id", flat=True))
     sections = (
         Section.objects.filter(pk__in=member_section_ids(user))
@@ -67,6 +73,9 @@ def me(request):
             user=user, type=Authenticator.Type.TOTP
         ).exists(),
         "appearance": user.appearance,
+        "guide_name": user.guide_name,
+        "guide_rename": theme["guide_rename"],
+        "guide_name_default": theme["guide_name"],
         "institution": user.institution,
         "roles": sorted({r.role for r in user.roles.filter(institution_id=user.institution_id)}),
         "sections": [
@@ -136,6 +145,29 @@ def set_appearance(request, payload: AppearanceIn):
         return Status(422, {"detail": "Choose light or dark."})
     request.user.appearance = payload.appearance
     request.user.save(update_fields=["appearance"])
+    return Status(204, None)
+
+
+class GuideNameIn(Schema):
+    guide_name: str = ""
+
+
+@router.put("/guide-name", response={204: None, 403: ErrorOut, 422: ErrorOut})
+def set_guide_name(request, payload: GuideNameIn):
+    """This person's own name for the guide; empty goes back to the institution's."""
+    from apps.academic.theme import clean_guide_name, theme_of
+
+    user = request.user
+    if not theme_of(user.institution)["guide_rename"]:
+        return Status(403, {"detail": "Your institution names the guide for everyone."})
+    name = ""
+    if payload.guide_name.strip():
+        try:
+            name = clean_guide_name(payload.guide_name)
+        except ValidationError as err:
+            return Status(422, {"detail": err.messages[0]})
+    user.guide_name = name
+    user.save(update_fields=["guide_name"])
     return Status(204, None)
 
 
