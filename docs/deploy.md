@@ -102,6 +102,11 @@ git push -u origin main
 Scheduled notices then go out within 30 minutes of their time. A shorter schedule keeps the API
 awake around the clock and uses up Render's free hours (see below).
 
+A second job keeps the API awake during the day, so the first person in the morning doesn't wait
+for it to wake: **URL** `https://<api address>/api/health`, method `GET`, **Custom** schedule
+`*/12 7-22 * * *` in the Asia/Karachi timezone (every 12 minutes from 7:00 am to 10:48 pm). That
+is 16 hours a day, which stays inside Render's free 750 hours a month.
+
 ## 6. Sign in
 
 Open your Vercel address and sign in with a demo account. Every account's password is
