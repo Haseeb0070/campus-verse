@@ -2,11 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { createContext, useContext, useEffect, useState } from "react";
-import { CheckIcon, LogoGlyph } from "@/components/icons";
-import { Pushpin } from "@/components/pushpin";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { LogoGlyph } from "@/components/icons";
 import { SignInDialog } from "@/components/sign-in-dialog";
 import s from "./landing.module.css";
+
+/*
+ * The landing page is built as the college's own printed timetable sheet: a paper card on the
+ * evergreen ground, the week as paper slips (one per day, the real BS CS G1+G2 classes), the features
+ * as a printed menu, sign-in as a reply card and the footer as the back of the card.
+ */
 
 /** Opens the sign-in popup, optionally with an email filled in. */
 const OpenSignIn = createContext<(email?: string) => void>(() => {});
@@ -20,10 +25,28 @@ function SignInButton({ className, children }: { className: string; children: Re
   );
 }
 
-/**
- * The public landing page. Sign in happens in a small popup over it; /sign-in renders this page
- * with the popup already open (signIn), and closing it there returns to the plain page (onSignInClose).
- */
+/** Adds `.in` to children marked `data-rise` the first time the section scrolls into view. */
+function useRise<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.classList.add(s.armed);
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.classList.add(s.in);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
+
 export function Landing({
   signIn,
   onSignInClose,
@@ -35,516 +58,430 @@ export function Landing({
     open: Boolean(signIn),
     email: signIn?.email,
   });
-  const openSignIn = (email?: string) => setDialog({ open: true, email });
   return (
-    <OpenSignIn.Provider value={openSignIn}>
-    <div className={s.page}>
-      <Header />
-      <main>
-        <Hero />
-        <Showcase />
-        <Features />
-        <HowItWorks />
-        <Roles />
-        <Questions />
-        <Closing />
-      </main>
-      <Footer />
-      <SignInDialog
-        open={dialog.open}
-        email={dialog.email}
-        next={signIn?.next}
-        onClose={() => {
-          setDialog({ open: false });
-          onSignInClose?.();
-        }}
-      />
-    </div>
+    <OpenSignIn.Provider value={(email) => setDialog({ open: true, email })}>
+      <div className={s.page}>
+        <main>
+          <Hero />
+          <Week />
+          <Menu />
+          <Questions />
+          <Reply />
+        </main>
+        <Footer />
+        <SignInDialog
+          open={dialog.open}
+          email={dialog.email}
+          next={signIn?.next}
+          onClose={() => {
+            setDialog({ open: false });
+            onSignInClose?.();
+          }}
+        />
+      </div>
     </OpenSignIn.Provider>
   );
 }
 
-function Header() {
-  return (
-    <header className={s.header} style={{ position: "absolute" }}>
-      <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
-        <span className={s.wordmarkTile}>
-          <LogoGlyph className="size-[21px]" />
-        </span>
-        CampusVerse
-      </Link>
-      <nav aria-label="Sections" className={s.navLinks}>
-        <a href="#what">What it does</a>
-        <a href="#timetables">Timetables</a>
-        <a href="#who">Who it&apos;s for</a>
-        <a href="#questions">Questions</a>
-      </nav>
-      <SignInButton className={s.button}>Sign in</SignInButton>
-    </header>
-  );
+/* ---------- Hero: the timetable card beside the app ---------- */
+
+const SCREENS = [
+  { src: "/landing/gcs-today.jpg", alt: "Today in CampusVerse: tomorrow's Web Development class in R-127, recent chats and notices." },
+  { src: "/landing/gcs-timetable.jpg", alt: "The BS CS G1+G2 timetable for the week, every class with its room." },
+  { src: "/landing/gcs-notices.jpg", alt: "The notices board: a pinned notice from Nabeel and the latest from Rawa." },
+  { src: "/landing/gcs-chat.jpg", alt: "The EC-330 section chat, with a question from a student and Nabeel's answer." },
+];
+
+/** The app's screens take turns in the hero, like light changing in a room. */
+function useTurns(count: number, holdMs = 5600) {
+  const [turn, setTurn] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") setTurn((t) => (t + 1) % count);
+    }, holdMs);
+    return () => clearInterval(id);
+  }, [count, holdMs]);
+  return turn;
 }
 
-/* ---------- Hero ---------- */
+function Stripe() {
+  return (
+    <div className={s.stripe} aria-hidden="true">
+      {Array.from({ length: 36 }, (_, i) => (
+        <span key={i} />
+      ))}
+    </div>
+  );
+}
 
 function Hero() {
+  const turn = useTurns(SCREENS.length);
   return (
     <section className={s.hero} aria-labelledby="hero-title">
-      <div className={s.heroTop} />
-      <div className={s.heroBottom} />
-      <h1 id="hero-title" className={`${s.display} ${s.heroHeadline}`}>
-        <span className={`${s.line} ${s.lineInk}`}>Your campus,</span>
-        <span className={`${s.line} ${s.linePaper}`}>
-          <span className={s.slot} aria-label="your next class in room R-127,">
-            <span aria-hidden="true">R-127</span>
-          </span>
-          up next.
-        </span>
-      </h1>
-      <div className={s.heroSupport}>
-        <p style={{ margin: 0 }}>
-          CampusVerse is the academic home for your university: timetables and room changes, notices, coursework,
-          attendance and live section chat, for students, teachers and staff.
-        </p>
-        <div className={s.heroActions}>
-          <SignInButton className={`${s.button} ${s.buttonPaper}`}>Sign in</SignInButton>
-          <a href="#what" className={`${s.button} ${s.heroGhost}`}>
-            See how it works
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Showcase: the Today screen ---------- */
-
-const NOTES: [string, string][] = [
-  ["Next class", "The room, the time left and the section chat, one tap away."],
-  ["Due soon", "Work still to hand in, soonest first, until you are all caught up."],
-  ["Notices", "Pinned by teachers and the department, newest underneath."],
-];
-
-function Showcase() {
-  return (
-    <section id="what" className={s.showcase} aria-labelledby="showcase-title">
-      <div className={s.showcaseHead}>
-        <h2 id="showcase-title" className={s.title}>
-          One screen for the whole day
-        </h2>
-        <p className={s.showcaseLead}>
-          Today is the first thing everyone sees: what is next, what is due and what changed.
-        </p>
-      </div>
-      <div className={s.screen}>
-        <Image
-          src="/landing/today.jpg"
-          width={2880}
-          height={1800}
-          sizes="(max-width: 860px) 92vw, 1200px"
-          alt="The CampusVerse Today screen: the next class with its room, recent chats, due work and notices."
-        />
-      </div>
-      <ul className={s.showcaseNotes}>
-        {NOTES.map(([name, text]) => (
-          <li key={name}>
-            <b>{name}</b>
-            {text}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/* ---------- Features: a paragraph with pictures for words ---------- */
-
-/** A small real piece of the app, set inline at the size of a word. */
-function Chip({ kind, children }: { kind: "pin" | "bubble" | "graded" | "attendance"; children: React.ReactNode }) {
-  return (
-    <span className={`${s.chip} ${s[kind]}`} data-ui>
-      {kind === "pin" && <Pushpin className={s.chipPin} />}
-      {children}
-    </span>
-  );
-}
-
-function Features() {
-  return (
-    <section className={s.features} aria-labelledby="features-title">
-      <h2 id="features-title" className={s.srOnly}>
-        What it does
-      </h2>
-      <p className={`${s.statement} ${s.featuresText}`}>
-          Notices pin to a board <Chip kind="pin">Important</Chip> so they stay seen. Each section has its own live chat{" "}
-          <Chip kind="bubble">Iterative is fine.</Chip> Coursework shows what is marked <Chip kind="graded">Graded 18.5/20</Chip>{" "}
-          and progress keeps attendance <Chip kind="attendance">100%</Chip> beside your marks.
-      </p>
-      <div className={s.featuresFoot}>
-        <div>
-          <p>
-            Search finds any notice, course, file or event you are allowed to see, and nothing you are not. The calendar holds
-            exams and events with sign-ups and waitlists, and notifications reach you in the app and by email.
+      <div className={s.heroCard}>
+        <Stripe />
+        <div className={s.heroCardBody}>
+          <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
+            <span className={s.wordmarkTile}>
+              <LogoGlyph className="size-[60%]" />
+            </span>
+            CampusVerse
+          </Link>
+          <h1 id="hero-title" className={s.display}>
+            Your college,
+            <br />
+            on one screen.
+          </h1>
+          <p className={s.heroLead}>
+            The class app of Govt. Graduate College of Science, Lahore: your timetable, room changes,
+            notices, coursework and section chat, with your college email.
           </p>
-          <SignInButton className={s.button}>Sign in to CampusVerse</SignInButton>
+          <SignInButton className={s.button}>Sign in</SignInButton>
+          <nav aria-label="On this page" className={s.heroLinks}>
+            <a href="#week">Your week</a>
+            <a href="#menu">What it does</a>
+            <a href="#questions">Questions</a>
+          </nav>
         </div>
       </div>
-      <div className={s.featuresPair}>
-        <figure>
+      <div className={s.heroScreens}>
+        {SCREENS.map((screen, i) => (
           <Image
-            src="/landing/notices.jpg"
+            key={screen.src}
+            src={screen.src}
+            alt={i === turn ? screen.alt : ""}
+            aria-hidden={i !== turn}
             width={2880}
             height={1800}
-            sizes="(max-width: 860px) 92vw, 46vw"
-            alt="The Notices pinboard: important notices pinned at the top, the latest underneath."
+            priority={i === 0}
+            sizes="(max-width: 860px) 160vw, 90vw"
+            className={`${s.heroScreen} ${i === turn ? s.heroScreenOn : ""}`}
           />
-          <figcaption>The notices pinboard: important first, everything else underneath.</figcaption>
-        </figure>
-        <figure>
-          <Image
-            src="/landing/chat.jpg"
-            width={2880}
-            height={1800}
-            sizes="(max-width: 860px) 92vw, 46vw"
-            alt="The CS-301 section chat, with a student question and the teacher's answer."
-          />
-          <figcaption>Section chat: a question at night, the teacher&apos;s answer by morning.</figcaption>
-        </figure>
+        ))}
       </div>
     </section>
   );
 }
 
-/* ---------- How it works: from the university's file to everyone's timetable ---------- */
+/* ---------- The week: one paper slip per day ---------- */
 
-const STEPS = [
-  {
-    name: "Upload",
-    title: "Upload the timetable",
-    body: "Staff upload the timetable as a CSV or Excel file, or connect a feed that is fetched on a schedule. People and enrolment lists come in the same way.",
-  },
-  {
-    name: "Check",
-    title: "Check every change",
-    body: "A dry run shows what is new, what moved and what clashes, row by row. Nothing changes until someone says so, and nothing is ever deleted.",
-  },
-  {
-    name: "Apply",
-    title: "Apply in one step",
-    body: "One button applies the whole file. The audit log records who applied it and when, and the run can be compared with the next one.",
-  },
-  {
-    name: "Live",
-    title: "Everyone sees it",
-    body: "Students and teachers see the new room or time straight away, with a notification for anything that moved today.",
-  },
+type Lecture = { title: string; code: string; teacher: string; room: string; colour: string };
+
+const MON_WED: Lecture[] = [
+  { title: "Artificial Intelligence", code: "CC-310", teacher: "Nabeel", room: "R-127", colour: "#8e5fb0" },
+  { title: "Theory of Automata", code: "CC-320", teacher: "Sadaf", room: "R-127", colour: "#2a8c88" },
+  { title: "Design and Analysis of Algorithms", code: "CC-313", teacher: "Nabeel", room: "R-127", colour: "#d9782d" },
+];
+const THU_SAT: Lecture[] = [
+  { title: "Web Development", code: "EC-330", teacher: "Nabeel", room: "R-127", colour: "#4a7fb5" },
+  { title: "Translation of the Holy Quran", code: "HQ-005", teacher: "Mati ur Rehman", room: "R-27", colour: "#b8902f" },
+  { title: "Computer Architecture", code: "DC-322", teacher: "Rawa", room: "R-127", colour: "#6e685e" },
+  { title: "Human-Computer Interaction", code: "DC-321", teacher: "Rawa", room: "R-127", colour: "#c9506d" },
+];
+const WEEK = [
+  { day: "Monday", short: "Mon", classes: MON_WED },
+  { day: "Tuesday", short: "Tue", classes: MON_WED },
+  { day: "Wednesday", short: "Wed", classes: MON_WED },
+  { day: "Thursday", short: "Thu", classes: THU_SAT },
+  { day: "Friday", short: "Fri", classes: THU_SAT },
+  { day: "Saturday", short: "Sat", classes: THU_SAT },
 ];
 
-function Fragment({ step }: { step: number }) {
-  if (step === 0)
-    return (
-      <>
-        <p className={s.uiTitle}>Imports &amp; sync</p>
-        <div className={s.uiTabs} aria-hidden="true">
-          <span>Timetable</span>
-          <span>People</span>
-          <span>Enrollment</span>
-        </div>
-        <div className={s.uiFile}>
-          <span className={s.uiFileIcon}>XLSX</span>
-          <span>
-            fall-2026-timetable.xlsx
-            <span className={s.uiMuted} style={{ display: "block" }}>
-              214 rows · lecture, day, time, room, teacher
-            </span>
-          </span>
-        </div>
-        <div className={s.uiRow}>
-          <span className={s.uiMuted}>Matched by course, section, day and start time</span>
-          <span className={s.uiButton}>Preview import</span>
-        </div>
-      </>
-    );
-  if (step === 1)
-    return (
-      <>
-        <p className={s.uiTitle}>Dry run · nothing changed yet</p>
-        <div className={s.uiStats}>
-          {[
-            ["Rows read", 214],
-            ["New", 6],
-            ["Updates", 3],
-            ["Unchanged", 205],
-            ["Errors", 0],
-            ["Room clashes", 1],
-          ].map(([label, n]) => (
-            <span key={label} className={s.uiStat}>
-              {label}
-              <b>{n}</b>
-            </span>
-          ))}
-        </div>
-        <div className={s.uiChange}>
-          <b>CS-301 · 3B</b> Tuesday lecture
-          <span className={s.uiMuted} style={{ display: "block" }}>
-            Room B-204 → B-210 · Imran Saleem
-          </span>
-        </div>
-      </>
-    );
-  if (step === 2)
-    return (
-      <>
-        <p className={s.uiTitle}>Apply 9 changes?</p>
-        <p className={s.uiMuted} style={{ margin: "0 0 14px" }}>
-          6 new classes and 3 updates. 205 classes stay as they are.
-        </p>
-        <div className={s.uiDone}>
-          <CheckIcon className="size-5" /> Applied · 9 classes updated
-        </div>
-        <p className={s.uiMuted} style={{ margin: "12px 0 0" }}>
-          Recorded in the audit log by Nadia Qureshi
-        </p>
-      </>
-    );
-  return (
-    <>
-      <p className={s.uiTitle}>Tuesday</p>
-      <div className={s.uiClass}>
-        <span className={s.uiClassBar} />
-        <span>
-          Data Structures <span className={s.uiBadge}>Room changed</span>
-          <span className={s.uiMuted} style={{ display: "block" }}>
-            CS-301 · 3B · Lecture · B-210
-          </span>
-        </span>
-      </div>
-      <div className={s.uiToast}>Data Structures on Tuesday moved to room B-210.</div>
-    </>
-  );
+function daySummary(i: number) {
+  const { day, classes } = WEEK[i];
+  const rooms = [...new Set(classes.map((c) => c.room))];
+  return `${day}: ${classes.length} classes, in ${rooms.join(" and ")}.`;
 }
 
-function HowItWorks() {
-  const [step, setStep] = useState(0);
-  const [shown, setShown] = useState(0);
-  const [fading, setFading] = useState(false);
-  // A short crossfade between states of the fragment.
+function Week() {
+  const ref = useRise<HTMLElement>();
+  // Opens on today (Sunday shows Monday). Set after mount so the server and browser agree.
+  const [picked, setPicked] = useState(0);
   useEffect(() => {
-    if (step === shown) return;
-    setFading(true);
-    const t = setTimeout(() => {
-      setShown(step);
-      setFading(false);
-    }, 160);
-    return () => clearTimeout(t);
-  }, [step, shown]);
-  const current = STEPS[shown];
+    const d = new Date().getDay();
+    setPicked(d === 0 ? 0 : d - 1);
+  }, []);
+
   return (
-    <section id="timetables" className={s.how} aria-labelledby="how-title">
-      <div className={s.howText}>
-        <h2 id="how-title" className={`${s.title} ${s.howTitle}`} aria-live="polite">
-          {current.title}
+    <section ref={ref} id="week" className={s.week} aria-labelledby="week-title">
+      <div className={s.weekText}>
+        <h2 id="week-title" className={s.title} data-rise>
+          This week in R-127
         </h2>
-        <p className={s.howBody}>{current.body}</p>
-      </div>
-      <div className={s.howUi}>
-        <div className={`${s.ui} ${fading ? s.uiFade : ""}`} data-ui>
-          <Fragment step={shown} />
-        </div>
-      </div>
-      <div className={s.howControls}>
-        <div className={s.rangeWrap}>
-          <span className={s.track} aria-hidden="true" />
-          <span className={s.trackFill} style={{ width: `${(step / 3) * 100}%` }} aria-hidden="true" />
-          <input
-            type="range"
-            min={0}
-            max={3}
-            step={1}
-            value={step}
-            onChange={(e) => setStep(Number(e.target.value))}
-            className={s.range}
-            aria-label="Import stage"
-            aria-valuetext={`${STEPS[step].name}: ${STEPS[step].title}`}
-          />
-        </div>
-        <div className={s.stops}>
-          {STEPS.map((st, i) => (
-            <button key={st.name} type="button" onClick={() => setStep(i)} aria-current={i === step ? "step" : undefined}>
-              {st.name}
+        <p className={s.weekLead} data-rise>
+          BS CS, 5th semester, G1 and G2 as one class. Monday to Wednesday has three classes and
+          Thursday to Saturday four, all in R-127 except the Quran translation class in R-27.
+        </p>
+        <div className={s.dayPicker} role="group" aria-label="Pick a day" data-rise>
+          {WEEK.map((d, i) => (
+            <button
+              key={d.day}
+              type="button"
+              aria-pressed={i === picked}
+              onClick={() => setPicked(i)}
+              className={s.dayButton}
+            >
+              {d.short}
             </button>
           ))}
         </div>
+        <p className={s.srOnly} aria-live="polite">
+          {daySummary(picked)}
+        </p>
       </div>
+      <ol className={s.slips} aria-label="The week, day by day">
+        {WEEK.map((d, i) => (
+          <li key={d.day} className={`${s.slipItem} ${i === picked ? s.slipItemPicked : ""}`}>
+            <button
+              type="button"
+              className={`${s.slip} ${i === picked ? s.slipPicked : ""}`}
+              onClick={() => setPicked(i)}
+              aria-label={daySummary(i)}
+            >
+              <span className={s.slipDay}>{d.day}</span>
+              <span className={s.slipCut} aria-hidden="true">
+                - - - - - - - - - - - - - - -
+              </span>
+              {d.classes.map((c) => (
+                <span key={c.code} className={s.slipClass}>
+                  <span className={s.slipDot} style={{ background: c.colour }} aria-hidden="true" />
+                  <span>
+                    <b>{c.title}</b>
+                    <span className={s.slipMeta}>
+                      {c.code} · {c.teacher} · {c.room}
+                    </span>
+                  </span>
+                </span>
+              ))}
+            </button>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
 
-/* ---------- Who it's for ---------- */
+/* ---------- What it does: a printed menu ---------- */
 
-const ROLES: [string, string, string][] = [
-  ["Students", "Today", "Next class, due work and notices"],
-  ["Students", "Timetable", "The week, with room changes"],
-  ["Students", "Assignments", "Hand in files before the deadline"],
-  ["Students", "Progress", "Released marks and attendance"],
-  ["Teachers", "Notices", "Pin, schedule and send to a section"],
-  ["Teachers", "Class changes", "Move, cancel or re-room a class"],
-  ["Teachers", "Attendance", "Mark a class in a minute"],
-  ["Teachers", "Grading", "Mark hand-ins, release when ready"],
-  ["Staff", "People", "Invites, roles and deactivation"],
-  ["Staff", "Imports & sync", "Timetable, people and enrolment files"],
-  ["Staff", "Reports", "Counts and rates, never who did what"],
-  ["Staff", "Audit log", "Every change, kept for good"],
-  ["Everyone", "Chat", "Sections and one-to-one messages"],
-  ["Everyone", "Calendar", "Events, sign-ups and waitlists"],
+const MENU: { group: string; items: [string, string, string][] }[] = [
+  {
+    group: "For students",
+    items: [
+      ["Today", "first screen", "Your next class with its room, recent chats, due work and notices."],
+      ["Timetable", "whole week", "Every class in order, with room changes as they happen."],
+      ["Section chat", "live", "One chat per subject, with the teacher in it."],
+      ["Assignments", "hand in online", "Upload files before the deadline and see what is marked."],
+      ["Progress", "marks and attendance", "Released marks and attendance for every subject."],
+    ],
+  },
+  {
+    group: "For teachers",
+    items: [
+      ["Notices", "pinned", "Post to a section, pin what matters, schedule the rest."],
+      ["Class changes", "one step", "Move, cancel or re-room a class; students are told."],
+      ["Attendance", "per class", "Mark the class list from a phone in the room."],
+    ],
+  },
+  {
+    group: "For the college office",
+    items: [
+      ["Accounts", "by roll number", "Every student signs in with their roll number email."],
+      ["Timetable import", "CSV or Excel", "Check every change before it goes out to everyone."],
+    ],
+  },
 ];
 
-function Roles() {
+function Menu() {
+  const ref = useRise<HTMLElement>();
   return (
-    <section id="who" className={s.roles} aria-labelledby="who-title">
-      <div className={s.rolesGrid}>
-        <div className={s.rolesHead}>
-          <h2 id="who-title" className={s.title}>
-            Built for every desk on campus
-          </h2>
-          <p className={s.rolesLead}>
-            Everyone signs in to the same place and sees only what belongs to them: their classes, their
-            sections, their work.
-          </p>
-        </div>
-        <table className={s.rolesTable}>
-          <caption>What each person can do</caption>
-          <tbody>
-            {ROLES.map(([who, tool, what], i) => {
-              const first = i === 0 || ROLES[i - 1][0] !== who;
-              return (
-                <tr key={tool + who} className={first && i > 0 ? s.groupStart : undefined}>
-                  <th scope="row">{first ? who : <span className={s.srOnly}>{who}</span>}</th>
-                  <td>{tool}</td>
-                  <td>{what}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <section ref={ref} id="menu" className={s.menu} aria-labelledby="menu-title">
+      <div className={s.sheet} data-rise>
+        <h2 id="menu-title" className={s.title}>
+          What it does
+        </h2>
+        {MENU.map(({ group, items }) => (
+          <div key={group} className={s.menuGroup}>
+            <h3 className={s.menuGroupName}>{group}</h3>
+            <dl>
+              {items.map(([name, value, text]) => (
+                <div key={name} className={s.menuItem}>
+                  <dt>
+                    <span className={s.menuName}>{name}</span>
+                    <span className={s.menuLeader} aria-hidden="true" />
+                    <span className={s.menuValue}>{value}</span>
+                  </dt>
+                  <dd>{text}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
+      </div>
+      <div className={s.menuScreens}>
+        <figure data-rise>
+          <Image
+            src="/landing/gcs-notices.jpg"
+            width={2880}
+            height={1800}
+            sizes="(max-width: 860px) 92vw, 48vw"
+            alt="The notices board: Project groups due Friday pinned at the top, then Lab notes uploaded and Quiz moved to Thursday."
+          />
+          <figcaption>Notices from Nabeel and Rawa, the important one pinned.</figcaption>
+        </figure>
+        <figure data-rise>
+          <Image
+            src="/landing/gcs-chat.jpg"
+            width={2880}
+            height={1800}
+            sizes="(max-width: 860px) 92vw, 48vw"
+            alt="The EC-330 Web Development section chat: Zainab asks about React, Nabeel answers."
+          />
+          <figcaption>The EC-330 section chat, with Nabeel in it.</figcaption>
+        </figure>
       </div>
     </section>
   );
 }
 
-/* ---------- Questions ---------- */
+/* ---------- Questions, beside the phone ---------- */
+
+const FACTS = [
+  ["Students", "your-roll-number@gcslahore.edu.pk"],
+  ["Teachers and staff", "the college email the office gave you"],
+  ["On a phone", "any browser, no app to install"],
+];
 
 const FAQ: [string, string][] = [
   [
-    "Who can sign up?",
-    "Nobody signs themselves up. Your institution creates accounts by invite or import, and gives each person the role they need.",
+    "How do I sign in?",
+    "Use your university roll number as your email, for example 126000@gcslahore.edu.pk, with the password the college gave you. Change the password after your first sign-in.",
   ],
   [
-    "Does it work on a phone?",
-    "Yes. CampusVerse runs in any phone browser with its own phone layout: four tabs at the bottom and everything else under More.",
+    "Can I message a teacher or a classmate privately?",
+    "Yes, anyone you share a class with, and the college office. Your first message goes as a request; once they accept, you can both write freely. If they decline, you can't message them again.",
   ],
   [
-    "Who can see a notice or a file?",
-    "Only the people it was sent to: a section, a course, a department or the whole campus. Search follows the same rule.",
+    "Who can read the section chat and notices?",
+    "Only the students and teachers of that section. Private chats are between the two of you; not even the college office can read them.",
   ],
   [
-    "Is the chat really live?",
-    "Messages, typing and who is online arrive as they happen. If the live line drops, messages still arrive within a few seconds.",
+    "What happens when a class moves?",
+    "The change is made once and everyone's timetable updates straight away. Anything that moved today also arrives as a notification.",
   ],
   [
-    "Where does the timetable come from?",
-    "From the university's own CSV or Excel file, or a scheduled feed. Every change is shown before it is applied, and nothing is ever deleted.",
+    "Do I need to install anything?",
+    "No. CampusVerse works in any phone or computer browser, with its own phone layout and the main tabs at the bottom.",
   ],
   [
-    "How are accounts protected?",
-    "Passwords are stored hashed, sign-in attempts are rate limited, and anyone can turn on two-step sign-in with an authenticator app and recovery codes.",
+    "I forgot my password.",
+    "Ask the college office to reset it. If you turned on two-step sign-in, keep your recovery codes somewhere safe.",
   ],
 ];
 
 function Questions() {
+  const ref = useRise<HTMLElement>();
   return (
-    <section id="questions" className={s.faq} aria-labelledby="faq-title">
-      <h2 id="faq-title" className={s.title}>
-        Questions people ask
-      </h2>
-      <div className={s.faqList}>
-        {FAQ.map(([q, a]) => (
-          <details key={q}>
-            <summary>
-              {q}
-              <span className={s.chevron} aria-hidden="true" />
-            </summary>
-            <p>{a}</p>
-          </details>
-        ))}
+    <section ref={ref} id="questions" className={s.faq} aria-labelledby="faq-title">
+      <div className={s.faqText}>
+        <h2 id="faq-title" className={s.title} data-rise>
+          Questions
+        </h2>
+        <dl className={s.facts} data-rise>
+          {FACTS.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className={s.faqList} data-rise>
+          {FAQ.map(([q, a]) => (
+            <details key={q}>
+              <summary>
+                {q}
+                <span className={s.chevron} aria-hidden="true" />
+              </summary>
+              <p>{a}</p>
+            </details>
+          ))}
+        </div>
+        <SignInButton className={s.button}>Sign in</SignInButton>
+      </div>
+      <div className={s.faqPictures} data-rise>
+        <Image
+          src="/landing/gcs-phone.jpg"
+          width={780}
+          height={1688}
+          sizes="(max-width: 860px) 70vw, 30vw"
+          className={s.faqPhone}
+          alt="CampusVerse on a phone: Today with tomorrow's Web Development class in R-127."
+        />
       </div>
     </section>
   );
 }
 
-/* ---------- Closing: a sentence with a blank ---------- */
+/* ---------- Sign in: the reply card ---------- */
 
-function Closing() {
-  const openSignIn = useContext(OpenSignIn);
-  const [email, setEmail] = useState("");
+function Reply() {
+  const ref = useRise<HTMLElement>();
   return (
-    <section className={s.cta} aria-labelledby="cta-title">
-      <h2 id="cta-title" className={s.srOnly}>
-        Sign in
-      </h2>
-      <form
-        action="/sign-in"
-        onSubmit={(e) => {
-          e.preventDefault();
-          openSignIn(email.trim());
-        }}
-      >
-        <p className={s.ctaSentence}>
-            Sign in with{" "}
-            <label>
-              <span className={s.srOnly}>Your university email</span>
-              <input
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="name@university.edu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={s.ctaInput}
-              />
-            </label>{" "}
-            <button type="submit" className={s.ctaSubmit}>
-              Continue
-            </button>
+    <section ref={ref} className={s.reply} aria-labelledby="reply-title">
+      <p className={s.replyNote} data-rise>
+        Your classes, notices and section chats are already in it. Sign in once and keep it open on
+        your phone.
+      </p>
+      <div className={s.replyCard} data-rise>
+        <h2 id="reply-title" className={s.title}>
+          Sign in
+        </h2>
+        <p>
+          Students: your roll number @gcslahore.edu.pk.
+          <br />
+          Teachers and staff: your college email.
         </p>
-      </form>
-      <p className={s.ctaNote}>Your institution creates your account. No account yet? Ask your administrator.</p>
+        <SignInButton className={`${s.button} ${s.buttonBar}`}>Sign in to CampusVerse</SignInButton>
+      </div>
     </section>
   );
 }
 
-/* ---------- Footer ---------- */
+/* ---------- Footer: the back of the card ---------- */
 
 function Footer() {
   return (
     <footer className={s.footer}>
-      <div className={s.footerInvite}>
-        <p className={s.title}>
-          Your next class
-          <br />
-          is already here.
-        </p>
-        <Link href="/today" className={`${s.button} ${s.buttonPaper}`}>
-          Open CampusVerse
-        </Link>
-      </div>
-      <nav aria-label="More" className={s.footerLinks}>
-        <SignInButton className={s.linkButton}>Sign in</SignInButton>
-        <a href="#timetables">Timetable imports</a>
-        <a href="#questions">Questions</a>
-      </nav>
-      <div className={s.footerLegal}>
-        <span>© {new Date().getFullYear()} CampusVerse</span>
-        <span>Timetables, notices, coursework and chat for your campus.</span>
+      <div className={s.back}>
+        <div className={s.scallops} aria-hidden="true">
+          {Array.from({ length: 12 }, (_, i) => (
+            <span key={i} />
+          ))}
+        </div>
+        <div className={s.backMessage}>
+          <p className={s.title}>See you in R-127.</p>
+          <p>
+            CampusVerse is the class app for BS CS (G1+G2) at Govt. Graduate College of Science. Built
+            for the college&apos;s students, teachers and office.
+          </p>
+        </div>
+        <div className={s.backAddress}>
+          <Image
+            src="/landing/gcs-phone.jpg"
+            width={780}
+            height={1688}
+            sizes="88px"
+            className={s.stamp}
+            alt=""
+          />
+          <address>
+            <span>Govt. Graduate College of Science</span>
+            <span>Wahdat Road, Lahore</span>
+            <SignInButton className={s.linkButton}>Sign in</SignInButton>
+            <a href="#questions">Questions</a>
+          </address>
+        </div>
+        <p className={s.imprint}>© {new Date().getFullYear()} CampusVerse</p>
       </div>
     </footer>
   );
