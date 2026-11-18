@@ -66,12 +66,47 @@ npx expo lint
 npx expo-doctor
 ```
 
-## Building for the stores
+## Building for release
+
+Release builds talk to the live servers: `.env.production` holds the API address
+(`https://campusverse-api-gm4t.onrender.com`, see `docs/deploy.md`). The live-chat address comes
+from the API itself.
+
+### The signing key
+
+Android only accepts updates signed with the same key, so the upload key is kept off the repo:
+
+- the key: `~/.campusverse/campusverse-upload.jks` on the machine that builds;
+- its passwords: four `CAMPUSVERSE_UPLOAD_*` lines in that machine's `~/.gradle/gradle.properties`
+  (the `with-release-signing` config plugin reads them).
+
+**Back up both** (a password manager is a good home). Lose them and the published app can never
+be updated. On Google Play, turn on Play App Signing so Google holds the final key and a lost
+upload key can be reset.
+
+Without those lines a release build still runs, signed with the debug key, which is fine on your
+own phone but can't be published.
+
+### Building on Windows
+
+Needs JDK 17 and the Android SDK. The native build uses CMake 3.31.6 (the SDK manager installs
+it), since older CMake can't handle the long paths Windows gives this project.
+
+```bash
+npx expo prebuild --platform android
+cd android
+./gradlew app:assembleRelease   # APK, to install directly: app/build/outputs/apk/release/
+./gradlew app:bundleRelease     # AAB, for Google Play: app/build/outputs/bundle/release/
+```
+
+Raise `android.versionCode` in `app.json` (and `version` for people to see) before each release
+you publish.
+
+### With EAS instead
 
 ```bash
 npx eas-cli@latest build --platform android
 npx eas-cli@latest build --platform ios
 ```
 
-The bundle ID is `pk.campusverse.app` in `app.json`; change it to your own before publishing.
-Production builds need `EXPO_PUBLIC_API_URL` set to an `https://` address.
+EAS keeps its own copy of the signing key. The bundle ID is `pk.campusverse.app` in `app.json`.
