@@ -229,7 +229,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ...(isAdmin
       ? [{ href: "/manage", label: "Manage", Icon: ManageIcon, group: "Administration" as const }]
       : user.roles.includes("department_coordinator")
-        ? [{ href: "/manage/academic", label: "Courses", Icon: ManageIcon, group: "Administration" as const }]
+        ? [{ href: "/manage/academic", label: "Department", Icon: ManageIcon, group: "Administration" as const }]
         : []),
   ];
   // Phones get four tabs; everything else sits under More.

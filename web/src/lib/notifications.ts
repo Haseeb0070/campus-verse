@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "./api";
 import { getRealtime, useRealtimeConnected } from "./realtime";
 import type { AppNotification, NotificationKind } from "./types";
+import { playChime, unlockSoundOnFirstTouch } from "./sound";
 
 const key = ["notifications"] as const;
 
@@ -63,6 +64,8 @@ export function useLiveNotifications(userId: number | undefined) {
     setToasts((list) => list.filter((t) => t.id !== id));
   }, []);
 
+  useEffect(() => unlockSoundOnFirstTouch(), []);
+
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -78,6 +81,8 @@ export function useLiveNotifications(userId: number | undefined) {
         for (const k of affects[ctx.data.kind as NotificationKind] ?? []) {
           queryClient.invalidateQueries({ queryKey: k });
         }
+        // A chime, a little brighter for important notices (Profile turns it off).
+        playChime(String(ctx.data.title ?? "").startsWith("Important"));
         const toast = { id: Date.now() + Math.random(), ...ctx.data } as Toast;
         setToasts((list) => [...list.slice(-2), toast]);
         setTimeout(() => dismiss(toast.id), 6_000);

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Count, Q
@@ -445,3 +445,91 @@ def find_people(request, kind: str = "student", q: str = ""):
         qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q)
                        | Q(email__icontains=q) | Q(external_id__iexact=q))
     return [_person(u) for u in qs.order_by("first_name", "last_name")[:20]]
+
+
+# Department coordinators: their departments' people and report ------------------------------
+
+
+def _departments(request, department: int | None) -> set[int]:
+    """The departments this person may look at: one they ask for (if allowed), else all of
+    theirs. Admins may look at any department."""
+    from apps.academic.models import Department
+
+    from .structure import department_ids_for
+
+    allowed = department_ids_for(request.user)
+    every = set(Department.objects.filter(institution_id=request.user.institution_id)
+                .values_list("pk", flat=True))
+    mine = every if allowed is None else allowed & every
+    if not mine:
+        raise HttpError(403, "This is for department coordinators and admins.")
+    if department is not None:
+        if department not in mine:
+            raise HttpError(403, "You can only see your own departments.")
+        return {department}
+    return mine
+
+
+class DeptPersonOut(Schema):
+    id: int
+    name: str
+    email: str
+    kind: str
+    external_id: str
+    sections: int
+    last_login: datetime | None
+
+
+def _dept_people(request, department, q, kind):
+    from django.db.models import Count, Q
+
+    from apps.academic.models import Section
+
+    from .reports import department_people
+
+    ids = _departments(request, department)
+    sections = Section.objects.filter(offering__course__department_id__in=ids,
+                                      status=Section.Status.ACTIVE)
+    qs = department_people(ids).filter(institution_id=request.user.institution_id,
+                                       is_active=True)
+    for word in (q or "").split()[:5]:
+        qs = qs.filter(Q(first_name__icontains=word) | Q(last_name__icontains=word)
+                       | Q(email__icontains=word) | Q(external_id__icontains=word))
+    if kind in ("student", "teacher", "staff"):
+        qs = qs.filter(kind=kind)
+    qs = qs.annotate(
+        n=Count("enrollments", filter=Q(enrollments__section__in=sections,
+                                        enrollments__status="active"), distinct=True)
+        + Count("teaching", filter=Q(teaching__section__in=sections), distinct=True)
+    ).order_by("kind", "first_name", "last_name")
+    return qs
+
+
+@router.get("/department/people", response=list[DeptPersonOut])
+def department_people_list(request, department: int | None = None, q: str = "", kind: str = ""):
+    """Students and teachers in the departments' sections (read only)."""
+    return [
+        {"id": u.pk, "name": u.get_full_name() or u.email, "email": u.email, "kind": u.kind,
+         "external_id": u.external_id, "sections": u.n, "last_login": u.last_login}
+        for u in _dept_people(request, department, q, kind)[:500]
+    ]
+
+
+@router.get("/department/people.csv", response={200: None})
+def department_people_csv(request, department: int | None = None, kind: str = ""):
+    from apps.core.exports import csv_response
+
+    rows = [(u.external_id, u.first_name, u.last_name, u.email, u.kind, u.n,
+             u.last_login.strftime("%Y-%m-%d") if u.last_login else "Never")
+            for u in _dept_people(request, department, "", kind)]
+    return csv_response("department people.csv", ["College ID", "First name", "Last name",
+                                                  "Email", "Type", "Sections", "Last signed in"],
+                        rows)
+
+
+@router.get("/department/reports", response=dict)
+def department_report(request, department: int | None = None, days: int = 30):
+    """The admins' report, limited to the coordinator's departments."""
+    from .reports import build
+
+    return build(request.user, days, department_ids=_departments(request, department))

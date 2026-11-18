@@ -1,4 +1,5 @@
-"""Reports for institution admins (SRS 12.1). Everything is scoped to one period, so the numbers
+"""Reports for institution admins (SRS 12.1), and for department coordinators the same report
+limited to their departments' sections. Everything is scoped to one period, so the numbers
 on the page agree with each other. Reports show counts and rates, never lists of who did what,
 and nothing here ranks or scores individual students or teachers."""
 
@@ -53,10 +54,31 @@ def _series(qs, field: str, buckets) -> list[dict]:
             for label, start, end in buckets]
 
 
-def build(admin, days: int = 30) -> dict:
-    require_admin(admin)
+def department_people(department_ids):
+    """Students in the departments' active sections and the teachers of those sections."""
+    from django.db.models import Q as _Q
+
+    sections = Section.objects.filter(offering__course__department_id__in=department_ids,
+                                      status=Section.Status.ACTIVE)
+    return User.objects.filter(
+        _Q(enrollments__section__in=sections, enrollments__status="active")
+        | _Q(teaching__section__in=sections)
+    ).distinct()
+
+
+def build(admin, days: int = 30, department_ids: set[int] | None = None) -> dict:
+    """The whole institution for its admins; with department_ids, only those departments (a
+    coordinator's own). The caller checks the person may see those departments."""
+    if department_ids is None:
+        require_admin(admin)
     if days not in PERIODS:
         days = 30
+    dept = department_ids is not None
+    dept_sections = (
+        list(Section.objects.filter(offering__course__department_id__in=department_ids)
+             .values_list("pk", flat=True))
+        if dept else []
+    )
     inst = admin.institution
     tz = ZoneInfo(inst.timezone)
     now = timezone.now()
@@ -66,16 +88,22 @@ def build(admin, days: int = 30) -> dict:
 
     # People -------------------------------------------------------------------------------
     people = User.objects.filter(institution_id=inst.pk, is_active=True)
+    if dept:
+        people = people.filter(pk__in=department_people(department_ids).values("pk"))
     by_kind = Counter(people.values_list("kind", flat=True))
     active = Counter(people.filter(last_login__gte=since).values_list("kind", flat=True))
     # Invited and not yet signed in: the account still has no usable password.
     invited = people.filter(password__startswith="!").count()
 
     # Activity -----------------------------------------------------------------------------
+    messages = Message.objects.filter(**scope, created_at__gte=buckets[0][1])
+    submissions_qs = Submission.objects.filter(**scope, submitted_at__gte=buckets[0][1])
+    if dept:
+        messages = messages.filter(conversation__section_id__in=dept_sections)
+        submissions_qs = submissions_qs.filter(assignment__section_id__in=dept_sections)
     activity = [
-        {"key": "messages", "label": "Chat messages",
-         "points": _series(Message.objects.filter(**scope, created_at__gte=buckets[0][1]),
-                           "created_at", buckets)},
+        {"key": "messages", "label": "Chat messages" + (" in section chats" if dept else ""),
+         "points": _series(messages, "created_at", buckets)},
         {"key": "feed", "label": "Feed posts and comments",
          "points": [
              {"label": a["label"], "value": a["value"] + b["value"]}
@@ -86,13 +114,30 @@ def build(admin, days: int = 30) -> dict:
                          "created_at", buckets), strict=True)
          ]},
         {"key": "submissions", "label": "Assignment submissions",
-         "points": _series(Submission.objects.filter(**scope, submitted_at__gte=buckets[0][1]),
-                           "submitted_at", buckets)},
+         "points": _series(submissions_qs, "submitted_at", buckets)},
     ]
+    if dept:
+        # Feed posts aren't tied to departments; a coordinator's report leaves them out.
+        activity = [a for a in activity if a["key"] != "feed"]
 
     # Notices: reach and read rate from the notifications that delivered them ---------------
-    notices = list(Notice.objects.filter(**scope, status=Notice.Status.PUBLISHED,
-                                         published_at__gte=since).order_by("-published_at")[:12])
+    notice_qs = Notice.objects.filter(**scope, status=Notice.Status.PUBLISHED,
+                                      published_at__gte=since)
+    if dept:
+        from django.contrib.contenttypes.models import ContentType
+
+        from apps.academic.models import CourseOffering
+        from apps.core.models import AudienceTarget
+
+        offerings = CourseOffering.objects.filter(course__department_id__in=department_ids)
+        targeted = AudienceTarget.objects.filter(
+            Q(scope_type="department", scope_id__in=list(department_ids))
+            | Q(scope_type="section", scope_id__in=dept_sections)
+            | Q(scope_type="offering", scope_id__in=list(offerings.values_list("pk", flat=True))),
+            content_type=ContentType.objects.get_for_model(Notice),
+        ).values("object_id")
+        notice_qs = notice_qs.filter(pk__in=targeted)
+    notices = list(notice_qs.order_by("-published_at")[:12])
     delivered = Notification.objects.filter(
         dedupe_key__in=[f"notice:{n.pk}" for n in notices], in_app=True
     ).values("dedupe_key").annotate(
@@ -108,9 +153,12 @@ def build(admin, days: int = 30) -> dict:
                             "read_rate": round(100 * d["read"] / d["sent"]) if d["sent"] else None})
 
     # Assignments due in the period: submitted and graded shares ----------------------------
-    work = list(Assignment.objects.filter(
+    work_qs = Assignment.objects.filter(
         **scope, status=Assignment.Status.PUBLISHED, due_at__gte=since, due_at__lte=now
-    ).select_related("section__offering__course").order_by("-due_at")[:12])
+    )
+    if dept:
+        work_qs = work_qs.filter(section_id__in=dept_sections)
+    work = list(work_qs.select_related("section__offering__course").order_by("-due_at")[:12])
     class_sizes = dict(SectionEnrollment.objects.filter(
         section__in=[a.section_id for a in work], status=SectionEnrollment.Status.ACTIVE
     ).values("section").annotate(n=Count("id")).values_list("section", "n"))
@@ -135,6 +183,8 @@ def build(admin, days: int = 30) -> dict:
     attendance = None
     if inst.attendance_enabled:
         records = AttendanceRecord.objects.filter(**scope, session__date__gte=since.date())
+        if dept:
+            records = records.filter(session__section_id__in=dept_sections)
         per = records.values("session__section").annotate(
             total=Count("id", filter=~Q(status="excused")),
             attended=Count("id", filter=Q(status__in=["present", "late"])),
@@ -151,6 +201,8 @@ def build(admin, days: int = 30) -> dict:
 
     # Resources: downloads and distinct people per resource ----------------------------------
     downloads = ResourceDownload.objects.filter(**scope, created_at__gte=since)
+    if dept:
+        downloads = downloads.filter(resource__offering__course__department_id__in=department_ids)
     top = downloads.values("resource", "resource__title", "resource__offering__course__code") \
         .annotate(n=Count("id"), people=Count("user", distinct=True)).order_by("-n")[:10]
     resources = {
@@ -190,8 +242,17 @@ def build(admin, days: int = 30) -> dict:
         .exclude(last_error="").count(),
     }
 
+    if dept:
+        # The institution's own figures stay out of a coordinator's report.
+        feed = {"posts": 0, "comments": 0, "people": 0}
+        moderation = {"open": 0, "reported": 0, "resolved": 0, "median_hours": None, "actioned": 0}
+        sync = {"applied": 0, "waiting": 0, "discarded": 0, "sources": 0, "failing": 0}
+
     return {
         "days": days,
+        # "department": a coordinator's view; the feed, moderation and sync parts are the
+        # institution's and stay empty there.
+        "scope": "department" if dept else "institution",
         "people": {
             "students": by_kind.get("student", 0), "teachers": by_kind.get("teacher", 0),
             "staff": by_kind.get("staff", 0), "invited": invited,

@@ -70,7 +70,8 @@ ASGI_APPLICATION = "config.asgi.application"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        # Our own wording for the sign-in emails (templates/account/email/), ahead of allauth's.
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -154,6 +155,7 @@ ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 # Finishing an invite (or a reset) signs you straight in instead of asking for the password again.
 ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ""  # subjects already say CampusVerse
 ACCOUNT_RATE_LIMITS = {"login_failed": "5/5m/ip,5/5m/key"}
 CAMPUSVERSE_OPEN_SIGNUP = env("OPEN_SIGNUP")
 HEADLESS_ONLY = True

@@ -1,0 +1,6 @@
+{% autoescape off %}Hello from CampusVerse,
+
+{% block content %}{% endblock content %}
+
+CampusVerse
+{% endautoescape %}

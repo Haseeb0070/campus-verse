@@ -1,13 +1,14 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Select } from "@/components/select";
 import { Switch } from "@/components/switch";
 import { TwoStepCard } from "@/components/two-step-card";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { courseBg, relativeTime } from "@/lib/format";
 import { useNotificationPreferences } from "@/lib/notifications";
+import { playChime, setSoundOn, soundOn } from "@/lib/sound";
 import type { NotificationPreference } from "@/lib/notifications";
 import { changePassword, topicLabels, useMyCorrections } from "@/lib/profile";
 import type { Correction, CorrectionTopic } from "@/lib/profile";
@@ -205,7 +206,41 @@ function NotificationsCard() {
           </li>
         ))}
       </ul>
+      <SoundRow />
     </section>
+  );
+}
+
+/** The chime for new notifications, on this device. */
+function SoundRow() {
+  const [on, setOn] = useState(true);
+  useEffect(() => setOn(soundOn()), []);
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-divider pt-3">
+      <span className="min-w-0 flex-1 basis-56">
+        <span className="block text-body font-semibold">Play a sound</span>
+        <span className="block text-footnote text-ink-2">A soft chime when a notification arrives, on this device.</span>
+      </span>
+      <span className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => playChime()}
+          disabled={!on}
+          className="press rounded-full bg-fill-strong px-3 py-1.5 text-footnote font-semibold disabled:opacity-50"
+        >
+          Test
+        </button>
+        <Switch
+          checked={on}
+          label="Play a sound for notifications"
+          onChange={(v) => {
+            setSoundOn(v);
+            setOn(v);
+            if (v) playChime();
+          }}
+        />
+      </span>
+    </div>
   );
 }
 
