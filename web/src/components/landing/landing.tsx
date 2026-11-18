@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
@@ -7,6 +8,9 @@ import { LogoGlyph } from "@/components/icons";
 import BlurText from "@/components/reactbits/BlurText";
 import { SignInDialog } from "@/components/sign-in-dialog";
 import s from "./landing.module.css";
+
+// The guide draws with window-only APIs, so it loads in the browser only.
+const Guide = dynamic(() => import("./guide"), { ssr: false });
 
 /*
  * The landing page is built as the college's own printed timetable sheet: a paper card on the
@@ -71,6 +75,7 @@ export function Landing({
           <Reply />
         </main>
         <Footer />
+        <Guide />
         <SignInDialog
           open={dialog.open}
           email={dialog.email}
@@ -468,7 +473,7 @@ function Questions() {
 function Reply() {
   const ref = useRise<HTMLElement>();
   return (
-    <section ref={ref} className={s.reply} aria-labelledby="reply-title">
+    <section ref={ref} id="signin" className={s.reply} aria-labelledby="reply-title">
       <p className={s.replyNote} data-rise>
         Your classes, notices and section chats are already in it. Sign in once and keep it open on
         your phone.
@@ -492,7 +497,7 @@ function Reply() {
 
 function Footer() {
   return (
-    <footer className={s.footer}>
+    <footer id="end" className={s.footer}>
       <div className={s.back}>
         <div className={s.scallops} aria-hidden="true">
           {Array.from({ length: 12 }, (_, i) => (
