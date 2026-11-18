@@ -1,0 +1,94 @@
+# Automatic checks on every push and pull request. They run on GitHub's own machines, with a
+# throwaway Postgres database: nothing here touches Render, Neon, Vercel or the live site.
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch cancels the older run.
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (lint, migrations, tests on Postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: campusverse
+          POSTGRES_PASSWORD: campusverse
+          POSTGRES_DB: campusverse
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U campusverse"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # The same engine as Neon. Test-only values; config/settings_test.py sets the rest.
+      DATABASE_URL: postgres://campusverse:campusverse@localhost:5432/campusverse
+      DJANGO_SETTINGS_MODULE: config.settings_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.6"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Every model change has its migration
+        run: uv run python manage.py makemigrations --check --dry-run
+
+      - name: Tests
+        run: uv run pytest -q -p no:warnings
+
+  web:
+    name: Web app (lint, types, production build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    env:
+      # Only used for the API's address in the build; nothing is called.
+      BACKEND_URL: https://api.example.invalid
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npx eslint src
+
+      - name: Types
+        run: npx tsc --noEmit -p .
+
+      - name: Production build
+        run: npm run build
