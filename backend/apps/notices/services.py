@@ -203,3 +203,75 @@ def archive_notice(*, user, notice: Notice) -> Notice:
         notice.save(update_fields=["status", "updated_at"])
         audit.record(actor=user, action="notice.archived", target=notice)
     return notice
+
+
+# Editing and files ----------------------------------------------------------------------------
+
+MAX_FILES = 5
+
+
+@transaction.atomic
+def update_notice(*, author, notice: Notice, title: str, body: str, priority: str,
+                  expires_at=None, targets: list[tuple[str, int]] | None = None) -> Notice:
+    """The author changes their notice. Once it has gone out, who it went to stays the same (the
+    people already told keep seeing it); the words, importance and take-down time can change."""
+    if notice.author_id != author.pk:
+        raise PermissionDenied("Only the author can edit this notice.")
+    if notice.status == Notice.Status.ARCHIVED:
+        raise ValidationError("This notice is archived.")
+    before = {"title": notice.title, "body": notice.body, "priority": notice.priority,
+              "expires_at": notice.expires_at}
+    notice.title, notice.body, notice.priority = title, body, priority
+    notice.expires_at = expires_at
+    _validate(notice)
+    goes_out = notice.published_at or notice.publish_at or timezone.now()
+    if notice.expires_at is not None and notice.expires_at <= goes_out:
+        raise ValidationError("The take-down time has to be after it goes out.")
+    if notice.status == Notice.Status.PUBLISHED:
+        notice.edited_at = timezone.now()
+    elif targets is not None:
+        _check_targets(author, targets)
+        _set_targets(notice, targets)
+    notice.save()
+    changed = {k: [str(v), str(getattr(notice, k))] for k, v in before.items()
+               if v != getattr(notice, k)}
+    if changed:
+        audit.record(actor=author, action="notice.edited", target=notice,
+                     changes={k: "changed" for k in changed})  # the words stay in the history
+    return notice
+
+
+def add_attachment(*, author, notice: Notice, upload):
+    from apps.core.files import store_upload
+
+    if notice.author_id != author.pk:
+        raise PermissionDenied("Only the author can add files.")
+    if notice.attachments.count() >= MAX_FILES:
+        raise ValidationError(f"A notice can have up to {MAX_FILES} files.")
+    stored = store_upload(author, upload)
+    notice.attachments.add(stored)
+    return stored
+
+
+def remove_attachment(*, author, notice: Notice, file_id: int) -> None:
+    if notice.author_id != author.pk:
+        raise PermissionDenied("Only the author can remove files.")
+    notice.attachments.remove(file_id)
+
+
+def downloadable_file(user, file_id: int):
+    """A notice's file, for anyone who can read that notice (and its author)."""
+    from apps.core.models import StoredFile
+
+    stored = StoredFile.objects.filter(pk=file_id, institution_id=user.institution_id).first()
+    if stored is None:
+        return None
+    through = Notice.attachments.through.objects.filter(storedfile_id=file_id)
+    notice_ids = list(through.values_list("notice_id", flat=True))
+    if not notice_ids:
+        return None
+    if Notice.objects.filter(pk__in=notice_ids, author=user).exists():
+        return stored
+    if Notice.objects.live().visible_to(user).filter(pk__in=notice_ids).exists():
+        return stored
+    return None

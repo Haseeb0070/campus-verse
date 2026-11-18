@@ -6,7 +6,12 @@ from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
 from apps.core.audience import visible_q
-from apps.core.models import AudienceTarget, InstitutionScopedModel, InstitutionScopedQuerySet
+from apps.core.models import (
+    AudienceTarget,
+    InstitutionScopedModel,
+    InstitutionScopedQuerySet,
+    StoredFile,
+)
 
 
 class NoticeQuerySet(InstitutionScopedQuerySet):
@@ -45,6 +50,9 @@ class Notice(InstitutionScopedModel):
         null=True, blank=True, help_text="When a scheduled notice goes out"
     )
     expires_at = models.DateTimeField(null=True, blank=True)
+    # Set when the author changes a notice that has already gone out.
+    edited_at = models.DateTimeField(null=True, blank=True)
+    attachments = models.ManyToManyField(StoredFile, blank=True, related_name="+")
     targets = GenericRelation(AudienceTarget)
     history = HistoricalRecords()
 

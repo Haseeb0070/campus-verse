@@ -20,6 +20,7 @@ def live_file_ids() -> set[int]:
     from apps.assignments.models import Assignment, Submission
     from apps.chat.models import Message
     from apps.feed.models import Post
+    from apps.notices.models import Notice
     from apps.resources.models import ResourceVersion
 
     ids: set[int] = set()
@@ -27,6 +28,7 @@ def live_file_ids() -> set[int]:
     ids.update(ResourceVersion.objects.values_list("file_id", flat=True))
     ids.update(Assignment.attachments.through.objects.values_list("storedfile_id", flat=True))
     ids.update(Submission.files.through.objects.values_list("storedfile_id", flat=True))
+    ids.update(Notice.attachments.through.objects.values_list("storedfile_id", flat=True))
     ids.update(
         Message.attachments.through.objects.filter(message__deleted_at__isnull=True).values_list(
             "storedfile_id", flat=True

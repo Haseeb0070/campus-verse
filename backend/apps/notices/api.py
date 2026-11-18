@@ -2,9 +2,11 @@ from datetime import datetime
 from typing import Literal
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.http import FileResponse
 from django.utils import timezone
-from ninja import Query, Router, Schema, Status
+from ninja import File, Query, Router, Schema, Status
 from ninja.errors import HttpError
+from ninja.files import UploadedFile
 
 from apps.core.audience import audience_options, parse_target, reach, scope_label
 
@@ -14,13 +16,33 @@ from .models import Notice
 router = Router(tags=["notices"])
 
 
+class FileOut(Schema):
+    id: int
+    name: str
+    size: int
+    content_type: str
+
+
+def _files(notice: Notice) -> list[dict]:
+    return [
+        {"id": f.pk, "name": f.original_name, "size": f.size, "content_type": f.content_type}
+        for f in notice.attachments.all()
+    ]
+
+
 class NoticeOut(Schema):
     id: int
     title: str
     body: str
     priority: str
     published_at: datetime | None
+    edited_at: datetime | None = None
     author_name: str
+    attachments: list[FileOut] = []
+
+    @staticmethod
+    def resolve_attachments(obj):
+        return _files(obj)
 
     @staticmethod
     def resolve_author_name(obj):
@@ -43,8 +65,10 @@ class MyNoticeOut(Schema):
     expires_at: datetime | None
     expired: bool
     updated_at: datetime
+    edited_at: datetime | None = None
     targets: list[TargetOut]
     reach: int
+    attachments: list[FileOut] = []
 
 
 class AudienceOut(Schema):
@@ -100,6 +124,8 @@ def _mine_out(notice: Notice) -> dict:
         "expires_at": notice.expires_at,
         "expired": notice.expires_at is not None and notice.expires_at <= timezone.now(),
         "updated_at": notice.updated_at,
+        "edited_at": notice.edited_at,
+        "attachments": _files(notice),
         "targets": [{"key": f"{t}:{i}", "label": scope_label(t, i)} for t, i in targets],
         "reach": reach(targets, notice.institution_id),
     }
@@ -119,6 +145,7 @@ def list_notices(request, limit: int = 50):
         Notice.objects.live()
         .visible_to(request.user)
         .select_related("author")
+        .prefetch_related("attachments")
         .order_by("-published_at")[: max(1, min(limit, 100))]
     )
 
@@ -201,6 +228,66 @@ def unschedule(request, notice_id: int):
     except ValidationError as err:
         return Status(422, {"detail": err.messages[0]})
     return Status(200, _mine_out(notice))
+
+
+class NoticeEditIn(Schema):
+    title: str
+    body: str
+    priority: Literal["normal", "important"] = "normal"
+    expires_at: datetime | None = None
+    # Only read for drafts and scheduled notices: a published one keeps its audience.
+    targets: list[str] | None = None
+
+
+@router.patch("/{notice_id}", response={200: MyNoticeOut, 403: ErrorOut, 422: ErrorOut})
+def edit_notice(request, notice_id: int, payload: NoticeEditIn):
+    notice = _own_notice(request, notice_id)
+    targets = _parse_targets(payload.targets) if payload.targets is not None else None
+    try:
+        services.update_notice(author=request.user, notice=notice, title=payload.title,
+                               body=payload.body, priority=payload.priority,
+                               expires_at=payload.expires_at, targets=targets)
+    except PermissionDenied as err:
+        return Status(403, {"detail": str(err)})
+    except ValidationError as err:
+        return Status(422, {"detail": err.messages[0]})
+    return Status(200, _mine_out(notice))
+
+
+@router.post("/{notice_id}/attachments", response={201: FileOut, 403: ErrorOut, 422: ErrorOut})
+def attach(request, notice_id: int, file: File[UploadedFile]):
+    notice = _own_notice(request, notice_id)
+    try:
+        f = services.add_attachment(author=request.user, notice=notice, upload=file)
+    except PermissionDenied as err:
+        return Status(403, {"detail": str(err)})
+    except ValidationError as err:
+        return Status(422, {"detail": err.messages[0]})
+    return Status(201, {"id": f.pk, "name": f.original_name, "size": f.size,
+                        "content_type": f.content_type})
+
+
+@router.delete("/{notice_id}/attachments/{file_id}", response={204: None, 403: ErrorOut})
+def detach(request, notice_id: int, file_id: int):
+    notice = _own_notice(request, notice_id)
+    try:
+        services.remove_attachment(author=request.user, notice=notice, file_id=file_id)
+    except PermissionDenied as err:
+        return Status(403, {"detail": str(err)})
+    return Status(204, None)
+
+
+@router.get("/files/{file_id}", response={200: None})
+def download(request, file_id: int):
+    stored = services.downloadable_file(request.user, file_id)
+    if stored is None:
+        raise HttpError(404, "File not found")  # the same whether missing or not yours
+    response = FileResponse(stored.file.open("rb"),
+                            as_attachment=not stored.content_type.startswith("image/"),
+                            filename=stored.original_name, content_type=stored.content_type)
+    response["Cache-Control"] = "private, max-age=3600"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @router.post("/{notice_id}/archive", response={204: None, 403: ErrorOut})

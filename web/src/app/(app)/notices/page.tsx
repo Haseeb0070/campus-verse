@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Pushpin, noteTilt } from "@/components/pushpin";
 import { apiFetch } from "@/lib/api";
-import { formatDateTime, relativeTime } from "@/lib/format";
+import { PaperclipIcon } from "@/components/icons";
+import { fileSize, formatDateTime, relativeTime } from "@/lib/format";
 import { useAudiences, useMyNotices, useNotices } from "@/lib/queries";
 import type { MyNotice, Notice } from "@/lib/types";
 import { PageTitle } from "@/components/page-title";
@@ -153,8 +154,23 @@ function BoardGroup({
                       </time>
                     </>
                   )}
+                  {n.edited_at && <span title={new Date(n.edited_at).toLocaleString()}> · edited</span>}
                 </p>
                 <p className="mt-3 whitespace-pre-line text-body">{n.body}</p>
+                {n.attachments.length > 0 && (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {n.attachments.map((f) => (
+                      <li key={f.id}>
+                        <a href={`/api/notices/files/${f.id}`}
+                          className="press inline-flex max-w-full items-center gap-2 rounded-full bg-fill-strong px-3 py-1.5 text-footnote font-semibold">
+                          <PaperclipIcon className="size-4 shrink-0" />
+                          <span className="truncate">{f.name}</span>
+                          <span className="font-normal text-ink-2">{fileSize(f.size)}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </article>
             </li>
           );
@@ -216,6 +232,11 @@ function MyNoticeRow({ notice: n }: { notice: MyNotice }) {
         {error && <span className="block text-footnote text-danger-ink">{error}</span>}
       </span>
       <span className="flex items-center gap-2 text-footnote font-semibold">
+        {n.status !== "archived" && (
+          <Link href={`/notices/${n.id}/edit`} className="rounded-full px-2 py-1.5 text-ink-2 hover:bg-fill-strong">
+            Edit
+          </Link>
+        )}
         {n.status === "scheduled" && (
           <button onClick={() => act("unschedule")} disabled={busy}
             className="rounded-full px-2 py-1.5 text-ink-2 hover:bg-fill-strong">

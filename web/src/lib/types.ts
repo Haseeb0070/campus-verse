@@ -60,6 +60,8 @@ export interface MyNotice {
   updated_at: string;
   targets: { key: string; label: string }[];
   reach: number;
+  edited_at: string | null;
+  attachments: StoredFileInfo[];
 }
 
 export interface Room {
@@ -253,5 +255,7 @@ export interface Notice {
   body: string;
   priority: "normal" | "important";
   published_at: string | null;
+  edited_at?: string | null;
   author_name: string;
+  attachments: StoredFileInfo[];
 }
