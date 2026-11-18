@@ -11,7 +11,7 @@
   --small: 14px;
   --radius: 16px;
   --ground: var(--cv-hero);
-  --on-ground: #f4efe6; /* paper-coloured text on the evergreen ground, in both themes */
+  --on-ground: var(--cv-on-field, #f4efe6); /* text on the deep field colour, in both modes */
   --sheet: var(--cv-paper);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   /* The app's faces (its @theme is inlined, so the names aren't CSS variables at runtime). */

@@ -8,6 +8,8 @@
  */
 
 export type ThemeKey = "evergreen" | "indus" | "maroon" | "olive" | "teal" | "slate";
+/** A built-in theme, or "custom": the admin's own colours. */
+export type PresetKey = ThemeKey | "custom";
 
 type Tokens = {
   accent: string;
@@ -87,12 +89,137 @@ export function themeByKey(key: string | undefined): BuiltInTheme {
 
 /** The institution's look, as /api/theme sends it. */
 export interface SiteTheme {
-  preset: ThemeKey;
+  preset: PresetKey;
   guide_enabled: boolean;
   guide_name: string;
   guide_body: string;
   guide_cap: string;
   guide_tassel: string;
+  /** The guide inside the app, for people who have signed in. */
+  helper_enabled: boolean;
+  /** The admin's own colours; read when preset is "custom". */
+  custom: Partial<Record<Mode, CustomColours>>;
+}
+
+/* ---------- Custom themes: the admin's own colours ---------- */
+
+export type Mode = "light" | "dark";
+
+/** What an admin colours in a custom theme. Keep in step with CUSTOM_KEYS in
+ *  backend/apps/academic/theme.py. */
+export const CUSTOM_KEYS = [
+  "bg",
+  "surface",
+  "fill",
+  "ink",
+  "accent",
+  "on_accent",
+  "accent_ink",
+  "active",
+  "field",
+  "side",
+] as const;
+
+export type CustomKey = (typeof CUSTOM_KEYS)[number];
+export type CustomColours = Record<CustomKey, string>;
+
+export const CUSTOM_LABELS: Record<CustomKey, { label: string; hint: string }> = {
+  bg: { label: "Page background", hint: "Behind everything" },
+  surface: { label: "Cards", hint: "Panels, cards and menus" },
+  fill: { label: "Soft fill", hint: "Inputs, chips and hovered rows" },
+  ink: { label: "Text", hint: "Headings and body text" },
+  accent: { label: "Buttons", hint: "Main buttons and badges" },
+  on_accent: { label: "Button text", hint: "Text and icons on buttons" },
+  accent_ink: { label: "Links", hint: "Links and highlighted text" },
+  active: { label: "Active page", hint: "The current page in the sidebar and tabs" },
+  field: { label: "Deep field", hint: "The Today card and the landing page" },
+  side: { label: "Sidebar", hint: "The navigation on the left" },
+};
+
+/** The app's own paper and ink, which built-in themes keep. */
+const BASE: Record<Mode, Pick<CustomColours, "bg" | "surface" | "fill" | "ink">> = {
+  light: { bg: "#f4efe6", surface: "#fffdf8", fill: "#f3ede2", ink: "#241e18" },
+  dark: { bg: "#171512", surface: "#201d19", fill: "#2a2621", ink: "#f2ebe0" },
+};
+
+/** Every colour of a theme, as a custom theme holds them: the start of a custom theme. */
+export function coloursOf(key: string | undefined, mode: Mode): CustomColours {
+  const t = themeByKey(key);
+  const m = mode === "light" ? t.light : t.dark;
+  return {
+    ...BASE[mode],
+    accent: m.accent,
+    on_accent: m.onAccent,
+    accent_ink: m.accentInk,
+    active: m.accent,
+    field: m.field,
+    side: m.side,
+  };
+}
+
+/** Relative luminance, 0 (black) to 1 (white). */
+function luminance(hex: string) {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Light or dark text, whichever reads on this colour. */
+export function textOn(hex: string) {
+  return luminance(hex) > 0.4 ? "#1f1a16" : "#fbf7f0";
+}
+
+/** All the app's tokens from the few an admin chose: shades, lines and text on each colour. */
+function customVars(c: CustomColours) {
+  const mix = (a: string, b: string, p: number) => `color-mix(in srgb, ${a} ${p}%, ${b})`;
+  const sideInk = textOn(c.side);
+  const lightField = luminance(c.field) > 0.4;
+  return [
+    `--cv-bg:${c.bg}`,
+    `--cv-surface:${c.surface}`,
+    `--cv-surface-thick:${c.surface}`,
+    `--cv-paper:${c.surface}`,
+    `--cv-fill:${c.fill}`,
+    `--cv-fill-strong:${mix(c.fill, c.ink, 88)}`,
+    `--cv-rim:${mix(c.fill, c.ink, 80)}`,
+    `--cv-divider:${mix(c.ink, "transparent", 10)}`,
+    `--cv-ink:${c.ink}`,
+    `--cv-ink-2:${mix(c.ink, c.bg, 74)}`,
+    `--cv-ink-3:${mix(c.ink, c.bg, 58)}`,
+    `--cv-accent:${c.accent}`,
+    `--cv-on-accent:${c.on_accent}`,
+    `--cv-accent-ink:${c.accent_ink}`,
+    `--cv-side-active:${c.active}`,
+    `--cv-on-active:${textOn(c.active)}`,
+    `--cv-hero:${c.field}`,
+    `--cv-hero-line:${mix(c.field, lightField ? "#000000" : "#ffffff", 84)}`,
+    `--cv-on-field:${textOn(c.field)}`,
+    `--cv-side:${c.side}`,
+    `--cv-side-line:${mix(sideInk, "transparent", 9)}`,
+    `--cv-side-ink:${mix(sideInk, c.side, 90)}`,
+    `--cv-side-strong:${sideInk}`,
+    `--cv-side-muted:${mix(sideInk, c.side, 62)}`,
+    `--cv-side-icon:${mix(sideInk, c.side, 66)}`,
+    `--cv-side-hover:${mix(sideInk, "transparent", 8)}`,
+    `--cv-side-avatar:${mix(c.side, sideInk, 78)}`,
+    `--cv-side-avatar-ink:${sideInk}`,
+    `--cv-board:${mix(c.bg, c.ink, 86)}`,
+    `--cv-board-line:${mix(c.bg, c.ink, 78)}`,
+  ].join(";");
+}
+
+/** A theme's tokens for one mode, as CSS variables to put on an element: lets a preview show a
+ *  theme without changing the page. */
+export function previewVars(site: Pick<SiteTheme, "preset" | "custom">, mode: Mode): Record<string, string> {
+  const colours =
+    site.preset === "custom" && site.custom[mode] ? (site.custom[mode] as CustomColours) : coloursOf(site.preset, mode);
+  return Object.fromEntries(
+    customVars(colours)
+      .split(";")
+      .map((pair) => [pair.slice(0, pair.indexOf(":")), pair.slice(pair.indexOf(":") + 1)]),
+  );
 }
 
 export const DEFAULT_SITE_THEME: SiteTheme = {
@@ -102,6 +229,8 @@ export const DEFAULT_SITE_THEME: SiteTheme = {
   guide_body: "",
   guide_cap: "",
   guide_tassel: "",
+  helper_enabled: true,
+  custom: {},
 };
 
 function vars(t: Tokens) {
@@ -112,11 +241,15 @@ function vars(t: Tokens) {
     `--cv-hero:${t.field}`,
     `--cv-hero-line:${t.fieldLine}`,
     `--cv-side:${t.side}`,
+    `--cv-side-active:${t.accent}`,
   ].join(";");
 }
 
 /** The CSS that puts a theme on the page, over the app's own tokens (globals.css). */
-export function themeCss(key: string | undefined): string {
+export function themeCss(key: string | undefined, custom?: SiteTheme["custom"]): string {
+  if (key === "custom" && custom?.light && custom?.dark) {
+    return `html:root{${customVars(custom.light)}}html:root[data-theme="dark"]{${customVars(custom.dark)}}`;
+  }
   const t = themeByKey(key);
   // `html:root` outranks globals.css's `:root`, whatever order the stylesheets load in.
   return `html:root{${vars(t.light)}}html:root[data-theme="dark"]{${vars(t.dark)}}`;
@@ -124,7 +257,10 @@ export function themeCss(key: string | undefined): string {
 
 /** The guide's colours: the admin's own, or the theme's. */
 export function guideColours(site: SiteTheme) {
-  const fallback = themeByKey(site.preset).guide;
+  const fallback =
+    site.preset === "custom" && site.custom.light
+      ? { body: site.custom.light.accent, cap: site.custom.light.field, tassel: "#e3a33b" }
+      : themeByKey(site.preset).guide;
   return {
     body: site.guide_body || fallback.body,
     cap: site.guide_cap || fallback.cap,

@@ -8,7 +8,23 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 
 #: Built-in themes, by key. Keep in step with THEMES in web/src/lib/theme.ts.
-PRESETS = ("evergreen", "indus", "maroon", "olive", "teal", "slate")
+PRESETS = ("evergreen", "indus", "maroon", "olive", "teal", "slate", "custom")
+
+#: The colours an admin sets for a custom theme, for light and for dark. Keep in step with
+#: CUSTOM_KEYS in web/src/lib/theme.ts.
+CUSTOM_KEYS = (
+    "bg",  # page background
+    "surface",  # cards and panels
+    "fill",  # soft fills: inputs, chips, hovered rows
+    "ink",  # text
+    "accent",  # buttons
+    "on_accent",  # text on buttons
+    "accent_ink",  # links and highlighted text
+    "active",  # the current page in the sidebar
+    "field",  # the deep colour of hero cards and the landing page
+    "side",  # the sidebar
+)
+MODES = ("light", "dark")
 
 DEFAULT_THEME = {
     "preset": "evergreen",
@@ -18,6 +34,10 @@ DEFAULT_THEME = {
     "guide_body": "",
     "guide_cap": "",
     "guide_tassel": "",
+    # The guide inside the app, which answers questions once someone has signed in.
+    "helper_enabled": True,
+    # Only read when preset is "custom": {"light": {key: "#hex"}, "dark": {...}}.
+    "custom": {},
 }
 
 _HEX = re.compile(r"^#[0-9a-f]{6}$")
@@ -42,6 +62,8 @@ def clean_theme(data: dict) -> dict:
     out["preset"] = preset
 
     out["guide_enabled"] = bool(data.get("guide_enabled", True))
+    out["helper_enabled"] = bool(data.get("helper_enabled", True))
+    out["custom"] = _clean_custom(data.get("custom") or {}, required=preset == "custom")
 
     name = " ".join(str(data.get("guide_name", "")).split())
     if not name:
@@ -76,3 +98,24 @@ def public_institution(user=None):
         if found:
             return found
     return qs.order_by("pk").first()
+
+
+def _clean_custom(custom, *, required: bool) -> dict:
+    """A custom theme's colours: every key for light and dark, each like #b4532a."""
+    if not isinstance(custom, dict):
+        raise ValidationError("Custom colours are missing.")
+    if not custom and not required:
+        return {}
+    out = {}
+    for mode in MODES:
+        given = custom.get(mode)
+        if not isinstance(given, dict):
+            raise ValidationError(f"Set the {mode} colours of your theme.")
+        out[mode] = {}
+        for key in CUSTOM_KEYS:
+            value = str(given.get(key, "") or "").strip().lower()
+            if not _HEX.match(value):
+                label = key.replace("_", " ")
+                raise ValidationError(f"The {mode} {label} colour must look like #b4532a.")
+            out[mode][key] = value
+    return out

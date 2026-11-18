@@ -479,6 +479,8 @@ class ThemeIO(Schema):
     guide_body: str = ""
     guide_cap: str = ""
     guide_tassel: str = ""
+    helper_enabled: bool = True
+    custom: dict = {}
 
 
 @router.get("/theme", response={200: ThemeIO, 403: ErrorOut})

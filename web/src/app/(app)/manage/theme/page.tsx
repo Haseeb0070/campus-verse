@@ -8,7 +8,19 @@ import { PageTitle } from "@/components/page-title";
 import { Switch } from "@/components/switch";
 import { applyThemeCss, siteThemeKey } from "@/components/theme-provider";
 import { apiFetch, errorDetail } from "@/lib/api";
-import { guideColours, type SiteTheme, THEMES, themeByKey, themeCss } from "@/lib/theme";
+import {
+  coloursOf,
+  CUSTOM_KEYS,
+  CUSTOM_LABELS,
+  type CustomColours,
+  type CustomKey,
+  guideColours,
+  type Mode,
+  previewVars,
+  type SiteTheme,
+  THEMES,
+  themeCss,
+} from "@/lib/theme";
 
 // The guide draws with browser-only APIs.
 const GuidePreview = dynamic(() => import("@/components/landing/guide-preview"), { ssr: false });
@@ -46,12 +58,12 @@ export default function ThemeSettings() {
 
   // Picking a theme shows it on this page at once; leaving without saving puts the saved one back.
   useEffect(() => {
-    if (draft) applyThemeCss(themeCss(draft.preset));
+    if (draft) applyThemeCss(themeCss(draft.preset, draft.custom));
   }, [draft]);
   useEffect(
     () => () => {
       const current = qc.getQueryData<SiteTheme>(siteThemeKey);
-      applyThemeCss(themeCss(current?.preset));
+      applyThemeCss(themeCss(current?.preset, current?.custom));
     },
     [qc],
   );
@@ -85,9 +97,13 @@ export default function ThemeSettings() {
     : draft.guide_name.trim().length > 24
       ? "Keep it to 24 characters or fewer."
       : null;
-  const colourError = PARTS.some((p) => draft[p.key] && !HEX.test(draft[p.key]))
-    ? "Colours look like #b4532a."
-    : null;
+  const badCustom =
+    draft.preset === "custom" &&
+    (["light", "dark"] as const).some((m) => CUSTOM_KEYS.some((k) => !HEX.test(draft.custom[m]?.[k] ?? "")));
+  const colourError =
+    PARTS.some((p) => draft[p.key] && !HEX.test(draft[p.key])) || badCustom
+      ? "Colours look like #b4532a."
+      : null;
 
   return (
     <>
@@ -136,7 +152,65 @@ export default function ThemeSettings() {
               </button>
             );
           })}
+          {/* Your own: every colour chosen by hand, starting from the theme picked last. */}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={draft.preset === "custom"}
+            onClick={() =>
+              set({
+                preset: "custom",
+                custom:
+                  draft.custom.light && draft.custom.dark
+                    ? draft.custom
+                    : { light: coloursOf(draft.preset, "light"), dark: coloursOf(draft.preset, "dark") },
+              })
+            }
+            className={`press relative flex flex-col gap-3 rounded-row p-3 text-left transition-colors ${
+              draft.preset === "custom" ? "bg-fill-strong ring-2 ring-accent" : "bg-fill hover:bg-fill-strong"
+            }`}
+          >
+            <span className="grid h-16 grid-cols-6 overflow-hidden rounded-[10px]" aria-hidden="true">
+              {["#f4efe6", "#b4532a", "#2f6fae", "#2a8c88", "#9e2b3a", "#262b33"].map((c) => (
+                <span key={c} style={{ background: c }} />
+              ))}
+            </span>
+            <span>
+              <span className="flex items-center gap-1.5 text-body font-semibold">
+                Your own
+                {draft.preset === "custom" && <CheckIcon className="size-4 text-accent-ink" />}
+              </span>
+              <span className="block text-footnote text-ink-2">
+                Choose every colour yourself, for light and dark.
+              </span>
+            </span>
+          </button>
         </div>
+
+        {draft.preset === "custom" && draft.custom.light && draft.custom.dark && (
+          <CustomEditor
+            custom={draft.custom as Record<Mode, CustomColours>}
+            onChange={(custom) => set({ custom })}
+          />
+        )}
+      </section>
+
+      <section aria-labelledby="helper-h" className="glass flex flex-wrap items-start justify-between gap-4 rounded-card p-6">
+        <div>
+          <h2 id="helper-h" className="text-title-2 font-bold">Guide in the app</h2>
+          <p className="mt-1 max-w-xl text-footnote text-ink-2">
+            After signing in, {draft.guide_name.trim() || "the guide"} waits in a corner of the app.
+            Tap it to ask about your next class, work that is due, new notices and unread messages.
+          </p>
+        </div>
+        <span className="flex items-center gap-3 text-body font-medium">
+          Show in the app
+          <Switch
+            checked={draft.helper_enabled}
+            onChange={(v) => set({ helper_enabled: v })}
+            label="Show the guide in the app"
+          />
+        </span>
       </section>
 
       <section aria-labelledby="guide-h" className="glass rounded-card p-6">
@@ -159,7 +233,7 @@ export default function ThemeSettings() {
         </div>
 
         <div className={`mt-5 grid gap-6 md:grid-cols-[180px_1fr] ${draft.guide_enabled ? "" : "opacity-50"}`}>
-          <div className="grid place-items-center rounded-row p-4" style={{ background: themeByKey(draft.preset).light.field }}>
+          <div className="grid place-items-center rounded-row p-4" style={{ background: previewVars(draft, "light")["--cv-hero"] }}>
             <GuidePreview name={draft.guide_name.trim() || "Verse"} colours={colours} />
           </div>
 
@@ -282,5 +356,202 @@ function ColourRow({
         />
       </div>
     </fieldset>
+  );
+}
+
+/* ---------- Your own theme ---------- */
+
+/** Colours offered for each kind of colour, by mode; any other can be typed in. */
+const PALETTES: Record<"paper" | "ink" | "colour", Record<Mode, string[]>> = {
+  paper: {
+    light: ["#ffffff", "#fffdf8", "#fbf8f3", "#f4efe6", "#f3ede2", "#eef2f6", "#f1f5f2", "#f6f1f4", "#e9e0d0", "#e6ebf1"],
+    dark: ["#0f0f10", "#121212", "#171512", "#1c1c1c", "#201d19", "#1b2027", "#18201c", "#2a2621", "#262626", "#2b3038"],
+  },
+  ink: {
+    light: ["#111111", "#1f1a16", "#241e18", "#1b2430", "#1d2a24", "#3a2f28"],
+    dark: ["#ffffff", "#f2ebe0", "#ece5d8", "#e8edf3", "#e4efe8", "#d9d2c6"],
+  },
+  colour: {
+    light: [
+      "#b4532a", "#9e2b3a", "#b8620f", "#9a640e", "#bd4b33", "#2f6fae", "#1d6f5f", "#3f7a42",
+      "#7a5a86", "#243329", "#1e2f47", "#3b1d22", "#262b33", "#ffffff", "#fffaf2", "#111111",
+    ],
+    dark: [
+      "#e07a50", "#e0707e", "#e89a45", "#e0a640", "#ef8a72", "#6aa6e0", "#4fb3a0", "#6aa86a",
+      "#b394c4", "#22302a", "#1c2a3e", "#351c21", "#23272e", "#ffffff", "#1c120c", "#0b1520",
+    ],
+  },
+};
+
+function paletteFor(key: CustomKey): keyof typeof PALETTES {
+  if (key === "bg" || key === "surface" || key === "fill") return "paper";
+  if (key === "ink") return "ink";
+  return "colour";
+}
+
+/** Every colour of the custom theme, for light and for dark, with a preview of the app. */
+function CustomEditor({
+  custom,
+  onChange,
+}: {
+  custom: Record<Mode, CustomColours>;
+  onChange: (c: Record<Mode, CustomColours>) => void;
+}) {
+  const [mode, setMode] = useState<Mode>("light");
+  const colours = custom[mode];
+  const setColour = (key: CustomKey, value: string) =>
+    onChange({ ...custom, [mode]: { ...colours, [key]: value } });
+
+  return (
+    <div className="mt-6 flex flex-col gap-5 rounded-row bg-fill p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div role="tablist" aria-label="Colours for" className="flex gap-1 rounded-full bg-surface p-1">
+          {(["light", "dark"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={mode === m}
+              onClick={() => setMode(m)}
+              className={`press rounded-full px-4 py-1.5 text-footnote font-semibold ${
+                mode === m ? "bg-accent text-on-accent" : "text-ink-2 hover:bg-fill"
+              }`}
+            >
+              {m === "light" ? "Light mode" : "Dark mode"}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-footnote">
+          <span className="font-semibold text-ink-2">Start from</span>
+          {THEMES.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => onChange({ ...custom, [mode]: coloursOf(t.key, mode) })}
+              className="press rounded-full bg-surface px-3 py-1.5 font-semibold hover:bg-fill-strong"
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
+        <div className="flex flex-col gap-4">
+          {CUSTOM_KEYS.map((key) => (
+            <CustomRow
+              key={`${mode}-${key}`}
+              id={`${mode}-${key}`}
+              label={CUSTOM_LABELS[key].label}
+              hint={CUSTOM_LABELS[key].hint}
+              value={colours[key]}
+              swatches={PALETTES[paletteFor(key)][mode]}
+              onChange={(v) => setColour(key, v)}
+            />
+          ))}
+        </div>
+        <div className="flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start">
+          <p className="text-footnote font-semibold text-ink-2">Preview</p>
+          <AppPreview custom={custom} mode="light" />
+          <AppPreview custom={custom} mode="dark" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CustomRow({
+  id,
+  label,
+  hint,
+  value,
+  swatches,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  value: string;
+  swatches: string[];
+  onChange: (v: string) => void;
+}) {
+  const bad = !HEX.test(value);
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
+      <div className="flex w-44 shrink-0 items-center gap-3">
+        <span
+          className="size-9 shrink-0 rounded-full"
+          style={{ background: bad ? "transparent" : value, boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.15)" }}
+          aria-hidden="true"
+        />
+        <span>
+          <label htmlFor={id} className="block text-footnote font-semibold">
+            {label}
+          </label>
+          <span className="block text-caption text-ink-3">{hint}</span>
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {swatches.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-pressed={value === c}
+            aria-label={`${label} ${c}`}
+            title={c}
+            onClick={() => onChange(c)}
+            className={`press size-7 rounded-full ${value === c ? "ring-2 ring-accent ring-offset-2 ring-offset-[var(--cv-fill)]" : ""}`}
+            style={{ background: c, boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.15)" }}
+          />
+        ))}
+        <input
+          id={id}
+          value={value}
+          maxLength={7}
+          spellCheck={false}
+          aria-invalid={bad}
+          onChange={(e) => onChange(e.target.value.trim().toLowerCase())}
+          className={`h-8 w-24 rounded-full border bg-surface px-3 font-mono text-footnote outline-none focus:border-accent ${
+            bad ? "border-danger" : "border-transparent"
+          }`}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** A small piece of the app drawn in the custom colours: sidebar, the current page, a card, a
+ *  button, a link and text. It carries its own colour variables, so the page around it is untouched. */
+function AppPreview({ custom, mode }: { custom: Record<Mode, CustomColours>; mode: Mode }) {
+  const vars = previewVars({ preset: "custom", custom }, mode) as React.CSSProperties;
+  return (
+    <div
+      style={vars}
+      className="flex h-44 overflow-hidden rounded-row bg-bg text-ink"
+      aria-label={`${mode === "light" ? "Light" : "Dark"} mode preview`}
+      role="img"
+    >
+      <div className="flex w-20 shrink-0 flex-col gap-1.5 bg-side p-2">
+        <span className="rounded-md bg-side-active px-1.5 py-1 text-[10px] font-semibold text-on-active">Today</span>
+        <span className="px-1.5 text-[10px] font-semibold text-side-ink">Timetable</span>
+        <span className="px-1.5 text-[10px] font-semibold text-side-ink">Chat</span>
+        <span className="px-1.5 text-[10px] text-side-muted">Notices</span>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-2 p-2.5">
+        <div className="rounded-lg p-2" style={{ background: "var(--cv-hero)", color: "var(--cv-on-field)" }}>
+          <p className="text-[11px] font-bold">Web Development</p>
+          <p className="text-[9px] opacity-80">EC-330 · R-127</p>
+        </div>
+        <div className="flex flex-1 flex-col gap-1.5 rounded-lg bg-surface p-2">
+          <p className="text-[10px] font-bold">Notices</p>
+          <p className="text-[9px] text-ink-2">Quiz moved to Thursday</p>
+          <div className="mt-auto flex items-center gap-1.5">
+            <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-semibold text-on-accent">Save</span>
+            <span className="rounded-full bg-fill px-2 py-0.5 text-[9px]">Chip</span>
+            <span className="text-[9px] font-semibold text-accent-ink underline">Link</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

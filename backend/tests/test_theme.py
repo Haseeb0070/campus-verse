@@ -59,3 +59,29 @@ def test_everyone_chooses_light_or_dark(client, campus):
     assert put(client, "/api/me/appearance", {"appearance": "dark"}).status_code == 204
     assert client.get("/api/me").json()["appearance"] == "dark"
     assert put(client, "/api/me/appearance", {"appearance": "system"}).status_code == 422
+
+
+LIGHT = {
+    "bg": "#f6f1ea", "surface": "#ffffff", "fill": "#efe7dc", "ink": "#1f1a16",
+    "accent": "#1d6f5f", "on_accent": "#ffffff", "accent_ink": "#145244", "active": "#1d6f5f",
+    "field": "#163a33", "side": "#12302a",
+}
+DARK = {**LIGHT, "bg": "#121212", "surface": "#1c1c1c", "fill": "#262626", "ink": "#f2f2f2"}
+
+
+def test_a_custom_theme_needs_every_colour_for_light_and_dark(client, campus):
+    with pytest.raises(Exception, match="light colours"):
+        clean_theme({**GOOD, "preset": "custom", "custom": {}})
+    with pytest.raises(Exception, match="dark accent colour"):
+        clean_theme({**GOOD, "preset": "custom",
+                     "custom": {"light": LIGHT, "dark": {**DARK, "accent": "green"}}})
+    out = clean_theme({**GOOD, "preset": "custom", "helper_enabled": False,
+                       "custom": {"light": LIGHT, "dark": DARK}})
+    assert out["custom"]["dark"]["bg"] == "#121212" and out["helper_enabled"] is False
+
+    client.force_login(campus.admin)
+    body = {**GOOD, "preset": "custom", "custom": {"light": LIGHT, "dark": DARK}}
+    assert put(client, "/api/manage/theme", body).status_code == 200
+    client.logout()
+    public = client.get("/api/theme").json()
+    assert public["preset"] == "custom" and public["custom"]["light"]["accent"] == "#1d6f5f"

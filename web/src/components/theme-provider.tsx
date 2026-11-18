@@ -84,10 +84,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // The institution's theme, and remembered for the next first paint.
   useEffect(() => {
-    const css = themeCss(site.preset);
+    const css = themeCss(site.preset, site.custom);
     applyThemeCss(css);
     store(THEME_CSS_KEY, css);
-  }, [site.preset]);
+  }, [site.preset, site.custom]);
 
   const setAppearance = useCallback(
     (a: Appearance) => {

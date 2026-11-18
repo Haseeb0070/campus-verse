@@ -109,13 +109,16 @@
   --color-paper: var(--cv-paper);
   --color-rim: var(--cv-rim);
   /* The sidebar and phone tab bar stay evergreen in both themes, so their inks are fixed. */
-  --color-side-ink: #ece5d8;
-  --color-side-muted: #a7ab9a;
-  --color-side-icon: #a9b6a3;
-  --color-side-hover: rgb(255 248 235 / 0.07);
-  --color-side-active: #b4532a;
-  --color-side-avatar: #34473b;
-  --color-side-avatar-ink: #d8e6cf;
+  /* The sidebar's own colours: a theme may change them (see lib/theme.ts); these are the app's. */
+  --color-side-ink: var(--cv-side-ink, #ece5d8);
+  --color-side-muted: var(--cv-side-muted, #a7ab9a);
+  --color-side-icon: var(--cv-side-icon, #a9b6a3);
+  --color-side-hover: var(--cv-side-hover, rgb(255 248 235 / 0.07));
+  --color-side-active: var(--cv-side-active, #b4532a);
+  --color-side-avatar: var(--cv-side-avatar, #34473b);
+  --color-side-avatar-ink: var(--cv-side-avatar-ink, #d8e6cf);
+  --color-side-strong: var(--cv-side-strong, #ffffff); /* the sidebar's brightest text */
+  --color-on-active: var(--cv-on-active, #ffffff); /* text on the current page's pill */
   /* Solid tiles on the Today stat cards, and ink for white buttons on the evergreen hero. */
   --color-tone-blue: #3d6a85;
   --color-tone-amber: #c98a2b;

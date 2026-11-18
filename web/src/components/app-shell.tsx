@@ -6,6 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { AppearanceToggle } from "@/components/appearance-toggle";
+import dynamic from "next/dynamic";
+
+// The guide draws with browser-only APIs, so it loads in the browser only.
+const Helper = dynamic(() => import("@/components/helper/helper"), { ssr: false });
 import { signOut } from "@/lib/auth";
 import { useUnreadTotal } from "@/lib/chat";
 import { courseBg } from "@/lib/format";
@@ -266,7 +270,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-3 border-b border-side-line px-1.5 pb-4">
           <LogoMark className="size-9" />
           <span className="min-w-0">
-            <span className="block text-headline font-bold text-white">CampusVerse</span>
+            <span className="block text-headline font-bold text-side-strong">CampusVerse</span>
             <span className="block truncate text-caption text-side-muted">
               {user.institution?.name ?? "No institution"}
             </span>
@@ -276,7 +280,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Link
           href="/search"
           aria-label={`Search (${modKey} K)`}
-          className="flex h-10 items-center gap-2.5 rounded-control border border-white/10 bg-white/[0.06] px-3 text-footnote text-side-muted transition-colors hover:bg-white/[0.12] hover:text-white"
+          className="flex h-10 items-center gap-2.5 rounded-control border border-white/10 bg-white/[0.06] px-3 text-footnote text-side-muted transition-colors hover:bg-white/[0.12] hover:text-side-strong"
         >
           <SearchIcon className="size-[18px]" />
           <span className="flex-1">Search</span>
@@ -301,15 +305,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         onClick={goTo(href)}
                         aria-current={active ? "page" : undefined}
                         className={`press group relative flex h-10 items-center gap-3 rounded-control px-3 text-footnote font-semibold transition-colors ${
-                          active ? "text-white" : "text-side-ink hover:bg-side-hover hover:text-white"
+                          active ? "text-on-active" : "text-side-ink hover:bg-side-hover hover:text-side-strong"
                         }`}
                       >
-                        <Icon className={`size-[18px] ${active ? "text-white" : "text-side-icon group-hover:text-white"}`} />
+                        <Icon className={`size-[18px] ${active ? "text-on-active" : "text-side-icon group-hover:text-side-strong"}`} />
                         <span className="flex-1">{label}</span>
                         <UnreadBadge
                           count={badgeFor(href)}
                           label={badgeLabel(href)}
-                          className={active ? "bg-white text-side-active" : "bg-side-active text-white"}
+                          className={active ? "bg-on-active text-side-active" : "bg-side-active text-on-active"}
                         />
                       </Link>
                     </li>
@@ -327,7 +331,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {courses.map((c) => (
                 <li key={c.course_code} className="flex h-8 items-center gap-2.5 px-3 text-caption">
                   <span className={`size-2 shrink-0 rounded-full ${courseBg[c.color]}`} aria-hidden="true" />
-                  <span className="shrink-0 font-semibold text-white">{c.course_code}</span>
+                  <span className="shrink-0 font-semibold text-side-strong">{c.course_code}</span>
                   <span className="min-w-0 flex-1 truncate text-side-muted">{c.course_title}</span>
                 </li>
               ))}
@@ -346,17 +350,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {initials.toUpperCase()}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-footnote font-semibold text-white">{user.full_name}</span>
+              <span className="block truncate text-footnote font-semibold text-side-strong">{user.full_name}</span>
               <span className="block truncate text-caption capitalize text-side-muted">{user.kind}</span>
             </span>
           </Link>
-          <AppearanceToggle className="grid size-9 place-items-center rounded-control text-side-muted transition-colors hover:bg-side-hover hover:text-white" />
+          <AppearanceToggle className="grid size-9 place-items-center rounded-control text-side-muted transition-colors hover:bg-side-hover hover:text-side-strong" />
           <button
             onClick={handleSignOut}
             disabled={signingOut}
             aria-label="Sign out"
             title="Sign out"
-            className="grid size-9 place-items-center rounded-control text-side-muted transition-colors hover:bg-danger/20 hover:text-white"
+            className="grid size-9 place-items-center rounded-control text-side-muted transition-colors hover:bg-danger/20 hover:text-side-strong"
           >
             <SignOutIcon className="size-5" />
           </button>
@@ -462,7 +466,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <UnreadBadge
               count={badgeFor(href)}
               label={badgeLabel(href)}
-              className="absolute top-0.5 left-1/2 bg-side-active text-white"
+              className="absolute top-0.5 left-1/2 bg-side-active text-on-active"
             />
           </Link>
         ))}
@@ -478,12 +482,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           More
           <UnreadBadge
             count={secondaryNav.reduce((sum, n) => sum + badgeFor(n.href), 0)}
-            className="absolute top-0.5 left-1/2 bg-side-active text-white"
+            className="absolute top-0.5 left-1/2 bg-side-active text-on-active"
           />
         </button>
       </nav>
 
       <Toasts toasts={toasts} onDismiss={dismiss} />
+      <Helper />
     </div>
   );
 }
