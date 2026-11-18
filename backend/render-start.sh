@@ -10,6 +10,8 @@ cd "$(dirname "$0")"
 PY=.venv/bin/python
 
 $PY manage.py migrate --noinput
+# The shared cache table (sign-in lock-outs, rate limits) when there's no Redis. Safe to repeat.
+$PY manage.py createcachetable
 
 # A test deployment sets up Govt. Graduate College of Science once (it replaces any demo data on
 # its first run and does nothing after that). It needs SEED_PASSWORD for the accounts it creates.

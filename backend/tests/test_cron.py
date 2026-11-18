@@ -51,7 +51,9 @@ def test_the_right_secret_runs_every_job_and_publishes_due_notices(settings, cam
     assert response.status_code == 200
     body = response.json()
     assert body["notices_published"] == 1
-    assert set(body) == {"notices_published", "notifications", "sources_synced"}
+    assert set(body) == {
+        "notices_published", "notifications", "sources_synced", "emails_sent", "files_removed",
+    }
     notice.refresh_from_db()
     assert notice.status == "published"
 

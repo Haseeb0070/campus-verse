@@ -36,5 +36,35 @@ def send_emails(dedupe_key: str, user_ids: list[int]) -> int:
 
 
 def after_commit_email(dedupe_key: str, user_ids: list[int]) -> None:
-    if user_ids:
+    if not user_ids:
+        return
+    from django.conf import settings
+
+    if settings.CAMPUSVERSE_EMAIL_IN_BACKGROUND:
+        # No worker: send after the response, so a notice to the whole college doesn't hold up
+        # the person posting it (or hit the request time limit).
+        transaction.on_commit(lambda: _in_background(dedupe_key, user_ids))
+    else:
         transaction.on_commit(lambda: send_emails.delay(dedupe_key, user_ids))
+
+
+def _in_background(dedupe_key: str, user_ids: list[int]) -> None:
+    import threading
+
+    from django.db import close_old_connections
+
+    def run():
+        from .emails import send_for
+
+        try:
+            send_for(dedupe_key, user_ids)
+        except Exception:  # noqa: BLE001 - the cron job sends what's left
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Background email %s failed", dedupe_key, exc_info=True
+            )
+        finally:
+            close_old_connections()
+
+    threading.Thread(target=run, name=f"email-{dedupe_key}", daemon=True).start()

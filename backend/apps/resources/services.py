@@ -169,6 +169,9 @@ def _check_targets(user, offering, targets: list[tuple[str, int]]) -> list[tuple
 @transaction.atomic
 def create_resource(user, *, offering, title: str, kind: str, targets: list[tuple[str, int]],
                     description: str = "", upload=None, url: str = "") -> Resource:
+    from apps.core.ratelimit import limit
+
+    limit(user, "upload", per_minute=10)
     title, description = _clean_details(title, description, kind)
     if upload and (url or "").strip():
         raise ValidationError("Share a file or a link, not both.")

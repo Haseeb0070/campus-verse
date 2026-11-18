@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import environ
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
     "apps.attendance",
     "apps.search",
     "apps.governance",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
@@ -51,6 +53,7 @@ MIDDLEWARE = [
     # Serves the admin's CSS and JS in production (collected into STATIC_ROOT at build time).
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -92,10 +95,20 @@ if REDIS_URL:
         "default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}
     }
 else:
-    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+    # Without Redis, a database table: every server process (Render runs two) sees the same
+    # counts, so sign-in lock-outs and rate limits hold. Created by `manage.py createcachetable`.
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "cv_cache",
+        }
+    }
 
 CELERY_BROKER_URL = REDIS_URL or "redis://localhost:6379/0"
 CELERY_TASK_ALWAYS_EAGER = not REDIS_URL
+# Without a Celery worker, notification emails go out in a background thread after the response
+# (one mail connection for the lot) instead of inside the request; the cron job sends leftovers.
+CAMPUSVERSE_EMAIL_IN_BACKGROUND = env.bool("EMAIL_IN_BACKGROUND", default=not REDIS_URL)
 CELERY_TASK_ACKS_LATE = True
 CELERY_BEAT_SCHEDULE = {
     "assignment-notifications": {
@@ -154,6 +167,13 @@ MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
 EMAIL_CONFIG = env.email_url("EMAIL_URL", default="consolemail://")
 vars().update(EMAIL_CONFIG)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="CampusVerse <no-reply@localhost>")
+
+# The mobile app calls the API directly with X-Session-Token; native builds need no CORS. Only
+# its web preview in development does (e.g. MOBILE_WEB_ORIGINS=http://localhost:8081).
+# No cookies cross origins: the token is the only credential.
+CORS_ALLOWED_ORIGINS = env.list("MOBILE_WEB_ORIGINS", default=[])
+CORS_ALLOW_HEADERS = (*default_headers, "x-session-token")
+CORS_ALLOW_CREDENTIALS = False
 
 CENTRIFUGO_API_URL = env("CENTRIFUGO_API_URL", default="http://localhost:8001/api")
 CENTRIFUGO_API_KEY = env("CENTRIFUGO_API_KEY", default="")

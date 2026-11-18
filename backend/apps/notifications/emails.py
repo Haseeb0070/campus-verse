@@ -5,7 +5,7 @@ the send fails so a retry can pick it up."""
 import logging
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.utils import timezone
 from django.utils.html import escape
 
@@ -46,6 +46,9 @@ def send_for(dedupe_key: str, user_ids: list[int]) -> int:
         emailed_at__isnull=True, recipient__is_active=True,
     ).select_related("recipient")
     sent = 0
+    # One connection for the whole batch: a notice to the whole college is one SMTP session,
+    # not one per person.
+    connection = get_connection()
     for n in pending:
         if not n.recipient.email:
             continue
@@ -55,10 +58,36 @@ def send_for(dedupe_key: str, user_ids: list[int]) -> int:
         ):
             continue
         try:
-            _message(n).send()
+            msg = _message(n)
+            msg.connection = connection
+            msg.send()
             sent += 1
         except Exception:
             Notification.objects.filter(pk=n.pk).update(emailed_at=None)
             logger.warning("Emailing notification %s failed", n.pk, exc_info=True)
             raise  # the task retries; the in-app record is untouched either way
+    return sent
+
+
+def send_leftovers(limit: int = 300) -> int:
+    """Emails that were wanted but never sent (a background send that died): for the cron job."""
+    from datetime import timedelta
+
+    stale = timezone.now() - timedelta(minutes=2)
+    keys = (
+        Notification.objects.filter(
+            email_wanted=True, emailed_at__isnull=True, created_at__lt=stale,
+            recipient__is_active=True,
+        )
+        .values_list("dedupe_key", "recipient_id")[:limit]
+    )
+    by_key: dict[str, list[int]] = {}
+    for key, uid in keys:
+        by_key.setdefault(key, []).append(uid)
+    sent = 0
+    for key, uids in by_key.items():
+        try:
+            sent += send_for(key, uids)
+        except Exception:  # noqa: BLE001 - the next run tries again
+            logger.warning("Sending leftover emails for %s failed", key, exc_info=True)
     return sent

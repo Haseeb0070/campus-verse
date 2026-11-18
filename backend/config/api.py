@@ -1,6 +1,7 @@
 import hmac
 import logging
 
+from allauth.headless.contrib.ninja.security import XSessionTokenAuth
 from django.conf import settings
 from django.views.decorators.csrf import ensure_csrf_cookie
 from ninja import NinjaAPI
@@ -26,17 +27,52 @@ from apps.search.api import router as search_router
 
 logger = logging.getLogger(__name__)
 
+
+class AppSessionAuth(XSessionTokenAuth):
+    """The mobile app's sign-in: allauth's app session token, sent as X-Session-Token.
+
+    allauth's own class only returns the user; the views read request.user, so set it too.
+    No CSRF check: a header the app sets by hand isn't sent along by a browser on its own."""
+
+    def __call__(self, request):
+        user = super().__call__(request)
+        if user is not None:
+            request.user = user
+        return user
+
+
+from apps.core.ratelimit import TooMany  # noqa: E402
+
 api = NinjaAPI(
     title="CampusVerse API",
     version="0.1.0",
-    auth=django_auth,  # session auth; Ninja enforces CSRF on unsafe methods for it
+    # The mobile app's session token, then the web app's session cookie. Token first: the
+    # cookie check fails a write without a CSRF token outright, before trying anything else.
+    auth=[AppSessionAuth(), django_auth],
     urls_namespace="api",
 )
+
+
+@api.exception_handler(TooMany)
+def too_many(request, exc):
+    return api.create_response(request, {"detail": str(exc)}, status=429)
 
 
 @api.get("/health", auth=None, tags=["system"])
 def health(request):
     return {"status": "ok"}
+
+
+def _send_leftover_emails():
+    from apps.notifications.emails import send_leftovers
+
+    return send_leftovers()
+
+
+def _purge_files():
+    from apps.core.cleanup import purge_unused_files
+
+    return purge_unused_files()
 
 
 @api.post("/cron", auth=None, tags=["system"])
@@ -62,6 +98,8 @@ def cron(request):
         ("notices_published", publish_due),
         ("notifications", send_scheduled),
         ("sources_synced", run_due_sources),
+        ("emails_sent", _send_leftover_emails),
+        ("files_removed", _purge_files),
     ):
         try:
             results[name] = job()
@@ -76,7 +114,9 @@ def theme(request):
     """The site's look for whoever asks: their institution's theme, or the public one."""
     from apps.academic.theme import public_institution, theme_of
 
-    return theme_of(public_institution(request.user))
+    # Open to everyone, so no auth runs first: read the mobile app's token here, if it sent one.
+    user = request.user if request.user.is_authenticated else AppSessionAuth()(request)
+    return theme_of(public_institution(user or request.user))
 
 
 @api.get("/csrf", auth=None, tags=["system"])

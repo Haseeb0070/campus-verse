@@ -118,6 +118,9 @@ def attempts_used(assignment: Assignment, student) -> int:
 
 @transaction.atomic
 def submit(user, assignment: Assignment, *, text: str = "", uploads=()) -> Submission:
+    from apps.core.ratelimit import limit
+
+    limit(user, "upload", per_minute=10)
     if assignment.status != Assignment.Status.PUBLISHED:
         raise ValidationError("This assignment isn't open yet.")
     if not is_student_in(user, assignment.section_id):

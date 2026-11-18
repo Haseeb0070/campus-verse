@@ -135,6 +135,9 @@ def visible_comments(user, post: Post):
 
 @transaction.atomic
 def create_post(user, *, body: str, targets: list[tuple[str, int]], uploads=()) -> Post:
+    from apps.core.ratelimit import limit
+
+    limit(user, "post", per_minute=5)
     body = (body or "").strip()
     uploads = list(uploads)
     if not body and not uploads:
@@ -173,6 +176,9 @@ def delete_post(user, post: Post) -> None:
 
 @transaction.atomic
 def add_comment(user, post: Post, *, body: str, parent_id: int | None = None) -> Comment:
+    from apps.core.ratelimit import limit
+
+    limit(user, "comment", per_minute=20)
     if post.visibility != Visibility.VISIBLE:
         raise ValidationError("This post isn't open for comments.")
     body = (body or "").strip()

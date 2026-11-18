@@ -18,6 +18,7 @@ dependencies = [
     "gunicorn>=23",
     "whitenoise>=6.9",
     "django-storages[s3]>=1.14",
+    "django-cors-headers>=4.4",
 ]
 
 [dependency-groups]

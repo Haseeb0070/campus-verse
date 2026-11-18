@@ -185,6 +185,11 @@ def send_message(user, conversation: Conversation, *, body: str, client_id: uuid
 
     if not can_access(user, conversation):
         raise PermissionDenied("You're not in this conversation.")
+    from apps.core.ratelimit import limit
+
+    limit(user, "chat", per_minute=30)
+    if uploads:
+        limit(user, "upload", per_minute=10)
     body = (body or "").strip()
     uploads = list(uploads)
     if not body and not uploads:
