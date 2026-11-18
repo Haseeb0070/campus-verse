@@ -371,7 +371,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         id="main"
         tabIndex={-1}
         aria-busy={leaving || undefined}
-        className="relative min-w-0 flex-1 px-4 pb-28 pt-6 outline-none md:px-8 md:pb-10 md:pt-7"
+        className="relative min-w-0 flex-1 px-4 pb-40 pt-6 outline-none md:px-8 md:pb-28 md:pt-7"
       >
         {leaving && <span aria-hidden="true" className="nav-progress" />}
         <div className={`transition-opacity duration-150 ease-out ${leaving ? "pointer-events-none opacity-40" : ""}`}>
