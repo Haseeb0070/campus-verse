@@ -15,7 +15,7 @@ export function appRoute(link: string): Href | null {
       return Number.isFinite(id) && id > 0 ? { pathname: "/assignment/[id]", params: { id: String(id) } } : "/work";
     case "chat": {
       // "/chat?to=12": a person from search, to message one-to-one.
-      const to = new URLSearchParams(query).get("to");
+      const to = /(?:^|&)to=(\d+)/.exec(query)?.[1];
       if (to && !parts[1]) return { pathname: "/new-chat", params: { to } };
       return Number.isFinite(id) && id > 0 ? { pathname: "/chat/[id]", params: { id: String(id) } } : "/chat";
     }

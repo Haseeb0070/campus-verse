@@ -76,7 +76,7 @@ export default function Thread() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior="padding"
       style={{ flex: 1, backgroundColor: p.bg }}
     >
       <StackHeader

@@ -1,5 +1,5 @@
 import { type ComponentRef, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
@@ -63,7 +63,7 @@ export default function SignIn() {
   }[step];
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: site.field }}>
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: site.field }}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

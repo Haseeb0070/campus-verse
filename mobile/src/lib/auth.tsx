@@ -19,6 +19,9 @@ function firstMessage(err: unknown, fallback: string) {
   if (err instanceof ApiError && err.status === 429) {
     return "Too many attempts. Wait a few minutes, then try again.";
   }
+  if (err instanceof ApiError && err.status >= 500) {
+    return "CampusVerse is having trouble right now. Try again in a minute.";
+  }
   if (err instanceof ApiError && err.status === 400) {
     const errors = (err.body as { errors?: { message: string }[] } | null)?.errors;
     return errors?.[0]?.message ?? fallback;
@@ -61,9 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await queryClient.fetchQuery({ queryKey: ["me"], queryFn: () => apiFetch("/api/me") });
         setStatus("signedIn");
       } catch (err) {
-        // Offline at launch: trust the saved token, and let screens show their own errors.
-        if (err instanceof ApiError && err.status === 0) setStatus("signedIn");
-        else await dropSession();
+        // Only a refused token signs you out. Offline, or the server having a bad moment: trust
+        // the saved token, and let each screen show its own error and retry.
+        if (err instanceof ApiError && err.status === 401) await dropSession();
+        else setStatus("signedIn");
       }
     });
     return () => setSignedOutHandler(null);

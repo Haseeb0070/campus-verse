@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
@@ -23,7 +23,7 @@ export default function AssignmentScreen() {
   const a = query.data;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: p.bg }}>
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: p.bg }}>
       <StackHeader title={a?.title ?? "Assignment"} subtitle={a ? `${a.course_code} · ${a.section_code} · ${a.course_title}` : undefined} />
       {query.isPending ? (
         <View style={{ padding: 16, gap: 12 }}>

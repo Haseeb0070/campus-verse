@@ -7,8 +7,8 @@ export function useMe(enabled = true) {
 }
 
 export function useTimetable(start: string | null, days: number) {
-  const params = new URLSearchParams({ days: String(days) });
-  if (start) params.set("start", start);
+  // Built by hand: React Native's URLSearchParams lacks most of its methods.
+  const params = `days=${days}${start ? `&start=${start}` : ""}`;
   return useQuery({
     queryKey: ["timetable", start, days],
     queryFn: () => apiFetch<Occurrence[]>(`/api/timetable?${params}`),

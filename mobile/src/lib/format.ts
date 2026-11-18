@@ -18,13 +18,28 @@ export function formatDay(isoDate: string, options: Intl.DateTimeFormatOptions =
   }).format(new Date(`${isoDate}T12:00:00Z`));
 }
 
+/** "in 20 minutes", "2 hours ago", "tomorrow". Hermes (the app's JavaScript engine on Android)
+ *  has no Intl.RelativeTimeFormat, so English words stand in where it's missing. */
 export function relativeTime(iso: string, now = Date.now()) {
   const minutes = Math.round((new Date(iso).getTime() - now) / 60_000);
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-  if (Math.abs(minutes) < 60) return rtf.format(minutes, "minute");
+  if (Math.abs(minutes) < 60) return relative(minutes, "minute");
   const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) return rtf.format(hours, "hour");
-  return rtf.format(Math.round(hours / 24), "day");
+  if (Math.abs(hours) < 24) return relative(hours, "hour");
+  return relative(Math.round(hours / 24), "day");
+}
+
+type Unit = "minute" | "hour" | "day";
+
+function relative(value: number, unit: Unit) {
+  if (typeof Intl !== "undefined" && "RelativeTimeFormat" in Intl) {
+    return new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(value, unit);
+  }
+  if (value === 0) return unit === "day" ? "today" : unit === "hour" ? "this hour" : "now";
+  if (unit === "day" && value === 1) return "tomorrow";
+  if (unit === "day" && value === -1) return "yesterday";
+  const n = Math.abs(value);
+  const words = `${n} ${unit}${n === 1 ? "" : "s"}`;
+  return value > 0 ? `in ${words}` : `${words} ago`;
 }
 
 /** When a class starts, in words: "Starts in 20 minutes", "Today at 13:00", "Tomorrow at 10:30",
@@ -68,7 +83,15 @@ export function greeting(timeZone?: string, now = new Date()) {
 
 /** Today's date (YYYY-MM-DD) in a timezone. */
 export function todayIn(timeZone?: string, now = new Date()) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone }).format(now);
+  // From the parts, not a locale's layout: phones format "en-CA" differently.
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 export function addDays(isoDate: string, days: number) {
