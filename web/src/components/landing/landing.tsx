@@ -83,58 +83,12 @@ export function Landing({
   );
 }
 
-/* ---------- Hero: the timetable card beside the app ---------- */
-
-const SCREENS = [
-  { src: "/landing/gcs-today.jpg", alt: "Today in CampusVerse: tomorrow's Web Development class in R-127, recent chats and notices." },
-  { src: "/landing/gcs-timetable.jpg", alt: "The BS CS G1+G2 timetable for the week, every class with its room." },
-  { src: "/landing/gcs-notices.jpg", alt: "The notices board: a pinned notice from Nabeel and the latest from Rawa." },
-  { src: "/landing/gcs-chat.jpg", alt: "The EC-330 section chat, with a question from a student and Nabeel's answer." },
-];
-
-/** The app's screens take turns in the hero, like light changing in a room. */
-function useTurns(count: number, holdMs = 5600) {
-  const [turn, setTurn] = useState(0);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") setTurn((t) => (t + 1) % count);
-    }, holdMs);
-    return () => clearInterval(id);
-  }, [count, holdMs]);
-  return turn;
-}
-
-/** The week's classes running across the top of the card, like a departure board. The list
- *  is drawn twice so the loop is seamless; the week section below says the same for screen readers. */
-function Ticker() {
-  const runs = [
-    ...MON_WED.map((c) => ({ ...c, days: "Mon–Wed" })),
-    ...THU_SAT.map((c) => ({ ...c, days: "Thu–Sat" })),
-  ];
-  const row = (copy: number) =>
-    runs.map((c) => (
-      <span key={`${copy}-${c.code}`} className={s.tickerItem}>
-        <span className={s.tickerDot} style={{ background: c.colour }} />
-        <b>{c.days}</b> {c.title} · {c.teacher} · {c.room}
-      </span>
-    ));
-  return (
-    <div className={s.ticker} aria-hidden="true">
-      <div className={s.tickerTrack}>
-        {row(0)}
-        {row(1)}
-      </div>
-    </div>
-  );
-}
+/* ---------- Hero: the card on its own ---------- */
 
 function Hero() {
-  const turn = useTurns(SCREENS.length);
   return (
     <section className={s.hero} aria-labelledby="hero-title">
       <div className={s.heroCard}>
-        <Ticker />
         <div className={s.heroCardBody}>
           <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
             <span className={s.wordmarkTile}>
@@ -157,21 +111,6 @@ function Hero() {
             <a href="#menu">What it does</a>
             <a href="#questions">Questions</a>
           </nav>
-        </div>
-        <div className={s.heroScreens}>
-        {SCREENS.map((screen, i) => (
-          <Image
-            key={screen.src}
-            src={screen.src}
-            alt={i === turn ? screen.alt : ""}
-            aria-hidden={i !== turn}
-            width={2880}
-            height={1800}
-            priority={i === 0}
-            sizes="(max-width: 860px) 160vw, 90vw"
-            className={`${s.heroScreen} ${i === turn ? s.heroScreenOn : ""}`}
-          />
-        ))}
         </div>
       </div>
     </section>

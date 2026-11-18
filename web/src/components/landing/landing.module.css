@@ -105,71 +105,18 @@
   outline-offset: 3px;
 }
 
-/* ---------- Hero: the card beside the app ---------- */
+/* ---------- Hero: one paper card on the evergreen ground ---------- */
 
 .hero {
   padding: 12px;
 }
 
-/* One card: the ticker across the top, the words on the left and the app on the right. */
 .heroCard {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
-  min-height: calc(min(100svh, 940px) - 24px);
+  display: flex;
+  min-height: min(72svh, 640px);
   border-radius: var(--radius);
   background: var(--cv-bg);
   overflow: hidden;
-}
-
-/* The week running across the top of the card. */
-.ticker {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  height: 56px;
-  overflow: hidden;
-  background: var(--cv-board);
-  color: var(--cv-ink);
-  font-size: var(--small);
-  white-space: nowrap;
-}
-
-.tickerTrack {
-  display: flex;
-  flex: none;
-  animation: cv-ticker 60s linear infinite;
-}
-
-.ticker:hover .tickerTrack {
-  animation-play-state: paused;
-}
-
-.tickerItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding-right: 40px;
-}
-
-.tickerItem b {
-  font-weight: 700;
-  color: var(--cv-accent-ink);
-}
-
-.tickerDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-@keyframes cv-ticker {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
 }
 
 .heroCardBody {
@@ -214,8 +161,7 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px 24px;
-  margin-top: auto;
-  padding-top: 16px;
+  padding-top: 4px;
   font-size: var(--small);
   font-weight: 600;
 }
@@ -228,29 +174,6 @@
   color: var(--cv-ink);
 }
 
-/* The app, peeking in from the corner of its own window. */
-.heroScreens {
-  position: relative;
-  background: var(--cv-board);
-  overflow: hidden;
-  min-height: 420px;
-}
-
-.heroScreen {
-  position: absolute;
-  left: 48px;
-  top: 48px;
-  width: auto;
-  height: calc(100% - 48px);
-  max-width: none;
-  border-top-left-radius: 12px;
-  opacity: 0;
-  transition: opacity 1600ms ease-in-out;
-}
-
-.heroScreenOn {
-  opacity: 1;
-}
 
 /* ---------- The week: one paper slip per day ---------- */
 
@@ -792,13 +715,6 @@ details[open] .chevron {
     transition: none;
   }
 
-  .heroScreen {
-    transition: none;
-  }
-
-  .tickerTrack {
-    animation: none;
-  }
 }
 
 /* ---------- Tablet and phone ---------- */
@@ -834,24 +750,7 @@ details[open] .chevron {
 
 @media (max-width: 860px) {
   .heroCard {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: none;
     min-height: 0;
-  }
-
-  .heroScreens {
-    height: 48svh;
-    min-height: 320px;
-  }
-
-  .heroScreen {
-    left: 24px;
-    top: 24px;
-    height: calc(100% - 24px);
-  }
-
-  .ticker {
-    height: 44px;
   }
 
   .heroCardBody {
