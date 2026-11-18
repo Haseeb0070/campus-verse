@@ -12,6 +12,7 @@ const tabs: { href: string; label: string; coordinators?: boolean }[] = [
   { href: "/manage/reports", label: "Reports" },
   { href: "/manage/requests", label: "Requests" },
   { href: "/manage/audit", label: "Audit log" },
+  { href: "/manage/theme", label: "Theme" },
 ];
 
 export default function ManageLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +33,7 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
   }
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
-      <nav aria-label="Manage" className="glass flex gap-1 self-start overflow-x-auto rounded-full p-1">
+      <nav aria-label="Manage" className="glass flex max-w-full gap-1 self-start overflow-x-auto rounded-full p-1">
         {tabs.filter((t) => admin || t.coordinators).map((t) => {
           const active = t.href === "/manage" ? pathname === t.href : pathname.startsWith(t.href);
           return (

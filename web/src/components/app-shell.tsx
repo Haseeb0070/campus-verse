@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
+import { AppearanceToggle } from "@/components/appearance-toggle";
 import { signOut } from "@/lib/auth";
 import { useUnreadTotal } from "@/lib/chat";
 import { courseBg } from "@/lib/format";
@@ -349,6 +350,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="block truncate text-caption capitalize text-side-muted">{user.kind}</span>
             </span>
           </Link>
+          <AppearanceToggle className="grid size-9 place-items-center rounded-control text-side-muted transition-colors hover:bg-side-hover hover:text-white" />
           <button
             onClick={handleSignOut}
             disabled={signingOut}
@@ -425,6 +427,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <PersonIcon className="size-5" />
               <span className="flex-1">Profile</span>
             </Link>
+            <AppearanceToggle
+              withLabel
+              className="press flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium hover:bg-fill"
+            />
             <button
               onClick={handleSignOut}
               disabled={signingOut}

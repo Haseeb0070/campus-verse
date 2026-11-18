@@ -53,6 +53,15 @@ class User(AbstractUser):
         max_length=60, blank=True, help_text="Shown instead of the first name"
     )
 
+    class Appearance(models.TextChoices):
+        LIGHT = "light"
+        DARK = "dark"
+
+    # Light or dark, chosen by the person (never taken from the device).
+    appearance = models.CharField(
+        max_length=8, choices=Appearance.choices, default=Appearance.LIGHT
+    )
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 

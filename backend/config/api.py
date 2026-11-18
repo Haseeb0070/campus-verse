@@ -71,6 +71,14 @@ def cron(request):
     return results
 
 
+@api.get("/theme", auth=None, tags=["system"])
+def theme(request):
+    """The site's look for whoever asks: their institution's theme, or the public one."""
+    from apps.academic.theme import public_institution, theme_of
+
+    return theme_of(public_institution(request.user))
+
+
 @api.get("/csrf", auth=None, tags=["system"])
 @decorate_view(ensure_csrf_cookie)
 def csrf(request):

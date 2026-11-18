@@ -47,42 +47,7 @@
   accent-color: var(--cv-accent);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --cv-bg: #171512;
-    --cv-surface: #201d19;
-    --cv-surface-thick: #27231e;
-    --cv-side: #131a15;
-    --cv-side-line: rgb(255 248 235 / 0.06);
-    --cv-hero: #22302a;
-    --cv-hero-line: #34473b;
-    --cv-fill: #2a2621;
-    --cv-fill-strong: #342f28;
-    --cv-rim: #342e27;
-    --cv-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
-    --cv-shadow-pop: 0 14px 30px -8px rgb(0 0 0 / 0.6);
-    --cv-divider: rgb(255 244 225 / 0.07);
-    --cv-ink: #f2ebe0;
-    --cv-ink-2: #cdc2b2;
-    --cv-ink-3: #a69a8a;
-    --cv-accent: #e07a50;
-    --cv-accent-ink: #f0a988;
-    --cv-on-accent: #1c120c;
-    --cv-success: #6aa86a;
-    --cv-warning: #d9a24a;
-    --cv-danger: #e2674f;
-    --cv-success-ink: #a6d6a0;
-    --cv-warning-ink: #efc985;
-    --cv-danger-ink: #f5a593;
-    --cv-board: #2a241d;
-    --cv-board-line: #3a3228;
-    --cv-paper: #302a23;
-    --cv-note-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 18px -8px rgb(0 0 0 / 0.6);
-    --cv-note-shadow-lift: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 30px -10px rgb(0 0 0 / 0.7);
-  }
-}
-
+/* Dark mode is each person's own choice (data-theme on <html>, set before paint), never the device's. */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --cv-bg: #171512;

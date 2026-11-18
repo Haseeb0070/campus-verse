@@ -1,8 +1,10 @@
 "use client";
 
 import { type AvatarHandle, createAvatar } from "@bible-strong/avatar-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CloseIcon } from "@/components/icons";
+import { useTheme } from "@/components/theme-provider";
+import { guideColours } from "@/lib/theme";
 import character from "./guide.avatar.json";
 import s from "./guide.module.css";
 
@@ -17,13 +19,29 @@ import s from "./guide.module.css";
  * sight until there is one. It also says one line about the section in view.
  */
 
-const Verse = createAvatar(character);
+/** The guide drawn in the colours the admin chose (or the theme's), under the name they chose. */
+export function makeGuide(name: string, colours: { body: string; cap: string; tassel: string }) {
+  const [base, board, tassel] = character.body.nodes;
+  return createAvatar({
+    ...character,
+    name,
+    colors: { ...character.colors, body: colours.body },
+    body: {
+      ...character.body,
+      nodes: [
+        { ...base, color: colours.cap },
+        { ...board, color: colours.cap },
+        { ...tassel, color: colours.tassel },
+      ],
+    },
+  });
+}
 
 type Stop = { id: string | null; state: string; line: string };
 
 /** Each section of the page, top to bottom, with what Verse does and says there. */
 const STOPS: Stop[] = [
-  { id: null, state: "happy", line: "Salaam! I’m Verse. Scroll and I’ll show you around CampusVerse." },
+  { id: null, state: "happy", line: "Salaam! I’m {name}. Scroll and I’ll show you around CampusVerse." },
   { id: "week", state: "reading", line: "This is BS CS G1+G2’s week. Tap a day to see its classes and rooms." },
   { id: "menu", state: "proud", line: "Students, teachers and the college office each get their own tools." },
   { id: "questions", state: "curious", line: "New here? Start with “How do I sign in?”." },
@@ -341,11 +359,21 @@ function useWalk(ref: React.RefObject<HTMLElement | null>, { glide, box }: { gli
 }
 
 export default function Guide({ on }: { on: boolean }) {
-  if (!on) return null;
+  const { site } = useTheme();
+  // Off when the visitor put it away, or when the admins turned the guide off for the site.
+  if (!on || !site.guide_enabled) return null;
   return <Companion />;
 }
 
 function Companion() {
+  const { site } = useTheme();
+  const name = site.guide_name || "Verse";
+  const colours = guideColours(site);
+  const Verse = useMemo(
+    () => makeGuide(name, colours),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuilt only when a colour or the name changes
+    [name, colours.body, colours.cap, colours.tassel],
+  );
   const stop = useStop();
   const { glide, phone } = useMode();
   const size = phone ? 60 : 72;
@@ -355,7 +383,8 @@ function Companion() {
   const { moving, facing, look, side, shown } = useWalk(el, { glide, box });
   // A tap on Verse puts the tip away and brings it back.
   const [talking, setTalking] = useState(true);
-  const { state, line } = STOPS[stop];
+  const { state } = STOPS[stop];
+  const line = STOPS[stop].line.replace("{name}", name);
 
   // A small nod each time Verse has something new to say.
   useEffect(() => {
@@ -363,7 +392,7 @@ function Companion() {
   }, [stop]);
 
   return (
-    <aside ref={el} className={`${s.guide} ${shown ? s.shown : ""}`} aria-label="Verse, your guide">
+    <aside ref={el} className={`${s.guide} ${shown ? s.shown : ""}`} aria-label={`${name}, your guide`}>
       <button
         type="button"
         className={`${s.disc} ${s.discButton}`}
@@ -371,7 +400,7 @@ function Companion() {
           setTalking((t) => !t);
           avatar.current?.poke("bounce");
         }}
-        aria-label={talking ? "Verse: hide tips" : "Verse: show tips"}
+        aria-label={talking ? `${name}: hide tips` : `${name}: show tips`}
         aria-expanded={talking}
       >
         <Verse
@@ -380,7 +409,7 @@ function Companion() {
           state={moving ? "running" : look ? "curious" : state}
           lookAt={moving ? [facing * 0.9, 0] : look}
           size={size}
-          ariaLabel="Verse, the CampusVerse guide"
+          ariaLabel={`${name}, the CampusVerse guide`}
         />
       </button>
       {side && !moving && talking && (
@@ -392,7 +421,7 @@ function Companion() {
             type="button"
             className={s.close}
             onClick={() => setTalking(false)}
-            aria-label="Hide Verse’s tips"
+            aria-label={`Hide ${name}’s tips`}
           >
             <CloseIcon className="size-4" />
           </button>

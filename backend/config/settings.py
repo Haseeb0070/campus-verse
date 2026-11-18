@@ -193,6 +193,8 @@ CAMPUSVERSE_DEMO_SEED = env.bool("DEMO_SEED", default=False)
 # Hosts without Celery beat run the scheduled jobs by calling POST /api/cron with this secret.
 # Unset (the default, and in development where beat or inline tasks do the work): no endpoint.
 CAMPUSVERSE_CRON_SECRET = env("CRON_SECRET", default="")
+# Whose theme the public pages (landing, sign-in) show; empty means the first active institution.
+CAMPUSVERSE_PUBLIC_INSTITUTION = env("PUBLIC_INSTITUTION", default="")
 DATA_UPLOAD_MAX_NUMBER_FILES = 10
 
 SESSION_COOKIE_HTTPONLY = True

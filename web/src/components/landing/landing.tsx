@@ -4,7 +4,9 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { AppearanceToggle } from "@/components/appearance-toggle";
 import { LogoGlyph } from "@/components/icons";
+import { useTheme } from "@/components/theme-provider";
 import BlurText from "@/components/reactbits/BlurText";
 import { SignInDialog } from "@/components/sign-in-dialog";
 import s from "./landing.module.css";
@@ -150,6 +152,7 @@ function useCurrentSection() {
  *  top while the page scrolls. */
 function NavBar({ guide, onGuide }: { guide: boolean; onGuide: () => void }) {
   const current = useCurrentSection();
+  const { site } = useTheme();
   return (
     <header className={s.nav} data-solid>
       <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
@@ -165,16 +168,19 @@ function NavBar({ guide, onGuide }: { guide: boolean; onGuide: () => void }) {
           </a>
         ))}
       </nav>
-      <button
-        type="button"
-        className={s.guideSwitch}
-        aria-pressed={guide}
-        onClick={onGuide}
-        title={guide ? "Put Verse, the guide, away" : "Bring Verse, the guide, back"}
-      >
-        <span className={s.guideDot} aria-hidden="true" />
-        Guide
-      </button>
+      {site.guide_enabled && (
+        <button
+          type="button"
+          className={s.guideSwitch}
+          aria-pressed={guide}
+          onClick={onGuide}
+          title={guide ? `Put ${site.guide_name}, the guide, away` : `Bring ${site.guide_name}, the guide, back`}
+        >
+          <span className={s.guideDot} aria-hidden="true" />
+          Guide
+        </button>
+      )}
+      <AppearanceToggle className={s.modeSwitch} />
       <SignInButton className={`${s.button} ${s.navButton}`}>Sign in</SignInButton>
     </header>
   );

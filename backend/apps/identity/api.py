@@ -40,6 +40,7 @@ class MeOut(Schema):
     full_name: str
     kind: str
     two_step: bool
+    appearance: str
     institution: InstitutionOut | None
     roles: list[str]
     sections: list[SectionOut]
@@ -65,6 +66,7 @@ def me(request):
         "two_step": Authenticator.objects.filter(
             user=user, type=Authenticator.Type.TOTP
         ).exists(),
+        "appearance": user.appearance,
         "institution": user.institution,
         "roles": sorted({r.role for r in user.roles.filter(institution_id=user.institution_id)}),
         "sections": [
@@ -121,6 +123,20 @@ def update(request, payload: ProfileIn):
     except ValidationError as err:
         return Status(422, {"detail": err.messages[0]})
     return Status(200, me(request))
+
+
+class AppearanceIn(Schema):
+    appearance: str
+
+
+@router.put("/appearance", response={204: None, 422: ErrorOut})
+def set_appearance(request, payload: AppearanceIn):
+    """Light or dark, for this person on every device."""
+    if payload.appearance not in request.user.Appearance.values:
+        return Status(422, {"detail": "Choose light or dark."})
+    request.user.appearance = payload.appearance
+    request.user.save(update_fields=["appearance"])
+    return Status(204, None)
 
 
 @router.get("/corrections", response=list[CorrectionOut])

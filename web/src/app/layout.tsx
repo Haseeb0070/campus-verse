@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "@fontsource-variable/plus-jakarta-sans";
 import "@fontsource-variable/newsreader";
 import "./globals.css";
+import { BOOT_SCRIPT } from "@/lib/theme";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
@@ -16,7 +17,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // The before-paint script sets data-theme (light or dark) on <html>, so React leaves it be.
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
+      </head>
       <body className="min-h-screen antialiased">
         <Providers>{children}</Providers>
       </body>

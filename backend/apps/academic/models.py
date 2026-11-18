@@ -13,6 +13,8 @@ class Institution(TimeStampedModel):
     # see their own records if its policy allows.
     attendance_enabled = models.BooleanField(default=False)
     attendance_visible_to_students = models.BooleanField(default=False)
+    # The site's look, chosen by its admins (see apps/academic/theme.py).
+    theme = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
         return self.name

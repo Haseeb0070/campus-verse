@@ -1,31 +1,95 @@
 {
   "name": "Verse",
   "body": {
-    "primary": { "type": "sphere", "width": 228, "height": 222, "depth": 214, "roundness": 1 },
+    "primary": {
+      "type": "sphere",
+      "width": 228,
+      "height": 222,
+      "depth": 214,
+      "roundness": 1
+    },
     "nodes": [
       {
         "color": "#243329",
-        "surface": { "type": "cylinder", "width": 136, "height": 46, "depth": 136, "roundness": 0.3 },
-        "position": [0, -98, -4],
-        "rotation": [0, 0, 0]
+        "surface": {
+          "type": "cylinder",
+          "width": 136,
+          "height": 46,
+          "depth": 136,
+          "roundness": 0.3
+        },
+        "position": [
+          0,
+          -98,
+          -4
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
       },
       {
         "color": "#243329",
-        "surface": { "type": "cube", "width": 214, "height": 14, "depth": 214, "roundness": 0.12 },
-        "position": [0, -124, -4],
-        "rotation": [-10, 0, -6]
+        "surface": {
+          "type": "cube",
+          "width": 214,
+          "height": 14,
+          "depth": 214,
+          "roundness": 0.12
+        },
+        "position": [
+          0,
+          -124,
+          -4
+        ],
+        "rotation": [
+          -10,
+          0,
+          -6
+        ]
       },
       {
         "color": "#e3a33b",
-        "surface": { "type": "sphere", "width": 24, "height": 34, "depth": 24, "roundness": 1 },
-        "position": [92, -98, 46],
-        "rotation": [0, 0, 0]
+        "surface": {
+          "type": "sphere",
+          "width": 24,
+          "height": 34,
+          "depth": 24,
+          "roundness": 1
+        },
+        "position": [
+          92,
+          -98,
+          46
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
       }
     ]
   },
-  "colors": { "body": "#c4602f", "eyes": "#fffaf2" },
+  "colors": {
+    "body": "#c4602f",
+    "eyes": "#fffaf2"
+  },
   "face": {
-    "eyes": { "width": 1, "height": 1, "gap": 1, "shiftY": 0.08 },
+    "eyes": {
+      "width": 1,
+      "height": 1,
+      "gap": 1,
+      "shiftY": 0.08
+    },
     "perspective": 1
+  },
+  "style": {
+    "outline": {
+      "enabled": true,
+      "color": "#f4efe6",
+      "width": 5,
+      "opacity": 1
+    }
   }
 }

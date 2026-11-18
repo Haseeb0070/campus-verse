@@ -22,15 +22,14 @@
 }
 
 
-/* A paper disc behind Verse (in both themes), so the dark-green cap shows on the dark-green page. */
+/* Verse alone, no background: a light outline on the character keeps it readable on any ground. */
 .disc {
   display: grid;
   place-items: center;
-  padding: 8px 8px 4px;
+  padding: 4px;
   border: 0;
   border-radius: 999px;
-  background: #f4efe6;
-  box-shadow: var(--cv-shadow-pop); /* taste-skill-ignore: a fixed overlay that floats over the page */
+  background: none;
 }
 
 .discButton {

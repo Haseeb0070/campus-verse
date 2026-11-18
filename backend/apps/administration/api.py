@@ -472,6 +472,45 @@ def run_source(request, source_id: int):
     return _call(go)
 
 
+class ThemeIO(Schema):
+    preset: str
+    guide_enabled: bool
+    guide_name: str
+    guide_body: str = ""
+    guide_cap: str = ""
+    guide_tassel: str = ""
+
+
+@router.get("/theme", response={200: ThemeIO, 403: ErrorOut})
+def get_theme(request):
+    _admin(request)
+    from apps.academic.theme import theme_of
+
+    return theme_of(request.user.institution)
+
+
+@router.put("/theme", response={200: ThemeIO, 403: ErrorOut, 422: ErrorOut})
+def set_theme(request, payload: ThemeIO):
+    """The whole site's look: a built-in theme and the landing page's guide."""
+    _admin(request)
+    from apps.academic.theme import clean_theme, theme_of
+    from apps.governance import audit
+
+    institution = request.user.institution
+    try:
+        cleaned = clean_theme(payload.dict())
+    except ValidationError as err:
+        return Status(422, {"detail": err.messages[0]})
+    before = theme_of(institution)
+    institution.theme = cleaned
+    institution.save(update_fields=["theme", "updated_at"])
+    changed = {k: [before.get(k), v] for k, v in cleaned.items() if before.get(k) != v}
+    if changed:
+        audit.record(actor=request.user, action="institution.theme_changed", target=institution,
+                     changes=changed)
+    return Status(200, cleaned)
+
+
 @router.get("/reports", response=dict)
 def get_reports(request, days: int = 30):
     """Summaries for one period (7, 30 or 90 days); counts and rates only (SRS 12.1)."""

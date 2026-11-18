@@ -15,6 +15,7 @@ export interface Me {
   last_name: string;
   preferred_name: string;
   two_step: boolean;
+  appearance: "light" | "dark";
   full_name: string;
   kind: "student" | "teacher" | "staff";
   institution: {
