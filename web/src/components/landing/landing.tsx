@@ -172,12 +172,13 @@ function NavBar({ guide, onGuide }: { guide: boolean; onGuide: () => void }) {
         <button
           type="button"
           className={s.guideSwitch}
+          aria-label="Guide"
           aria-pressed={guide}
           onClick={onGuide}
           title={guide ? `Put ${site.guide_name}, the guide, away` : `Bring ${site.guide_name}, the guide, back`}
         >
           <span className={s.guideDot} aria-hidden="true" />
-          Guide
+          <span className={s.guideLabel}>Guide</span>
         </button>
       )}
       <AppearanceToggle className={s.modeSwitch} />

@@ -253,6 +253,12 @@
   [aria-current="page"] .duo {
     fill-opacity: 0.24;
   }
+
+  /* Browsers size a fieldset to its widest child (min-width: min-content), so a file input or a
+     row of options could push a form past a phone's edge. Let fieldsets shrink like any block. */
+  fieldset {
+    min-width: 0;
+  }
 }
 
 @keyframes cv-icon-pop {

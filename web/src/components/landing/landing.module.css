@@ -1027,3 +1027,35 @@ details[open] .chevron {
     scroll-margin-top: 60px;
   }
 }
+
+/* A narrow phone: a smaller name, and the guide switch keeps only its dot, so sign in fits. */
+@media (max-width: 480px) {
+  .nav {
+    gap: 8px;
+  }
+
+  .wordmark {
+    gap: 8px;
+    font-size: 17px;
+  }
+
+  .wordmarkTile {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .guideSwitch {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .guideLabel {
+    display: none;
+  }
+
+  .navButton {
+    padding: 0 16px;
+  }
+}
