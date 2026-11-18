@@ -3,6 +3,7 @@
 import { type AvatarHandle, createAvatar } from "@bible-strong/avatar-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CloseIcon } from "@/components/icons";
+import { Body, type BodyHandle, useLife } from "@/components/life/life";
 import { useTheme } from "@/components/theme-provider";
 import { guideColours } from "@/lib/theme";
 import character from "./guide.avatar.json";
@@ -179,7 +180,10 @@ type Look = [number, number] | null;
  * on the element's style; React hears only about travel, facing, the gaze, the tip's side and
  * whether Verse is in sight.
  */
-function useWalk(ref: React.RefObject<HTMLElement | null>, { glide, box }: { glide: boolean; box: number }) {
+function useWalk(
+  ref: React.RefObject<HTMLElement | null>,
+  { glide, box, resting }: { glide: boolean; box: number; resting: React.RefObject<boolean> },
+) {
   const [moving, setMoving] = useState(false);
   const [facing, setFacing] = useState<1 | -1>(-1);
   const [look, setLook] = useState<Look>(null);
@@ -300,7 +304,7 @@ function useWalk(ref: React.RefObject<HTMLElement | null>, { glide, box }: { gli
     // A stroll now and then, when nobody has pressed anything for a while.
     const wander = () => {
       wanderTimer = setTimeout(wander, 7000 + Math.random() * 6000);
-      if (!glide || frame || Date.now() - lastPress < 6000 || document.hidden) return;
+      if (!glide || frame || resting.current || Date.now() - lastPress < 6000 || document.hidden) return;
       const w = window.innerWidth;
       const h = window.innerHeight;
       const px = w * (0.1 + Math.random() * 0.8);
@@ -353,7 +357,7 @@ function useWalk(ref: React.RefObject<HTMLElement | null>, { glide, box }: { gli
       clearTimeout(unlook);
       clearTimeout(wanderTimer);
     };
-  }, [ref, glide, box]);
+  }, [ref, glide, box, resting]);
 
   return { moving, facing, look, side, shown };
 }
@@ -380,16 +384,56 @@ function Companion() {
   const box = size + 16; // with the disc around it
   const el = useRef<HTMLElement>(null);
   const avatar = useRef<AvatarHandle>(null);
-  const { moving, facing, look, side, shown } = useWalk(el, { glide, box });
+  const body = useRef<BodyHandle>(null);
+  // Asleep or busy reacting: no strolls meanwhile.
+  const resting = useRef(false);
+  const { moving, facing, look, side, shown } = useWalk(el, { glide, box, resting });
+  const life = useLife({ avatar, body, target: el, still: !glide, busy: moving, sleepAfterMs: 45_000 });
+  useEffect(() => {
+    resting.current = life.asleep || life.drowsy;
+  }, [life.asleep, life.drowsy]);
   // A tap on Verse puts the tip away and brings it back.
   const [talking, setTalking] = useState(true);
   const { state } = STOPS[stop];
   const line = STOPS[stop].line.replace("{name}", name);
+  const { cheer } = life;
 
-  // A small nod each time Verse has something new to say.
+  // It pops into sight with a sparkle the first time it shows.
+  const greeted = useRef(false);
   useEffect(() => {
-    if (stop > 0) avatar.current?.poke("nod");
-  }, [stop]);
+    if (!shown || greeted.current) return;
+    greeted.current = true;
+    const t = setTimeout(() => {
+      body.current?.act("pop");
+      body.current?.emote("sparkle", 6);
+      avatar.current?.poke("bounce");
+    }, 120);
+    return () => clearTimeout(t);
+  }, [shown]);
+
+  // A little show each time Verse has something new to say, in the section's mood.
+  useEffect(() => {
+    if (stop > 0) cheer(STOPS[stop].state);
+  }, [stop, cheer]);
+
+  // Lands from a walk with a squash.
+  const wasMoving = useRef(false);
+  useEffect(() => {
+    if (wasMoving.current && !moving) body.current?.act("land");
+    wasMoving.current = moving;
+  }, [moving]);
+
+  // Arrived beside something pressed: perks up and wonders about it.
+  useEffect(() => {
+    if (!look) return;
+    body.current?.act("perk");
+    body.current?.emote("ask");
+  }, [look]);
+
+  const mood = moving
+    ? "running"
+    : (life.reaction ?? (life.asleep ? "sleeping" : life.drowsy ? "drowsy" : look ? "curious" : state));
+  const said = life.quip ?? (talking && !life.asleep ? line : null);
 
   return (
     <aside ref={el} className={`${s.guide} ${shown ? s.shown : ""}`} aria-label={`${name}, your guide`}>
@@ -397,25 +441,30 @@ function Companion() {
         type="button"
         className={`${s.disc} ${s.discButton}`}
         onClick={() => {
+          if (life.tap()) return; // tickled dizzy: the tip stays as it is
           setTalking((t) => !t);
-          avatar.current?.poke("bounce");
         }}
+        {...life.pointer}
         aria-label={talking ? `${name}: hide tips` : `${name}: show tips`}
         aria-expanded={talking}
       >
-        <Verse
-          ref={avatar}
-          // Walking, it runs; looking at something pressed, it is curious; otherwise the section's mood.
-          state={moving ? "running" : look ? "curious" : state}
-          lookAt={moving ? [facing * 0.9, 0] : look}
-          size={size}
-          ariaLabel={`${name}, the CampusVerse guide`}
-        />
+        <Body ref={body} walking={moving} facing={facing} sleeping={life.asleep} still={!glide} colours={colours}>
+          <Verse
+            ref={avatar}
+            // Walking, it runs; a reaction wins; then sleep, a pressed thing, or the section's mood.
+            state={mood}
+            lookAt={moving ? [facing * 0.9, 0] : (look ?? life.gaze)}
+            // Standing about, its eyes follow your pointer.
+            followPointer={!phone && !moving && !life.asleep}
+            size={size}
+            ariaLabel={`${name}, the CampusVerse guide`}
+          />
+        </Body>
       </button>
-      {side && !moving && talking && (
+      {side && !moving && said && (
         <div className={`${s.bubble} ${side === "left" ? s.toLeft : s.toRight}`}>
-          <p key={stop} className={s.line} aria-live="polite">
-            {line}
+          <p key={life.quip ?? stop} className={s.line} aria-live="polite">
+            {said}
           </p>
           <button
             type="button"

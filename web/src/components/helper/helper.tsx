@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CloseIcon } from "@/components/icons";
+import { Body, type BodyHandle, useLife } from "@/components/life/life";
 import character from "@/components/landing/guide.avatar.json";
 import { useTheme } from "@/components/theme-provider";
 import { useUnreadTotal } from "@/lib/chat";
@@ -17,8 +18,9 @@ import s from "./helper.module.css";
 /*
  * The guide inside the app. It waits in a corner, calm, its eyes on your pointer; tapped, it asks
  * what you want to know and answers from your own data, with questions for your role. It reacts as
- * the app is used: a nod when you change page, a bounce for a new message, a doze when nobody is
- * around. Admins turn it on or off in Manage → Theme; anyone can close its panel.
+ * the app is used: a hop when you change page, a jump and sparkles for a new message, a doze (Zzz)
+ * when nobody is around. It can be petted and tickled dizzy (see components/life). Admins turn it
+ * on or off in Manage → Theme; anyone can close its panel.
  */
 
 /**
@@ -76,37 +78,35 @@ function HelperInner() {
   const me = useMe().data;
   const role = roleOf(me);
   const name = site.guide_name || "Verse";
-  const Guide = useGuide(name, guideColours(site));
+  const colours = guideColours(site);
+  const Guide = useGuide(name, colours);
   const avatar = useRef<AvatarHandle>(null);
+  const body = useRef<BodyHandle>(null);
+  const button = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
   const unread = useUnreadTotal();
 
   const [open, setOpen] = useState(false);
   const [bubble, setBubble] = useState<string | null>(null);
   const [phone, setPhone] = useState(false);
-  const [asleep, setAsleep] = useState(false);
-  // A short reaction (a state for a moment) that wins over everything else.
-  const [reaction, setReaction] = useState<string | null>(null);
-  const reactTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [still, setStill] = useState(false);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const react = useCallback((state: string, ms = 1800) => {
-    clearTimeout(reactTimer.current);
-    setReaction(state);
-    reactTimer.current = setTimeout(() => setReaction(null), ms);
-  }, []);
+  const life = useLife({
+    avatar,
+    body,
+    target: button,
+    still,
+    busy: open,
+    sleepAfterMs: DOZE_AFTER_MS,
+    scrollGasp: false, // the app's lists are scrolled fast all day: no gasp at each
+  });
+  const { react, cheer } = life;
   const say = useCallback((text: string, ms = 5000) => {
     clearTimeout(bubbleTimer.current);
     setBubble(text);
     bubbleTimer.current = setTimeout(() => setBubble(null), ms);
   }, []);
-  useEffect(
-    () => () => {
-      clearTimeout(reactTimer.current);
-      clearTimeout(bubbleTimer.current);
-    },
-    [],
-  );
+  useEffect(() => () => clearTimeout(bubbleTimer.current), []);
 
   const firstName = me?.preferred_name || me?.first_name || "there";
 
@@ -122,6 +122,7 @@ function HelperInner() {
     if (seen || !me) return;
     const t = setTimeout(() => {
       react("happy", 2500);
+      cheer("happy");
       say(`Hi ${firstName}! ${HELLO_BY_ROLE[role]}`, 7000);
     }, 1200);
     return () => clearTimeout(t);
@@ -131,10 +132,18 @@ function HelperInner() {
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
-    const on = () => setPhone(mq.matches);
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const on = () => {
+      setPhone(mq.matches);
+      setStill(calm.matches);
+    };
     on();
     mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
+    calm.addEventListener("change", on);
+    return () => {
+      mq.removeEventListener("change", on);
+      calm.removeEventListener("change", on);
+    };
   }, []);
 
   // A new message: a bounce and a word about it.
@@ -142,60 +151,34 @@ function HelperInner() {
   useEffect(() => {
     if (unread > lastUnread.current && !open) {
       react("excited", 2600);
-      avatar.current?.poke("bounce");
+      cheer("excited");
       say(unread - lastUnread.current === 1 ? "New message!" : `${unread - lastUnread.current} new messages!`);
     }
     lastUnread.current = unread;
-  }, [unread, open, react, say]);
+  }, [unread, open, react, cheer, say]);
 
-  // A small nod at every new page.
+  // A small hop and a nod at every new page.
   const lastPath = useRef(pathname);
   useEffect(() => {
-    if (pathname !== lastPath.current) avatar.current?.poke("nod");
+    if (pathname !== lastPath.current) {
+      avatar.current?.poke("nod");
+      body.current?.act("hop");
+    }
     lastPath.current = pathname;
   }, [pathname]);
 
-  // Dozes when nobody is around; wakes, surprised, when someone is back.
-  useEffect(() => {
-    let timer = setTimeout(() => setAsleep(true), DOZE_AFTER_MS);
-    let sleeping = false;
-    const onActivity = () => {
-      clearTimeout(timer);
-      if (sleeping) {
-        sleeping = false;
-        setAsleep(false);
-        react("surprised", 1400);
-      }
-      timer = setTimeout(() => {
-        sleeping = true;
-        setAsleep(true);
-      }, DOZE_AFTER_MS);
-    };
-    const events = ["pointermove", "keydown", "scroll", "touchstart"] as const;
-    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
-    return () => {
-      clearTimeout(timer);
-      events.forEach((e) => window.removeEventListener(e, onActivity));
-    };
-  }, [react]);
-
-  // Five quick taps: it laughs.
-  const taps = useRef<number[]>([]);
   const onTap = () => {
-    const now = Date.now();
-    taps.current = [...taps.current.filter((t) => now - t < 1500), now];
-    if (taps.current.length >= 5) {
-      taps.current = [];
-      react("laughing", 2200);
-      say("Hehe, that tickles!", 2500);
-      return;
-    }
-    avatar.current?.poke("bounce");
-    setOpen((o) => !o);
+    if (life.tap()) return; // tickled dizzy: the panel stays as it is
+    setOpen((o) => {
+      if (!o) body.current?.act("perk");
+      return !o;
+    });
     setBubble(null);
   };
 
-  const state = reaction ?? (open ? "attentive" : asleep ? "sleeping" : "calm");
+  const state =
+    life.reaction ?? (open ? "attentive" : life.asleep ? "sleeping" : life.drowsy ? "drowsy" : "calm");
+  const said = bubble ?? life.quip;
 
   return (
     <aside className={s.helper} aria-label={`${name}, your guide`}>
@@ -206,32 +189,39 @@ function HelperInner() {
           firstName={firstName}
           questions={QUESTIONS_BY_ROLE[role]}
           onClose={() => setOpen(false)}
-          onAnswer={(a) => react(a.mood ?? "happy", 2600)}
+          onAnswer={(a) => {
+            react(a.mood ?? "happy", 2600);
+            cheer(a.mood ?? "happy");
+          }}
           Guide={Guide}
           followPointer={!phone}
         />
       )}
-      {!open && bubble && (
-        <p className={s.hello} role="status">
-          {bubble}
+      {!open && said && (
+        <p key={said} className={s.hello} role="status">
+          {said}
         </p>
       )}
       <button
         type="button"
+        ref={button}
         className={s.avatar}
         onClick={onTap}
-        onPointerEnter={() => avatar.current?.poke("nod")}
+        {...life.pointer}
         aria-expanded={open}
         aria-label={open ? `Close ${name}` : `Ask ${name} a question`}
       >
-        <Guide
-          ref={avatar}
-          library={LIBRARY}
-          state={state}
-          // Its eyes follow your pointer (on a phone there is none to follow).
-          followPointer={!phone}
-          size={phone ? 52 : 64}
-        />
+        <Body ref={body} sleeping={life.asleep} still={still} colours={colours}>
+          <Guide
+            ref={avatar}
+            library={LIBRARY}
+            state={state}
+            lookAt={life.gaze}
+            // Its eyes follow your pointer (on a phone there is none to follow).
+            followPointer={!phone && !life.asleep}
+            size={phone ? 52 : 64}
+          />
+        </Body>
         {!open && (
           <span className={s.badge} aria-hidden="true">
             ?

@@ -1,0 +1,342 @@
+/* The guide's body and its emotes. The body's springs are written by script on .act; the rest is
+   here. Emotes rise from just above the head (.fx) and are removed by script when done. */
+
+.life {
+  --life-heart: #ef5b7f;
+  --life-sky: #6cb8ec;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+/* A soft spot of shade under it, that shrinks while it is in the air. */
+.shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 1px;
+  width: 54%;
+  height: 9%;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.16);
+  filter: blur(3px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.act {
+  display: grid;
+  place-items: center;
+  transform-origin: 50% 92%;
+  will-change: transform;
+}
+
+/* Breathing, a little deeper and slower asleep. */
+.breathe {
+  display: grid;
+  place-items: center;
+  transform-origin: 50% 92%;
+  animation: life-breathe 3.4s ease-in-out infinite;
+}
+
+.deep {
+  animation-duration: 5.2s;
+  animation-name: life-breathe-deep;
+}
+
+.fx {
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.bit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  opacity: 0;
+  font-weight: 800;
+  line-height: 1;
+  animation-fill-mode: both;
+}
+
+.heart {
+  width: 19px;
+  height: 19px;
+  margin: -9px 0 0 -9px;
+  color: var(--life-heart);
+  animation: life-heart 1.4s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.sparkle {
+  width: 13px;
+  height: 13px;
+  margin: -6px 0 0 -6px;
+  color: var(--life-tassel);
+  animation: life-sparkle 0.9s cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+
+.z {
+  color: var(--cv-ink-2);
+  font-size: calc(13px * var(--s, 1));
+  animation: life-z 2.2s ease-out;
+}
+
+.note {
+  color: var(--life-cap);
+  font-size: 17px;
+  animation: life-note 1.6s ease-out;
+}
+
+.bang,
+.ask {
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  background: var(--cv-surface);
+  box-shadow: var(--cv-shadow-pop); /* taste-skill-ignore: a speech mark floating over the page */
+  font-size: 15px;
+  animation: life-pop 1.1s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.bang {
+  color: var(--life-body);
+}
+
+.ask {
+  color: var(--cv-accent-ink, var(--life-cap));
+  animation-duration: 1.4s;
+}
+
+.sweat {
+  width: 9px;
+  height: 13px;
+  margin: -6px 0 0 -4px;
+  color: var(--life-sky);
+  animation: life-sweat 1.2s ease-in;
+}
+
+.star {
+  width: 11px;
+  height: 11px;
+  margin: -5px 0 0 -5px;
+  color: var(--c, var(--life-tassel));
+  animation:
+    life-orbit 0.8s linear 2,
+    life-fade 1.6s linear;
+}
+
+.confetti {
+  width: 6px;
+  height: 9px;
+  margin: -4px 0 0 -3px;
+  border-radius: 1.5px;
+  background: var(--c);
+  animation: life-confetti 1.4s cubic-bezier(0.15, 0.7, 0.4, 1);
+}
+
+@keyframes life-breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.018, 0.982) translateY(0.5px);
+  }
+}
+
+@keyframes life-breathe-deep {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.04, 0.955) translateY(1px);
+  }
+}
+
+@keyframes life-heart {
+  0% {
+    opacity: 0;
+    transform: translate(calc(var(--dx) * 0.3), 4px) scale(0.2);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.55), -12px) scale(1.25);
+  }
+  30% {
+    transform: translate(calc(var(--dx) * 0.65), -18px) scale(0.95);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), -64px) scale(0.85) rotate(var(--r));
+  }
+}
+
+@keyframes life-sparkle {
+  0% {
+    opacity: 0;
+    transform: translate(0, 8px) scale(0) rotate(0deg);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.8), calc(var(--dy) * 0.8)) scale(1.2) rotate(calc(var(--r) * 0.6));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(0) rotate(var(--r));
+  }
+}
+
+@keyframes life-z {
+  0% {
+    opacity: 0;
+    transform: translate(6px, 0) scale(0.4) rotate(-10deg);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(calc(var(--dx) * 0.8), -26px) scale(0.9) rotate(8deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--dx) + 10px), -54px) scale(1.2) rotate(-6deg);
+  }
+}
+
+@keyframes life-note {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.4), -12px) scale(1.1) rotate(var(--r));
+  }
+  50% {
+    transform: translate(calc(var(--dx) * 0.9), -30px) rotate(calc(var(--r) * -1));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), -56px) rotate(var(--r));
+  }
+}
+
+@keyframes life-pop {
+  0% {
+    opacity: 0;
+    transform: translate(var(--dx), 6px) scale(0.2);
+  }
+  22% {
+    opacity: 1;
+    transform: translate(var(--dx), -14px) scale(1.25) rotate(-8deg);
+  }
+  38% {
+    transform: translate(var(--dx), -10px) scale(0.95) rotate(6deg);
+  }
+  50%,
+  80% {
+    opacity: 1;
+    transform: translate(var(--dx), -12px) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), -18px) scale(0.8);
+  }
+}
+
+@keyframes life-sweat {
+  0% {
+    opacity: 0;
+    transform: translate(var(--dx), 2px) scale(0.3);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(var(--dx), 6px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), 30px) scale(0.8, 1.15);
+  }
+}
+
+/* Dizzy stars run round the head on a flat ring. */
+@keyframes life-orbit {
+  0% {
+    transform: translate(30px, 0) scale(1);
+  }
+  12.5% {
+    transform: translate(21px, 6px) scale(1.1);
+  }
+  25% {
+    transform: translate(0, 9px) scale(1.2);
+  }
+  37.5% {
+    transform: translate(-21px, 6px) scale(1.1);
+  }
+  50% {
+    transform: translate(-30px, 0) scale(0.9);
+  }
+  62.5% {
+    transform: translate(-21px, -6px) scale(0.75);
+  }
+  75% {
+    transform: translate(0, -9px) scale(0.7);
+  }
+  87.5% {
+    transform: translate(21px, -6px) scale(0.75);
+  }
+  100% {
+    transform: translate(30px, 0) scale(1);
+  }
+}
+
+@keyframes life-fade {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes life-confetti {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  45% {
+    transform: translate(var(--dx), var(--dy)) scale(1) rotate(calc(var(--r) * 0.5));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--dx) * 1.15), calc(var(--dy) + 70px)) scale(0.9) rotate(var(--r));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breathe,
+  .deep {
+    animation: none;
+  }
+
+  .shadow {
+    display: none;
+  }
+}
