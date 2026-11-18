@@ -123,19 +123,54 @@
   overflow: hidden;
 }
 
-.stripe {
-  display: flex;
-  height: 56px;
+/* The week running across the top of the card. */
+.ticker {
   flex: none;
+  display: flex;
+  align-items: center;
+  height: 56px;
   overflow: hidden;
+  background: var(--cv-board);
+  color: var(--cv-ink);
+  font-size: var(--small);
+  white-space: nowrap;
 }
 
-.stripe span {
-  flex: 0 0 28px;
+.tickerTrack {
+  display: flex;
+  flex: none;
+  animation: cv-ticker 60s linear infinite;
 }
 
-.stripe span:nth-child(odd) {
-  background: var(--ground);
+.ticker:hover .tickerTrack {
+  animation-play-state: paused;
+}
+
+.tickerItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 40px;
+}
+
+.tickerItem b {
+  font-weight: 700;
+  color: var(--cv-accent-ink);
+}
+
+.tickerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+@keyframes cv-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .heroCardBody {
@@ -762,6 +797,10 @@ details[open] .chevron {
   .heroScreen {
     transition: none;
   }
+
+  .tickerTrack {
+    animation: none;
+  }
 }
 
 /* ---------- Tablet and phone ---------- */
@@ -819,8 +858,8 @@ details[open] .chevron {
     margin-top: -24px;
   }
 
-  .stripe {
-    height: 40px;
+  .ticker {
+    height: 44px;
   }
 
   .heroCardBody {

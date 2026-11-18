@@ -105,12 +105,26 @@ function useTurns(count: number, holdMs = 5600) {
   return turn;
 }
 
-function Stripe() {
+/** The week's classes running across the top of the card, like a departure board. The list
+ *  is drawn twice so the loop is seamless; the week section below says the same for screen readers. */
+function Ticker() {
+  const runs = [
+    ...MON_WED.map((c) => ({ ...c, days: "Mon–Wed" })),
+    ...THU_SAT.map((c) => ({ ...c, days: "Thu–Sat" })),
+  ];
+  const row = (copy: number) =>
+    runs.map((c) => (
+      <span key={`${copy}-${c.code}`} className={s.tickerItem}>
+        <span className={s.tickerDot} style={{ background: c.colour }} />
+        <b>{c.days}</b> {c.title} · {c.teacher} · {c.room}
+      </span>
+    ));
   return (
-    <div className={s.stripe} aria-hidden="true">
-      {Array.from({ length: 36 }, (_, i) => (
-        <span key={i} />
-      ))}
+    <div className={s.ticker} aria-hidden="true">
+      <div className={s.tickerTrack}>
+        {row(0)}
+        {row(1)}
+      </div>
     </div>
   );
 }
@@ -120,7 +134,7 @@ function Hero() {
   return (
     <section className={s.hero} aria-labelledby="hero-title">
       <div className={s.heroCard}>
-        <Stripe />
+        <Ticker />
         <div className={s.heroCardBody}>
           <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
             <span className={s.wordmarkTile}>
