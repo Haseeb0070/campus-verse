@@ -150,14 +150,15 @@ def test_preview_classifies_every_row_and_changes_nothing(campus, rooms):
         "CS-301,3C,Tue,15:00,16:00,B-204,,",                   # new, clashes with the row above
         "CS-301,9Z,Mon,09:00,10:00,B-204,,",                   # error: no such section
         "CS-301,3B,Wed,25:00,26:00,B-204,,",                   # error: bad time
-        "CS-301,3B,Fri,09:00,10:00,Z-999,,",                   # error: unknown room
+        "CS-301,3B,Fri,09:00,10:00,Z-999,,",                   # new: a room to add
         "CS-301,3B,Thu,10:30,11:50,B-210,,",                   # error: duplicate of line 2
         "CS-301,3B,Sat,11:00,12:00,Online,,",                  # new, online
     ))
     rows = run.plan["rows"]
     assert [r["status"] for r in rows] == [
-        "update", "new", "new", "error", "error", "error", "error", "new"
+        "update", "new", "new", "error", "error", "new", "error", "new"
     ]
+    assert rows[5]["new_room"] == "Z-999" and "(new room)" in rows[5]["detail"]
     assert rows[0]["changes"] == {"room": ["B-204", "B-210"]}
     assert "no section CS-301 · 9Z" in rows[3]["message"]
     assert "Same class as line 2" in rows[6]["message"]
@@ -175,7 +176,7 @@ def test_apply_writes_only_valid_rows_and_is_audited(campus, rooms):
     imports.apply(campus.admin, run)
     run.refresh_from_db()
     assert (run.status, run.result) == (
-        "applied", {"created": 1, "updated": 0, "confirmed": 0, "skipped": 1})
+        "applied", {"created": 1, "updated": 0, "confirmed": 0, "skipped": 1, "rooms_added": 0})
     assert ClassMeeting.objects.count() == 1
     with pytest.raises(Exception, match="already applied"):
         imports.apply(campus.admin, run)
@@ -219,3 +220,15 @@ def test_audit_log_filters(client, campus):
     entries = client.get("/api/manage/audit", {"action": "person."}).json()
     found = [(e["action"], e["actor"]) for e in entries]
     assert found == [("person.deactivated", "nadia@test.edu")]
+
+
+def test_rooms_named_in_the_timetable_are_added_on_apply(campus, rooms):
+    run = imports.preview(campus.admin, csv_file(
+        "CS-301,3B,Mon,09:00,10:00,R-127,,", "CS-301,3C,Mon,11:00,12:00,r-127,,",
+    ))
+    assert not Room.objects.filter(code__iexact="R-127").exists()  # the preview adds nothing
+    imports.apply(campus.admin, run)
+    run.refresh_from_db()
+    assert run.result["rooms_added"] == 1  # one room, however the file spells it
+    room = Room.objects.get(code__iexact="R-127")
+    assert set(ClassMeeting.objects.values_list("room_id", flat=True)) == {room.pk}

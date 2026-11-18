@@ -55,6 +55,8 @@ class PlanRow:
     meeting_id: int | None = None
     section_id: int | None = None
     room_id: int | None = None
+    # A room the file names that the college doesn't have yet: added when the import is applied.
+    new_room: str = ""
 
 
 def _parse_time(value: str) -> time:
@@ -133,9 +135,13 @@ def build_plan(institution_id: int, term: AcademicTerm, rows: list[dict]) -> dic
         if mode == "in_person":
             room = rooms.get(row.room.lower())
             if room is None:
-                row.message = f"Room {row.room or '(blank)'} doesn't exist. Add it first."
-                continue
-            row.room_id = room.pk
+                if not row.room:
+                    row.message = "Give the room, or set the mode to online."
+                    continue
+                # Rooms come from the timetable: one the college doesn't have yet is added on apply.
+                row.new_room = row.room
+            else:
+                row.room_id = room.pk
         key = (section.pk, day, starts)
         if key in seen:
             row.message = f"Same class as line {seen[key]}."
@@ -150,7 +156,7 @@ def build_plan(institution_id: int, term: AcademicTerm, rows: list[dict]) -> dic
         diffs = {
             "end": [f"{current.ends_at:%H:%M}", row.end],
             "room": [current.room.code if current.room else "Online",
-                     room.code if room else "Online"],
+                     room.code if room else (row.new_room or "Online")],
             "kind": [current.kind, kind],
             "mode": [current.mode, mode],
         }
@@ -160,8 +166,9 @@ def build_plan(institution_id: int, term: AcademicTerm, rows: list[dict]) -> dic
     # Room clashes in the resulting timetable (warnings: the timetable team decides).
     by_slot: dict[tuple, list[PlanRow]] = {}
     for row in plan:
-        if row.status in ("new", "update", "unchanged") and row.room_id:
-            by_slot.setdefault((row.room_id, row.day), []).append(row)
+        room_key = row.room_id or (row.new_room and f"new:{row.new_room.lower()}")
+        if row.status in ("new", "update", "unchanged") and room_key:
+            by_slot.setdefault((room_key, row.day), []).append(row)
     for group in by_slot.values():
         group.sort(key=lambda x: x.start)
         for a_i, a in enumerate(group):
@@ -177,11 +184,15 @@ def build_plan(institution_id: int, term: AcademicTerm, rows: list[dict]) -> dic
         for key, m in existing.items()
         if (key[0], key[1], f"{key[2]:%H:%M}") not in in_file
     ]
+    def where(r: PlanRow) -> str:
+        if r.room:
+            return r.room + (" (new room)" if r.new_room else "")
+        return "Online" if r.mode == "online" else ""
+
     return finish_plan(
         [asdict(r) | {"label": r.section,
                       "detail": " ".join(filter(None, [r.day, r.start and f"{r.start}–{r.end}",
-                                                       r.room or (r.mode == "online" and "Online")
-                                                       or ""]))}
+                                                       where(r)]))}
          for r in plan],
         not_in_file, extra={"clash": sum(1 for r in plan if r.clash)},
     )
@@ -190,16 +201,26 @@ def build_plan(institution_id: int, term: AcademicTerm, rows: list[dict]) -> dic
 def _timetable_signature(plan: dict) -> list:
     return [
         (r["status"], r["section_id"], r["day"], r["start"], r["end"], r["room_id"], r["kind"],
-         r["mode"], r["meeting_id"])
+         r["mode"], r["meeting_id"], r.get("new_room", ""))
         for r in plan["rows"] if r["status"] in ("new", "update")
     ]
 
 
 def _apply_timetable(run: ImportRun, plan: dict, actor) -> dict:
     created = updated = 0
+    rooms_added: dict[str, int] = {}
     for r in plan["rows"]:
         if r["status"] not in ("new", "update"):
             continue
+        if r.get("new_room") and not r["room_id"]:
+            code = r["new_room"].strip()
+            if code.lower() not in rooms_added:
+                room = Room.objects.filter(institution_id=run.institution_id,
+                                           code__iexact=code).first()
+                if room is None:
+                    room = Room.objects.create(institution_id=run.institution_id, code=code)
+                rooms_added[code.lower()] = room.pk
+            r["room_id"] = rooms_added[code.lower()]
         values = {"ends_at": time.fromisoformat(r["end"]), "room_id": r["room_id"],
                   "kind": r["kind"], "mode": r["mode"], "last_import": run}
         if r["status"] == "new":
@@ -219,7 +240,7 @@ def _apply_timetable(run: ImportRun, plan: dict, actor) -> dict:
     confirmed = [r["meeting_id"] for r in plan["rows"] if r["status"] == "unchanged"]
     ClassMeeting.objects.filter(pk__in=confirmed).update(last_import=run)
     return {"created": created, "updated": updated, "confirmed": len(confirmed),
-            "skipped": plan["summary"]["error"]}
+            "skipped": plan["summary"]["error"], "rooms_added": len(rooms_added)}
 
 
 # The pipeline -------------------------------------------------------------------------------
