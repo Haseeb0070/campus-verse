@@ -51,6 +51,18 @@ services:
           type: web
           name: campusverse-realtime
           envVarKey: CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY
+      # Cloudflare R2, where uploads are kept (this server's own disk is wiped at every deploy
+      # and restart). From the Cloudflare dashboard: R2 > your bucket's name, the account ID on
+      # the R2 overview page, and an R2 API token with Object Read & Write on that bucket only.
+      # Leave R2_BUCKET empty to keep uploads on the server's disk (they won't last).
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
       # Loads Demo University on first start (accounts in the README). Testing only.
       - key: DEMO_SEED
         value: "true"

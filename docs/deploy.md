@@ -122,9 +122,16 @@ pricing pages now and then.
   the API to **Starter** (about $7/month) keeps it awake.
 - **Live chat while Centrifugo sleeps:** messages still arrive, by checking every few seconds,
   until it wakes.
-- **Uploaded files don't last.** Photos, PDFs and hand-ins are stored on the API server and are
-  lost when it restarts or redeploys. Fine for testing; keeping them needs cloud storage such as
-  Cloudflare R2.
+- **Uploaded files need Cloudflare R2.** The API server's disk is wiped at every deploy and
+  restart, so uploads (photos, PDFs, hand-ins) are kept in an R2 bucket (free up to 10 GB):
+  1. In the Cloudflare dashboard, open **R2**, create a bucket (for example
+     `campusverse-uploads`), and leave public access off.
+  2. **R2 > Manage API tokens > Create API token**: permission **Object Read & Write**, applied
+     to that bucket only. Copy the **Access Key ID** and **Secret Access Key** (shown once).
+  3. On Render, campusverse-api > **Environment**, set `R2_BUCKET`, `R2_ACCOUNT_ID` (on the
+     R2 overview page), `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, then save and deploy.
+  4. The deploy log says `Uploads: stored in Cloudflare R2 bucket ...` when it works.
+  Without these, uploads stay on the server's disk and are lost at the next deploy.
 - **Emails aren't sent.** Invites and password resets appear in Render's **Logs** tab for
   campusverse-api. To send real email, set `EMAIL_URL` to an SMTP provider.
 - **Background tasks run inside the request** (there's no Redis on the free setup), so a big

@@ -17,6 +17,9 @@ if [ "${DEMO_SEED:-false}" = "true" ]; then
   $PY manage.py seed_college || echo "seed_college failed; see the message above."
 fi
 
+# Says in the log where uploads go (R2 once R2_BUCKET is set) and whether that works.
+$PY manage.py check_uploads || true
+
 # Worker and scheduler in one small process. Without REDIS_URL, tasks run inline instead.
 if [ -n "${REDIS_URL:-}" ]; then
   .venv/bin/celery -A config worker --beat --pool=solo --loglevel=INFO &

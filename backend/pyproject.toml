@@ -17,6 +17,7 @@ dependencies = [
     "openpyxl>=3.1",
     "gunicorn>=23",
     "whitenoise>=6.9",
+    "django-storages[s3]>=1.14",
 ]
 
 [dependency-groups]

@@ -183,6 +183,35 @@ STORAGES = {
 # Uploads are private: MEDIA_ROOT is never served directly, only through permission-checked
 # download endpoints.
 MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
+
+# On a host whose disk is wiped at every deploy or restart (Render's free plan), uploads go to a
+# Cloudflare R2 bucket instead. The bucket stays private: files are still only handed out by the
+# permission-checked download endpoints, which read them from R2. Without R2_BUCKET (development),
+# uploads stay in MEDIA_ROOT.
+R2_BUCKET = env("R2_BUCKET", default="")
+if R2_BUCKET:
+    from botocore.config import Config as _BotoConfig
+
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": R2_BUCKET,
+            "endpoint_url": f"https://{env('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com",
+            "access_key": env("R2_ACCESS_KEY_ID"),
+            "secret_key": env("R2_SECRET_ACCESS_KEY"),
+            "region_name": "auto",
+            "signature_version": "s3v4",
+            "default_acl": None,  # R2 has no per-file permissions; the bucket itself is private
+            "file_overwrite": False,
+            "location": env("R2_PREFIX", default=""),
+            # Only send checksums S3 requires: R2 does not accept every optional one.
+            "client_config": _BotoConfig(
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+                retries={"max_attempts": 3, "mode": "standard"},
+            ),
+        },
+    }
 CAMPUSVERSE_MAX_UPLOAD_MB = env.int("MAX_UPLOAD_MB", default=20)
 # Sync sources may only be fetched from public HTTPS addresses, unless this is on (development:
 # a feed on localhost or the office network).
