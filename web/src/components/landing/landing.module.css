@@ -108,16 +108,15 @@
 /* ---------- Hero: the card beside the app ---------- */
 
 .hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
   padding: 12px;
-  min-height: min(100svh, 940px);
 }
 
+/* One card: the ticker across the top, the words on the left and the app on the right. */
 .heroCard {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: calc(min(100svh, 940px) - 24px);
   border-radius: var(--radius);
   background: var(--cv-bg);
   overflow: hidden;
@@ -125,7 +124,7 @@
 
 /* The week running across the top of the card. */
 .ticker {
-  flex: none;
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   height: 56px;
@@ -232,7 +231,6 @@
 /* The app, peeking in from the corner of its own window. */
 .heroScreens {
   position: relative;
-  border-radius: var(--radius);
   background: var(--cv-board);
   overflow: hidden;
   min-height: 420px;
@@ -835,14 +833,13 @@ details[open] .chevron {
 }
 
 @media (max-width: 860px) {
-  .hero {
+  .heroCard {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0;
+    grid-template-rows: none;
     min-height: 0;
   }
 
   .heroScreens {
-    order: -1;
     height: 48svh;
     min-height: 320px;
   }
@@ -851,11 +848,6 @@ details[open] .chevron {
     left: 24px;
     top: 24px;
     height: calc(100% - 24px);
-  }
-
-  .heroCard {
-    position: relative;
-    margin-top: -24px;
   }
 
   .ticker {

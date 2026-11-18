@@ -158,8 +158,7 @@ function Hero() {
             <a href="#questions">Questions</a>
           </nav>
         </div>
-      </div>
-      <div className={s.heroScreens}>
+        <div className={s.heroScreens}>
         {SCREENS.map((screen, i) => (
           <Image
             key={screen.src}
@@ -173,6 +172,7 @@ function Hero() {
             className={`${s.heroScreen} ${i === turn ? s.heroScreenOn : ""}`}
           />
         ))}
+        </div>
       </div>
     </section>
   );
