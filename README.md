@@ -7,6 +7,7 @@ data sync for students, teachers and administrators.
 |---|---|
 | `backend/` | Django 5.2, Django Ninja API, django-allauth (headless), Celery |
 | `web/` | Next.js 15, React 19, Tailwind CSS v4, CampusVerse Glass tokens |
+| `mobile/` | Expo (React Native) app for Android and iOS; see [mobile/README.md](mobile/README.md) |
 | `infra/` | Docker Compose: PostgreSQL 17, Redis, Centrifugo v6, Mailpit |
 | `docs/` | Architecture decisions |
 
