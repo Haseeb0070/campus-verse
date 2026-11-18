@@ -10,6 +10,18 @@ it. About 30 minutes the first time.
 | Django API, and live chat (Centrifugo) | [Render](https://render.com), from [`render.yaml`](../render.yaml) | Free |
 | Scheduled jobs: publishing scheduled notices, reminders, sync | [cron-job.org](https://cron-job.org) calls the API | Free |
 
+## Where it runs now
+
+| Piece | Address |
+|---|---|
+| Web app | https://campus-verse-flame.vercel.app |
+| API | https://campusverse-api-gm4t.onrender.com |
+| Live chat (Centrifugo) | https://campusverse-realtime.onrender.com |
+| Scheduled jobs | `https://campusverse-api-gm4t.onrender.com/api/cron` |
+
+Every push to `main` redeploys the web app and the API. The steps below are for setting it up
+from scratch.
+
 ## Your PC stays as it is
 
 Nothing below changes how CampusVerse runs locally. The code reads every address and secret
@@ -46,9 +58,9 @@ git push -u origin main
 1. Sign up at [vercel.com](https://vercel.com) with GitHub, choose **Add New → Project**, and
    import the repository.
 2. Set **Root Directory** to `web`. Vercel recognises Next.js by itself.
-3. Under **Environment Variables** add `BACKEND_URL` = `https://campusverse-api.onrender.com`
-   (you'll check this address in step 4).
-4. Press **Deploy**. Note your address, for example `https://campusverse.vercel.app`.
+3. Under **Environment Variables** add `BACKEND_URL` = the API's Render address, for example
+   `https://campusverse-api-gm4t.onrender.com` (you'll check this address in step 4).
+4. Press **Deploy**. Note your address, for example `https://campus-verse-flame.vercel.app`.
 
 ## 4. Render: put the API and live chat online
 
@@ -58,14 +70,15 @@ git push -u origin main
    | Value | What to paste |
    |---|---|
    | `DATABASE_URL` | The Neon connection string from step 2 |
-   | `FRONTEND_URL` | Your Vercel address, e.g. `https://campusverse.vercel.app` (no slash at the end) |
+   | `FRONTEND_URL` | Your Vercel address, e.g. `https://campus-verse-flame.vercel.app` (no slash at the end) |
    | `CENTRIFUGO_CLIENT_ALLOWED_ORIGINS` | The same Vercel address |
 
 2. Press **Apply**. The first deploy takes about 10 minutes. It creates the tables in Neon and
    loads Demo University.
 3. Check the two service addresses. If they are exactly `campusverse-api.onrender.com` and
    `campusverse-realtime.onrender.com`, carry on. If Render added a suffix because a name was
-   taken, update the matching settings and redeploy:
+   taken (the API here became `campusverse-api-gm4t.onrender.com`), update the matching
+   settings and redeploy:
 
    | Where | Setting | Should be |
    |---|---|---|
@@ -77,7 +90,7 @@ git push -u origin main
 
 1. In Render, open **campusverse-api → Environment** and copy the value of `CRON_SECRET`.
 2. Sign up at [cron-job.org](https://cron-job.org) and create a cron job:
-   - **URL:** `https://campusverse-api.onrender.com/api/cron`
+   - **URL:** `https://<api address>/api/cron` (here `https://campusverse-api-gm4t.onrender.com/api/cron`)
    - **Schedule:** every 30 minutes
    - **Advanced → Request method:** `POST`
    - **Advanced → Headers:** `Authorization` = `Bearer <the CRON_SECRET value>`

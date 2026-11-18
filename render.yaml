@@ -26,7 +26,7 @@ services:
       # e.g. postgresql://user:password@ep-something.eu-central-1.aws.neon.tech/neondb?sslmode=require
       - key: DATABASE_URL
         sync: false
-      # The Vercel address, e.g. https://campusverse.vercel.app (no slash at the end).
+      # The Vercel address, e.g. https://campus-verse-flame.vercel.app (no slash at the end).
       - key: FRONTEND_URL
         sync: false
       # Extra addresses allowed to sign in, comma-separated. To use a Vercel branch preview, add
@@ -91,6 +91,6 @@ services:
       - key: CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY
         generateValue: true
       # The Vercel address: the only page allowed to open a live connection. Separate several
-      # with spaces, e.g. "https://campusverse.vercel.app https://campusverse-git-dev-yourname.vercel.app"
+      # with spaces, e.g. "https://campus-verse-flame.vercel.app https://campus-verse-git-dev-yourname.vercel.app"
       - key: CENTRIFUGO_CLIENT_ALLOWED_ORIGINS
         sync: false
