@@ -1,43 +1,46 @@
 "use client";
 
-import { createAvatar } from "@bible-strong/avatar-react";
+import { type AvatarHandle, createAvatar } from "@bible-strong/avatar-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CloseIcon } from "@/components/icons";
 import character from "@/components/landing/guide.avatar.json";
 import { useTheme } from "@/components/theme-provider";
 import { useUnreadTotal } from "@/lib/chat";
-import { relativeTime, startsLabel, todayIn } from "@/lib/format";
-import { useAssignments, useMe, useNextClass, useNotices } from "@/lib/queries";
+import { useMe } from "@/lib/queries";
 import { guideColours } from "@/lib/theme";
+import type { Me } from "@/lib/types";
+import { type Answer, HELLO_BY_ROLE, type Question, QUESTIONS_BY_ROLE, type Role } from "./answers";
 import s from "./helper.module.css";
 
 /*
- * The guide inside the app. It waits in a corner; tapped, it asks what you want to know and
- * answers from your own timetable, coursework, notices and chats. Admins turn it on or off in
- * Manage → Theme; anyone can close its panel.
+ * The guide inside the app. It waits in a corner, calm, its eyes on your pointer; tapped, it asks
+ * what you want to know and answers from your own data, with questions for your role. It reacts as
+ * the app is used: a nod when you change page, a bounce for a new message, a doze when nobody is
+ * around. Admins turn it on or off in Manage → Theme; anyone can close its panel.
  */
 
-type Answer = { text: string; link?: { href: string; label: string } };
-type Question = { id: string; ask: string };
+/**
+ * States of its own, made only of the catalogue's calm clips: the built-in "idle" and "curious"
+ * spin the avatar all the way round now and then, which is too much for a corner of the app.
+ */
+const LIBRARY = {
+  clips: [],
+  faces: [],
+  states: [
+    { name: "calm", clips: ["Idle_B", "Idle_D", "Idle_B"] },
+    { name: "attentive", clips: ["Idle_D"], face: "inspecting" },
+  ],
+};
 
-const QUESTIONS: Question[] = [
-  { id: "next", ask: "What’s my next class?" },
-  { id: "due", ask: "Anything due soon?" },
-  { id: "notices", ask: "Any new notices?" },
-  { id: "unread", ask: "Unread messages?" },
-  { id: "tip", ask: "Give me a study tip" },
-  { id: "who", ask: "Who are you?" },
-];
-
-const TIPS = [
-  "Study in 25-minute blocks with a 5-minute break. After four, take a longer one.",
-  "Explain today’s lecture to a friend in your section chat. If you can teach it, you know it.",
-  "Write tomorrow’s first task before you close your notes tonight. Starting is the hard part.",
-  "Put your phone in another room for one focused hour. You’ll be surprised.",
-  "Redo one solved problem without looking. That beats reading the solution three times.",
-  "Sleep is study too: memories settle while you rest.",
-];
+/** Admins first (they may also teach), then anyone who teaches, then students. */
+function roleOf(me: Me | undefined): Role {
+  if (!me) return "student";
+  if (me.roles.includes("institution_admin")) return "admin";
+  if (me.kind === "teacher" || me.sections.some((sec) => sec.teaching)) return "teacher";
+  return "student";
+}
 
 function useGuide(name: string, colours: { body: string; cap: string; tassel: string }) {
   return useMemo(() => {
@@ -58,6 +61,10 @@ function useGuide(name: string, colours: { body: string; cap: string; tassel: st
   }, [name, colours.body, colours.cap, colours.tassel]);
 }
 
+type GuideComponent = ReturnType<typeof createAvatar>;
+
+const DOZE_AFTER_MS = 90_000;
+
 export default function Helper() {
   const { site } = useTheme();
   if (!site.helper_enabled) return null;
@@ -67,13 +74,43 @@ export default function Helper() {
 function HelperInner() {
   const { site } = useTheme();
   const me = useMe().data;
+  const role = roleOf(me);
   const name = site.guide_name || "Verse";
   const Guide = useGuide(name, guideColours(site));
-  const [open, setOpen] = useState(false);
-  const [hello, setHello] = useState(false);
-  const [phone, setPhone] = useState(false);
+  const avatar = useRef<AvatarHandle>(null);
+  const pathname = usePathname();
+  const unread = useUnreadTotal();
 
-  // A hello once per visit, then it waits quietly.
+  const [open, setOpen] = useState(false);
+  const [bubble, setBubble] = useState<string | null>(null);
+  const [phone, setPhone] = useState(false);
+  const [asleep, setAsleep] = useState(false);
+  // A short reaction (a state for a moment) that wins over everything else.
+  const [reaction, setReaction] = useState<string | null>(null);
+  const reactTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const bubbleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const react = useCallback((state: string, ms = 1800) => {
+    clearTimeout(reactTimer.current);
+    setReaction(state);
+    reactTimer.current = setTimeout(() => setReaction(null), ms);
+  }, []);
+  const say = useCallback((text: string, ms = 5000) => {
+    clearTimeout(bubbleTimer.current);
+    setBubble(text);
+    bubbleTimer.current = setTimeout(() => setBubble(null), ms);
+  }, []);
+  useEffect(
+    () => () => {
+      clearTimeout(reactTimer.current);
+      clearTimeout(bubbleTimer.current);
+    },
+    [],
+  );
+
+  const firstName = me?.preferred_name || me?.first_name || "there";
+
+  // A hello once per visit.
   useEffect(() => {
     let seen = false;
     try {
@@ -82,14 +119,15 @@ function HelperInner() {
     } catch {
       // Storage blocked: just say hello.
     }
-    if (seen) return;
-    const show = setTimeout(() => setHello(true), 1200);
-    const hide = setTimeout(() => setHello(false), 8000);
-    return () => {
-      clearTimeout(show);
-      clearTimeout(hide);
-    };
-  }, []);
+    if (seen || !me) return;
+    const t = setTimeout(() => {
+      react("happy", 2500);
+      say(`Hi ${firstName}! ${HELLO_BY_ROLE[role]}`, 7000);
+    }, 1200);
+    return () => clearTimeout(t);
+    // Once, when we know who it is.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Boolean(me)]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -99,27 +137,101 @@ function HelperInner() {
     return () => mq.removeEventListener("change", on);
   }, []);
 
-  const firstName = me?.preferred_name || me?.first_name || "there";
+  // A new message: a bounce and a word about it.
+  const lastUnread = useRef(unread);
+  useEffect(() => {
+    if (unread > lastUnread.current && !open) {
+      react("excited", 2600);
+      avatar.current?.poke("bounce");
+      say(unread - lastUnread.current === 1 ? "New message!" : `${unread - lastUnread.current} new messages!`);
+    }
+    lastUnread.current = unread;
+  }, [unread, open, react, say]);
+
+  // A small nod at every new page.
+  const lastPath = useRef(pathname);
+  useEffect(() => {
+    if (pathname !== lastPath.current) avatar.current?.poke("nod");
+    lastPath.current = pathname;
+  }, [pathname]);
+
+  // Dozes when nobody is around; wakes, surprised, when someone is back.
+  useEffect(() => {
+    let timer = setTimeout(() => setAsleep(true), DOZE_AFTER_MS);
+    let sleeping = false;
+    const onActivity = () => {
+      clearTimeout(timer);
+      if (sleeping) {
+        sleeping = false;
+        setAsleep(false);
+        react("surprised", 1400);
+      }
+      timer = setTimeout(() => {
+        sleeping = true;
+        setAsleep(true);
+      }, DOZE_AFTER_MS);
+    };
+    const events = ["pointermove", "keydown", "scroll", "touchstart"] as const;
+    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, onActivity));
+    };
+  }, [react]);
+
+  // Five quick taps: it laughs.
+  const taps = useRef<number[]>([]);
+  const onTap = () => {
+    const now = Date.now();
+    taps.current = [...taps.current.filter((t) => now - t < 1500), now];
+    if (taps.current.length >= 5) {
+      taps.current = [];
+      react("laughing", 2200);
+      say("Hehe, that tickles!", 2500);
+      return;
+    }
+    avatar.current?.poke("bounce");
+    setOpen((o) => !o);
+    setBubble(null);
+  };
+
+  const state = reaction ?? (open ? "attentive" : asleep ? "sleeping" : "calm");
 
   return (
     <aside className={s.helper} aria-label={`${name}, your guide`}>
-      {open && <AskPanel name={name} firstName={firstName} onClose={() => setOpen(false)} Guide={Guide} />}
-      {!open && hello && (
+      {open && (
+        <AskPanel
+          key={role}
+          name={name}
+          firstName={firstName}
+          questions={QUESTIONS_BY_ROLE[role]}
+          onClose={() => setOpen(false)}
+          onAnswer={(a) => react(a.mood ?? "happy", 2600)}
+          Guide={Guide}
+          followPointer={!phone}
+        />
+      )}
+      {!open && bubble && (
         <p className={s.hello} role="status">
-          Hi {firstName}! Tap me if you have a question.
+          {bubble}
         </p>
       )}
       <button
         type="button"
         className={s.avatar}
-        onClick={() => {
-          setOpen((o) => !o);
-          setHello(false);
-        }}
+        onClick={onTap}
+        onPointerEnter={() => avatar.current?.poke("nod")}
         aria-expanded={open}
         aria-label={open ? `Close ${name}` : `Ask ${name} a question`}
       >
-        <Guide state={open ? "curious" : hello ? "happy" : "idle"} size={phone ? 52 : 64} settleAfterMs={open ? 0 : 6000} />
+        <Guide
+          ref={avatar}
+          library={LIBRARY}
+          state={state}
+          // Its eyes follow your pointer (on a phone there is none to follow).
+          followPointer={!phone}
+          size={phone ? 52 : 64}
+        />
         {!open && (
           <span className={s.badge} aria-hidden="true">
             ?
@@ -133,145 +245,134 @@ function HelperInner() {
 function AskPanel({
   name,
   firstName,
+  questions,
   onClose,
+  onAnswer,
   Guide,
+  followPointer,
 }: {
   name: string;
   firstName: string;
+  questions: Question[];
   onClose: () => void;
-  Guide: ReturnType<typeof createAvatar>;
+  onAnswer: (a: Answer) => void;
+  Guide: GuideComponent;
+  followPointer: boolean;
 }) {
-  const me = useMe().data;
-  const tz = me?.institution?.timezone;
-  const next = useNextClass();
-  const assignments = useAssignments();
-  const notices = useNotices(5);
-  const unread = useUnreadTotal();
-  const [asked, setAsked] = useState<Question | null>(null);
-  const [thinking, setThinking] = useState(false);
-
-  // A moment to think before answering: it reads as the guide looking things up.
-  useEffect(() => {
-    if (!asked) return;
-    setThinking(true);
-    const t = setTimeout(() => setThinking(false), 700);
-    return () => clearTimeout(t);
-  }, [asked]);
-
-  const answer = (q: Question): Answer | null => {
-    switch (q.id) {
-      case "next": {
-        if (next.isPending) return null;
-        const c = next.data;
-        if (!c) return { text: "Nothing on your timetable for the next few weeks. Enjoy the quiet!", link: { href: "/timetable", label: "Open timetable" } };
-        const when = startsLabel(c.date, c.starts_at, todayIn(tz), tz);
-        const who = c.teachers.length ? ` with ${c.teachers.join(" and ")}` : "";
-        const where = c.mode === "online" ? "online" : `in ${c.room}`;
-        return {
-          text: `${c.course_title} (${c.course_code}). ${when}, ${where}${who}.`,
-          link: { href: "/timetable", label: "Open timetable" },
-        };
-      }
-      case "due": {
-        if (assignments.isPending) return null;
-        const now = Date.now();
-        const open = (assignments.data ?? [])
-          .filter((a) => a.status === "published" && new Date(a.due_at).getTime() > now)
-          .filter((a) => !(a.my_submissions && a.my_submissions.length > 0))
-          .sort((a, b) => a.due_at.localeCompare(b.due_at));
-        if (!open.length) return { text: "Nothing due right now. You’re all caught up!", link: { href: "/assignments", label: "See coursework" } };
-        const first = open[0];
-        const more = open.length > 1 ? ` And ${open.length - 1} more after that.` : "";
-        return {
-          text: `${first.title} for ${first.course_code} is due ${relativeTime(first.due_at)}.${more}`,
-          link: { href: `/assignments/${first.id}`, label: "Open it" },
-        };
-      }
-      case "notices": {
-        if (notices.isPending) return null;
-        const list = notices.data ?? [];
-        if (!list.length) return { text: "No notices yet. I’ll be here when one arrives.", link: { href: "/notices", label: "Open notices" } };
-        const latest = list[0];
-        const important = list.filter((n) => n.priority === "important").length;
-        const when = latest.published_at ? `, ${relativeTime(latest.published_at)}` : "";
-        const flag = important ? ` ${important} of the latest ${list.length} ${important === 1 ? "is" : "are"} marked important.` : "";
-        return {
-          text: `The newest is “${latest.title}” from ${latest.author_name}${when}.${flag}`,
-          link: { href: "/notices", label: "Open notices" },
-        };
-      }
-      case "unread":
-        return unread
-          ? { text: `You have ${unread} unread ${unread === 1 ? "message" : "messages"}.`, link: { href: "/chat", label: "Open chat" } }
-          : { text: "No unread messages. Your chats are all read.", link: { href: "/chat", label: "Open chat" } };
-      case "tip":
-        return { text: TIPS[Math.floor(Math.random() * TIPS.length)] };
-      case "who":
-        return {
-          text: `I’m ${name}, CampusVerse’s guide. Ask me about your classes, coursework, notices or messages, and I’ll look them up for you.`,
-        };
-      default:
-        return null;
-    }
-  };
-
-  // The tip is picked once per asking, not on every render.
-  const [tipAnswer, setTipAnswer] = useState<Answer | null>(null);
-  const reply = asked ? (asked.id === "tip" ? tipAnswer : answer(asked)) : null;
-  const busy = thinking || (asked !== null && reply === null);
+  // Each asking gets its own key, so a question asked again is looked up again.
+  const [asked, setAsked] = useState<{ q: Question; n: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [mood, setMood] = useState<string | null>(null);
 
   return (
     <div className={s.panel} role="dialog" aria-label={`Ask ${name}`}>
       <div className={s.panelHead}>
         <span className={s.panelFace} aria-hidden="true">
-          <Guide state={busy ? "thinking" : asked ? "happy" : "curious"} size={40} />
+          <Guide
+            library={LIBRARY}
+            state={busy ? "thinking" : asked ? (mood ?? "happy") : "attentive"}
+            followPointer={followPointer}
+            size={40}
+          />
         </span>
-        <p className={s.panelTitle}>
-          {asked ? asked.ask : `Hi ${firstName}! What do you want to know?`}
-        </p>
+        <p className={s.panelTitle}>{asked ? asked.q.ask : `Hi ${firstName}! What do you want to know?`}</p>
         <button type="button" className={s.close} onClick={onClose} aria-label={`Close ${name}`}>
           <CloseIcon className="size-4" />
         </button>
       </div>
 
       {asked && (
-        <div className={s.answer} aria-live="polite">
-          {busy ? (
-            <span className={s.dots} aria-label="Looking it up">
-              <span />
-              <span />
-              <span />
-            </span>
-          ) : (
-            reply && (
-              <>
-                <p>{reply.text}</p>
-                {reply.link && (
-                  <Link href={reply.link.href} onClick={onClose} className={s.answerLink}>
-                    {reply.link.label}
-                  </Link>
-                )}
-              </>
-            )
-          )}
-        </div>
+        <ReplyView
+          key={asked.n}
+          question={asked.q}
+          name={name}
+          onBusy={setBusy}
+          onReady={(a) => {
+            setMood(a.mood ?? "happy");
+            onAnswer(a);
+          }}
+          onFollow={onClose}
+        />
       )}
 
       <div className={s.chips}>
-        {QUESTIONS.filter((q) => q.id !== asked?.id).map((q) => (
-          <button
-            key={q.id}
-            type="button"
-            className={s.chip}
-            onClick={() => {
-              if (q.id === "tip") setTipAnswer(answer(q));
-              setAsked(q);
-            }}
-          >
-            {q.ask}
-          </button>
-        ))}
+        {questions
+          .filter((q) => q.id !== asked?.q.id)
+          .map((q) => (
+            <button
+              key={q.id}
+              type="button"
+              className={s.chip}
+              onClick={() => {
+                setMood(null);
+                setAsked((a) => ({ q, n: (a?.n ?? 0) + 1 }));
+              }}
+            >
+              {q.ask}
+            </button>
+          ))}
       </div>
+    </div>
+  );
+}
+
+/** Asks one question: shows the guide thinking for a moment, then the answer and its link. */
+function ReplyView({
+  question,
+  name,
+  onBusy,
+  onReady,
+  onFollow,
+}: {
+  question: Question;
+  name: string;
+  onBusy: (busy: boolean) => void;
+  onReady: (a: Answer) => void;
+  onFollow: () => void;
+}) {
+  const reply = question.useReply({ name });
+  // Picked once per asking (tips are random), not on every render.
+  const [fixed, setFixed] = useState(reply);
+  const [thinking, setThinking] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setThinking(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (!fixed && reply) setFixed(reply);
+  }, [reply, fixed]);
+
+  const busy = thinking || !fixed;
+  useEffect(() => onBusy(busy), [busy, onBusy]);
+  const told = useRef(false);
+  useEffect(() => {
+    if (!busy && fixed && !told.current) {
+      told.current = true;
+      onReady(fixed);
+    }
+  }, [busy, fixed, onReady]);
+
+  return (
+    <div className={s.answer} aria-live="polite">
+      {busy ? (
+        <span className={s.dots} aria-label="Looking it up">
+          <span />
+          <span />
+          <span />
+        </span>
+      ) : (
+        fixed && (
+          <>
+            <p>{fixed.text}</p>
+            {fixed.link && (
+              <Link href={fixed.link.href} onClick={onFollow} className={s.answerLink}>
+                {fixed.link.label}
+              </Link>
+            )}
+          </>
+        )
+      )}
     </div>
   );
 }
