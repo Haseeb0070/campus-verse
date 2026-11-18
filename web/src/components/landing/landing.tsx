@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { LogoGlyph } from "@/components/icons";
+import BlurText from "@/components/reactbits/BlurText";
 import { SignInDialog } from "@/components/sign-in-dialog";
 import s from "./landing.module.css";
 
@@ -61,6 +62,7 @@ export function Landing({
   return (
     <OpenSignIn.Provider value={(email) => setDialog({ open: true, email })}>
       <div className={s.page}>
+        <NavBar />
         <main>
           <Hero />
           <Week />
@@ -83,34 +85,120 @@ export function Landing({
   );
 }
 
+/* ---------- Navigation bar ---------- */
+
+const SECTIONS = [
+  ["week", "Your week"],
+  ["menu", "What it does"],
+  ["questions", "Questions"],
+] as const;
+
+/** The section in the middle of the screen, for the bar to mark. */
+function useCurrentSection() {
+  const [current, setCurrent] = useState<string | null>(null);
+  useEffect(() => {
+    // The last section whose top has passed the upper third of the screen; none at the very top.
+    // Three measurements per scroll event, so it runs directly.
+    const update = () => {
+      const line = window.innerHeight * 0.35;
+      let found: string | null = null;
+      for (const [id] of SECTIONS) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= line) found = id;
+      }
+      setCurrent(found);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+  return current;
+}
+
+/** A plain bar on the evergreen ground: the name, the page's sections and sign in. It stays at the
+ *  top while the page scrolls. */
+function NavBar() {
+  const current = useCurrentSection();
+  return (
+    <header className={s.nav}>
+      <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
+        <span className={s.wordmarkTile}>
+          <LogoGlyph className="size-[60%]" />
+        </span>
+        CampusVerse
+      </Link>
+      <nav aria-label="On this page" className={s.navLinks}>
+        {SECTIONS.map(([id, label]) => (
+          <a key={id} href={`#${id}`} aria-current={current === id ? "location" : undefined}>
+            {label}
+          </a>
+        ))}
+      </nav>
+      <SignInButton className={`${s.button} ${s.navButton}`}>Sign in</SignInButton>
+    </header>
+  );
+}
+
 /* ---------- Hero: the card on its own ---------- */
+
+const TITLE = ["Your college,", "on one screen."];
+
+/** The headline drifts in word by word, like the app's page titles: the second line follows the
+ *  first, and holds its space until then so nothing below it moves. */
+function HeroTitle() {
+  const [second, setSecond] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSecond(true), 260);
+    return () => clearTimeout(t);
+  }, []);
+  const line = (text: string) => (
+    <BlurText
+      text={text}
+      trigger="load"
+      effect="drift"
+      blur={10}
+      distance={18}
+      delay={110}
+      stepDuration={0.55}
+      className="justify-center"
+    />
+  );
+  return (
+    <h1 id="hero-title" className={s.display}>
+      <span className={s.titleLine}>{line(TITLE[0])}</span>
+      <span className={s.titleLine}>
+        {second ? (
+          line(TITLE[1])
+        ) : (
+          <span className={s.titleHold} aria-hidden="true">
+            {TITLE[1]}
+          </span>
+        )}
+      </span>
+    </h1>
+  );
+}
 
 function Hero() {
   return (
     <section className={s.hero} aria-labelledby="hero-title">
       <div className={s.heroCard}>
         <div className={s.heroCardBody}>
-          <Link href="/" className={s.wordmark} aria-label="CampusVerse home">
-            <span className={s.wordmarkTile}>
-              <LogoGlyph className="size-[60%]" />
-            </span>
-            CampusVerse
-          </Link>
-          <h1 id="hero-title" className={s.display}>
-            Your college,
-            <br />
-            on one screen.
-          </h1>
+          <HeroTitle />
           <p className={s.heroLead}>
             The class app of Govt. Graduate College of Science, Lahore: your timetable, room changes,
             notices, coursework and section chat, with your college email.
           </p>
-          <SignInButton className={s.button}>Sign in</SignInButton>
-          <nav aria-label="On this page" className={s.heroLinks}>
-            <a href="#week">Your week</a>
-            <a href="#menu">What it does</a>
-            <a href="#questions">Questions</a>
-          </nav>
+          <div className={s.heroActions}>
+            <SignInButton className={s.button}>Sign in</SignInButton>
+            <a href="#week" className={s.textLink}>
+              See this week
+            </a>
+          </div>
         </div>
       </div>
     </section>
