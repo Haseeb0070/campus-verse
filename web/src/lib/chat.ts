@@ -175,6 +175,13 @@ export function useChat(conversationId: number, me: Me | undefined) {
 
   // Files picked for a message, kept by client id so a failed send can be retried with them.
   const filesFor = useRef(new Map<string, File[]>());
+  // Messages still sending, or that failed. Kept apart from the fetched pages, which a refetch
+  // (polling while the live connection is down) replaces wholesale, so an unsent message never
+  // disappears from under the person.
+  const [outbox, setOutbox] = useState<ChatMessage[]>([]);
+  const putOutbox = useCallback((m: ChatMessage) => {
+    setOutbox((list) => [...list.filter((x) => x.client_id !== m.client_id), m]);
+  }, []);
 
   const send = useCallback(
     async (body: string, retryOf?: ChatMessage, files: File[] = []) => {
@@ -199,7 +206,7 @@ export function useChat(conversationId: number, me: Me | undefined) {
           };
       if (!retryOf && files.length) filesFor.current.set(optimistic.client_id, files);
       const toSend = filesFor.current.get(optimistic.client_id) ?? [];
-      upsert(qc, conversationId, optimistic);
+      putOutbox(optimistic);
       try {
         let saved: ChatMessage;
         if (toSend.length) {
@@ -219,12 +226,13 @@ export function useChat(conversationId: number, me: Me | undefined) {
         }
         filesFor.current.delete(optimistic.client_id);
         upsert(qc, conversationId, saved);
+        setOutbox((list) => list.filter((x) => x.client_id !== optimistic.client_id));
         qc.invalidateQueries({ queryKey: conversationsKey });
       } catch {
-        upsert(qc, conversationId, { ...optimistic, pending: false, failed: true });
+        putOutbox({ ...optimistic, pending: false, failed: true });
       }
     },
-    [conversationId, me, qc],
+    [conversationId, me, qc, putOutbox],
   );
 
   const remove = useCallback(
@@ -254,9 +262,12 @@ export function useChat(conversationId: number, me: Me | undefined) {
     typingSub.current?.publish({ typing: true }).catch(() => {});
   }, []);
 
-  const list = messages.data
+  // Oldest first, then anything still in the outbox that the server doesn't have yet.
+  const fetched = messages.data
     ? [...messages.data.pages].reverse().flatMap((page) => page.messages)
     : [];
+  const known = new Set(fetched.map((m) => m.client_id));
+  const list = [...fetched, ...outbox.filter((m) => !known.has(m.client_id))];
 
   return { messages, list, send, remove, markRead, notifyTyping, typists, online, live };
 }
