@@ -93,14 +93,26 @@ Needs JDK 17 and the Android SDK. The native build uses CMake 3.31.6 (the SDK ma
 it), since older CMake can't handle the long paths Windows gives this project.
 
 ```bash
-npx expo prebuild --platform android
-cd android
-./gradlew app:assembleRelease   # APK, to install directly: app/build/outputs/apk/release/
-./gradlew app:bundleRelease     # AAB, for Google Play: app/build/outputs/bundle/release/
+npm run release:android
 ```
 
-Raise `android.versionCode` in `app.json` (and `version` for people to see) before each release
-you publish.
+That runs `expo prebuild` and Gradle, then files the APK in `dist/` (git-ignored) under its
+version, with a SHA-256 checksum beside it:
+
+```
+dist/CampusVerse-v1.1.0-build3.apk
+dist/CampusVerse-v1.1.0-build3.apk.sha256
+```
+
+Before each release, raise `expo.android.versionCode` in `app.json` by one (Android only installs
+an update with a higher build number) and `expo.version` for people to see. The script refuses a
+build number that is already in `dist/`.
+
+The APK carries native code for real phones only (64-bit `arm64-v8a` and older 32-bit
+`armeabi-v7a`), compressed, with unused code and resources removed: `expo-build-properties` in
+`app.json` sets this. To run on an x86 emulator, build with
+`./gradlew app:assembleDebug -PreactNativeArchitectures=x86_64`. For Google Play, `./gradlew
+app:bundleRelease` makes the AAB in `android/app/build/outputs/bundle/release/`.
 
 ### With EAS instead
 
