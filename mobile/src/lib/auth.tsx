@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ApiError, apiFetch, setSignedOutHandler } from "./api";
+import { unregisterForPush } from "./push";
 import { disconnectRealtime } from "./realtime";
 import { tokenStore } from "./token";
 
@@ -142,6 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // While the token still works: this phone stops getting this person's notifications.
+    await unregisterForPush();
     try {
       await apiFetch(`${BASE}/auth/session`, { method: "DELETE" });
     } catch {

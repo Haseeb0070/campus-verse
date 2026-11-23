@@ -80,6 +80,10 @@ def notify(
                 realtime.broadcast([realtime.user_channel(uid) for uid in new], payload)
             except Exception:  # noqa: BLE001 - stored already; clients catch up on next load
                 logger.warning("Live delivery of %s failed", dedupe_key, exc_info=True)
+            # And to their phones, for when the app is closed.
+            from .tasks import push_in_background
+
+            push_in_background(new, title=title, body=body, link=link, kind=kind)
 
         transaction.on_commit(push)
     return len(new_ids)

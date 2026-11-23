@@ -110,6 +110,10 @@ CELERY_TASK_ALWAYS_EAGER = not REDIS_URL
 # Without a Celery worker, notification emails go out in a background thread after the response
 # (one mail connection for the lot) instead of inside the request; the cron job sends leftovers.
 CAMPUSVERSE_EMAIL_IN_BACKGROUND = env.bool("EMAIL_IN_BACKGROUND", default=not REDIS_URL)
+# Phone push notifications through Expo's push service (the mobile app registers each phone).
+# EXPO_ACCESS_TOKEN is only needed if "enhanced push security" is on in the Expo project.
+CAMPUSVERSE_PUSH_ENABLED = env.bool("PUSH_ENABLED", default=True)
+EXPO_ACCESS_TOKEN = env("EXPO_ACCESS_TOKEN", default="")
 CELERY_TASK_ACKS_LATE = True
 CELERY_BEAT_SCHEDULE = {
     "assignment-notifications": {

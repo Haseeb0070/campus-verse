@@ -81,3 +81,32 @@ def list_notifications(request, limit: int = 30, unread_only: bool = False):
 def mark_read(request, payload: ReadIn):
     # Scoped to the signed-in user, so other people's IDs are silently ignored.
     return {"updated": services.mark_read(request.user, payload.ids)}
+
+
+# Phones -------------------------------------------------------------------------------------
+
+
+class DeviceIn(Schema):
+    token: str
+    platform: str = ""
+
+
+@router.post("/devices", response={204: None, 422: ErrorOut})
+def register_device(request, payload: DeviceIn):
+    """The mobile app registers the phone it runs on, to get push notifications."""
+    from . import push
+
+    if not push.valid_token(payload.token):
+        return Status(422, {"detail": "That isn't an Expo push token."})
+    push.register(request.user, payload.token, payload.platform)
+    return Status(204, None)
+
+
+@router.post("/devices/remove", response={204: None})
+def unregister_device(request, payload: DeviceIn):
+    """Signing out: this phone stops getting this person's notifications."""
+    from . import push
+
+    push.unregister(request.user, payload.token)
+    return Status(204, None)
+

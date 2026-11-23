@@ -64,6 +64,12 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#2f6fae"
+        }
       ]
     ],
     "experiments": {

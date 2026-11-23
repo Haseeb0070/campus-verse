@@ -19,6 +19,7 @@ import { Intro } from "@/components/Intro";
 import { LiveBanner } from "@/components/LiveBanner";
 import { ApiError } from "@/lib/api";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { usePush } from "@/lib/push";
 import { ThemeProvider, useTheme } from "@/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -82,6 +83,7 @@ function Navigator() {
   const p = useTheme();
   // On a tab, the deep green tab bar sits over the phone's navigation buttons.
   const onTabs = useSegments()[0] === "(tabs)";
+  usePush(status === "signedIn");
 
   useEffect(() => {
     if (status !== "loading") SplashScreen.hideAsync().catch(() => {});

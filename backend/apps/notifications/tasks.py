@@ -68,3 +68,37 @@ def _in_background(dedupe_key: str, user_ids: list[int]) -> None:
             close_old_connections()
 
     threading.Thread(target=run, name=f"email-{dedupe_key}", daemon=True).start()
+
+
+@shared_task(acks_late=True)
+def send_push(user_ids: list[int], title: str, body: str, link: str, kind: str) -> int:
+    from .push import send
+
+    return send(user_ids, title=title, body=body, link=link, kind=kind)
+
+
+def push_in_background(user_ids: list[int], *, title: str, body: str, link: str, kind: str) -> None:
+    """Phone pushes off the request: a Celery task where there's a worker, else a thread, the
+    same way emails go."""
+    from django.conf import settings
+
+    if not settings.CAMPUSVERSE_EMAIL_IN_BACKGROUND:
+        send_push.delay(user_ids, title, body, link, kind)
+        return
+    import threading
+
+    from django.db import close_old_connections
+
+    def run():
+        from .push import send
+
+        try:
+            send(user_ids, title=title, body=body, link=link, kind=kind)
+        except Exception:  # noqa: BLE001 - best effort; the notification is in the app already
+            import logging
+
+            logging.getLogger(__name__).warning("Background push failed", exc_info=True)
+        finally:
+            close_old_connections()
+
+    threading.Thread(target=run, name="push", daemon=True).start()

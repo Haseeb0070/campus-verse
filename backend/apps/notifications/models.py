@@ -67,3 +67,20 @@ class NotificationPreference(models.Model):
 
     def __str__(self):
         return f"Notification preferences for {self.user_id}"
+
+
+class PushDevice(models.Model):
+    """A phone that gets push notifications: the Expo push token the app registered for the
+    person signed in on it. A token moves to whoever signs in on that phone next, and is dropped
+    when Expo says the app is gone from the phone."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="push_devices"
+    )
+    token = models.CharField(max_length=200, unique=True)
+    platform = models.CharField(max_length=16, blank=True)  # "android" or "ios"
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.platform or 'phone'} for {self.user_id}"

@@ -66,6 +66,27 @@ npx expo lint
 npx expo-doctor
 ```
 
+## Push notifications
+
+Every notification is also pushed to the person's phones, so room changes and new marks arrive
+with the app closed. The app registers each phone after sign-in (`src/lib/push.ts`) and removes it
+on sign-out; the API pushes through Expo's push service (`backend/apps/notifications/push.py`),
+off the request like emails, and forgets phones the app was removed from. People who turn a kind
+of notification off for the app get no push for it either.
+
+Android delivers pushes through Firebase, so a build that should receive them needs, once:
+
+1. An Expo account and project: `npx eas-cli@latest init` writes `expo.extra.eas.projectId` into
+   `app.json`.
+2. A Firebase project with an Android app for `pk.campusverse.app`: put its
+   `google-services.json` in `mobile/` and set `expo.android.googleServicesFile` to it.
+3. The Firebase service-account key uploaded to Expo: `npx eas-cli@latest credentials`
+   (Android → push notifications, FCM V1).
+
+Until then the app skips registering, and everything else (including the in-app banner while it
+is open) works as before. On the server, `PUSH_ENABLED=false` turns pushes off, and
+`EXPO_ACCESS_TOKEN` is only needed if the Expo project has enhanced push security on.
+
 ## Building for release
 
 Release builds talk to the live servers: `.env.production` holds the API address
