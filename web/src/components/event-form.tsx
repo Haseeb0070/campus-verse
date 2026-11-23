@@ -38,10 +38,14 @@ function inDays(days: number, hour: number) {
 /** The form for adding or editing an event. Audiences are chosen once, when it's created. */
 export function EventForm({
   initial,
+  day,
   submitLabel,
   onSubmit,
 }: {
   initial?: CampusEvent;
+  /** A new event on this day (YYYY-MM-DD), from double-clicking it in the calendar: it starts and
+   *  ends that day. Without it, a new event starts a week from now. */
+  day?: string;
   submitLabel: string;
   onSubmit: (payload: EventPayload) => Promise<string | null>;
 }) {
@@ -50,8 +54,12 @@ export function EventForm({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [category, setCategory] = useState<EventCategory>(initial?.category ?? "event");
   const [allDay, setAllDay] = useState(initial?.all_day ?? false);
-  const [starts, setStarts] = useState(initial ? toLocalInput(new Date(initial.starts_at)) : inDays(7, 14));
-  const [ends, setEnds] = useState(initial ? toLocalInput(new Date(initial.ends_at)) : inDays(7, 15));
+  const [starts, setStarts] = useState(
+    initial ? toLocalInput(new Date(initial.starts_at)) : day ? `${day}T09:00` : inDays(7, 14),
+  );
+  const [ends, setEnds] = useState(
+    initial ? toLocalInput(new Date(initial.ends_at)) : day ? `${day}T10:00` : inDays(7, 15),
+  );
   const [mode, setMode] = useState<EventMode>(initial?.mode ?? "in_person");
   const [location, setLocation] = useState(initial?.location ?? "");
   const [link, setLink] = useState(initial?.online_url ?? "");

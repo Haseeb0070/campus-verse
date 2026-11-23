@@ -2,7 +2,8 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { EventForm } from "@/components/event-form";
 import { ChevronLeftIcon } from "@/components/icons";
 import { apiFetch, errorDetail } from "@/lib/api";
@@ -11,7 +12,18 @@ import type { CampusEvent } from "@/lib/events";
 import { PageTitle } from "@/components/page-title";
 
 export default function NewEventPage() {
+  return (
+    <Suspense>
+      <NewEvent />
+    </Suspense>
+  );
+}
+
+function NewEvent() {
   const router = useRouter();
+  // "?date=2026-11-27": the day picked in the calendar (a double-click, or the selected day).
+  const asked = useSearchParams().get("date") ?? "";
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : undefined;
   const queryClient = useQueryClient();
   const audiences = useEventAudiences();
 
@@ -32,6 +44,7 @@ export default function NewEventPage() {
         </div>
       ) : (
         <EventForm
+          day={day}
           submitLabel="Add event"
           onSubmit={async (payload) => {
             try {

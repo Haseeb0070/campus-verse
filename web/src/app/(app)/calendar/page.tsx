@@ -2,6 +2,7 @@
 
 import { ChipGroup } from "@/components/chip-group";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { addDays, formatDay, formatTime } from "@/lib/format";
@@ -90,6 +91,9 @@ export default function CalendarPage() {
   const [selected, setSelected] = useState(today);
   const [filter, setFilter] = useState("all");
   const canAdd = (useEventAudiences().data?.length ?? 0) > 0;
+  const router = useRouter();
+  // New events land on a chosen day from today on: double-click it, or select it and press Add.
+  const addOn = (d: string) => `/calendar/new?date=${d >= today ? d : today}`;
 
   // Month view shows six weeks from the Monday on or before the 1st; list view the next 60 days.
   const first = new Date(`${month}T12:00:00Z`);
@@ -142,7 +146,7 @@ export default function CalendarPage() {
           <PageTitle className="mt-1 text-large-title font-bold" text="Calendar" />
         </div>
         {canAdd && (
-          <Link href="/calendar/new"
+          <Link href={addOn(selected)}
             className="press inline-flex h-11 items-center rounded-full bg-accent px-5 text-body font-semibold text-on-accent">
             Add event
           </Link>
@@ -189,6 +193,8 @@ export default function CalendarPage() {
                     aria-label={`${formatDay(d, { weekday: "long", day: "numeric", month: "long" })}, ${
                       dayItems.length ? `${dayItems.length} ${dayItems.length === 1 ? "item" : "items"}` : "nothing on"}`}
                     onClick={() => setSelected(d)}
+                    onDoubleClick={canAdd && d >= today ? () => router.push(addOn(d)) : undefined}
+                    title={canAdd && d >= today ? "Double-click to add an event on this day" : undefined}
                     className={`press flex min-h-14 flex-col items-stretch gap-1 rounded-[12px] p-1 text-left sm:min-h-24 sm:p-1.5 ${
                       isSel ? "bg-fill-strong ring-2 ring-accent/60" : "hover:bg-fill"}`}>
                     <span className={`grid size-7 place-items-center self-center rounded-full text-footnote sm:self-start ${
