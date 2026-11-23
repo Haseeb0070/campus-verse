@@ -156,7 +156,12 @@ ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 # Finishing an invite (or a reset) signs you straight in instead of asking for the password again.
 ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""  # subjects already say CampusVerse
-ACCOUNT_RATE_LIMITS = {"login_failed": "5/5m/ip,5/5m/key"}
+# Each account gets 5 wrong passwords per 5 minutes. The per-address counts are generous because
+# a whole campus can share one address on the college Wi-Fi.
+ACCOUNT_RATE_LIMITS = {
+    "login_failed": "40/5m/ip,5/5m/key",
+    "login": "120/m/ip",
+}
 CAMPUSVERSE_OPEN_SIGNUP = env("OPEN_SIGNUP")
 HEADLESS_ONLY = True
 HEADLESS_FRONTEND_URLS = {
