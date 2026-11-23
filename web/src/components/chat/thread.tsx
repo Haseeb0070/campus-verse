@@ -165,7 +165,7 @@ export function Thread({ conversationId }: { conversationId: number }) {
                 {chat.online} online
               </>
             )}
-            {!chat.live && <span className="text-ink-3"> · reconnecting…</span>}
+            {chat.live === false && <span className="text-ink-3"> · reconnecting…</span>}
           </span>
         </span>
         {conversation && (
