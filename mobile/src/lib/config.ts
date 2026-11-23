@@ -35,3 +35,7 @@ export function reachable(url: string): string {
     return url;
   }
 }
+
+/** The website, for what only it does (managing the college). In development, the Next.js app on
+ *  the same computer as the API. */
+export const WEB_URL = (process.env.EXPO_PUBLIC_WEB_URL ?? API_URL.replace(/:\d+$/, ":3000")).replace(/\/+$/, "");

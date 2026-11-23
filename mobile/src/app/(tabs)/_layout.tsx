@@ -6,6 +6,7 @@ import Animated, { ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
 import { useUnreadTotal } from "@/lib/chat";
+import { useMe } from "@/lib/queries";
 import { font, useTheme } from "@/theme";
 
 const TABS: { name: string; label: string; icon: IconName }[] = [
@@ -31,6 +32,10 @@ function TabBar({ state, navigateToTab }: BottomTabBarProps) {
   const p = useTheme();
   const insets = useSafeAreaInsets();
   const unread = useUnreadTotal();
+  // Timetable and Work are about one's own classes: staff with none (an admin who doesn't teach)
+  // don't get tabs that could only ever be empty.
+  const me = useMe().data;
+  const hasClasses = !me || me.kind !== "staff" || me.sections.length > 0;
 
   return (
     <View
@@ -48,7 +53,7 @@ function TabBar({ state, navigateToTab }: BottomTabBarProps) {
     >
       {state.routes.map((route, index) => {
         const tab = TABS.find((t) => t.name === route.name);
-        if (!tab) return null;
+        if (!tab || (!hasClasses && (tab.name === "timetable" || tab.name === "work"))) return null;
         const focused = state.index === index;
         const badge = tab.name === "chat" && unread > 0 ? unread : 0;
         return (

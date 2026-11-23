@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { AdminToday } from "@/components/admin-today";
 import { AssignmentStatusChip } from "@/components/assignment-status";
 import { ConversationRow } from "@/components/chat/conversation-list";
 import { ClassRow } from "@/components/class-row";
@@ -68,6 +69,13 @@ function dayStatus(live: Occurrence[], now: number) {
 }
 
 export default function TodayPage() {
+  const me = useMe().data;
+  // An admin with no classes of their own gets the college at a glance, not an empty timetable.
+  if (me && me.sections.length === 0 && me.roles.includes("institution_admin")) return <AdminToday />;
+  return <ClassToday />;
+}
+
+function ClassToday() {
   const me = useMe();
   const tz = me.data?.institution?.timezone;
   const today = todayIn(tz);

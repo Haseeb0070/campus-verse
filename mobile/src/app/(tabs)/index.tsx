@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useMemo } from "react";
 import { Linking, View } from "react-native";
 import { changeOf, isOff, KIND, place } from "@/components/classes";
+import { AdminToday } from "@/components/AdminToday";
 import { Icon } from "@/components/Icon";
 import { HeaderActions, Screen } from "@/components/Screen";
 import { Button, Card, CourseTag, Divider, Failed, Pill, Press, SectionHeader, Skeleton, T } from "@/components/ui";
@@ -14,6 +15,13 @@ import { ConversationRow } from "@/components/conversations";
 import { courseTone, font, radius, useTheme } from "@/theme";
 
 export default function Today() {
+  const me = useMe().data;
+  // An admin with no classes of their own gets the college at a glance, not an empty timetable.
+  if (me && me.sections.length === 0 && me.roles.includes("institution_admin")) return <AdminToday />;
+  return <ClassToday />;
+}
+
+function ClassToday() {
   const me = useMe().data;
   const tz = me?.institution?.timezone;
   const now = useNow();

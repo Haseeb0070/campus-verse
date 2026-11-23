@@ -120,3 +120,21 @@ export function useSearch(q: string) {
     placeholderData: (previous) => previous,
   });
 }
+
+/** For admins: the college's headline numbers and what needs looking at (Manage → Overview). */
+export interface Overview {
+  students: number;
+  teachers: number;
+  staff: number;
+  invited: number;
+  signed_in_week: number;
+  active_people: number;
+  sections: number;
+  departments: number;
+  pending_imports: number;
+  room_clashes: { room: string; date: string; time: string; classes: string[] }[];
+}
+
+export function useOverview(enabled: boolean) {
+  return useQuery({ queryKey: ["manage", "overview"], queryFn: () => apiFetch<Overview>("/api/manage/overview"), enabled });
+}

@@ -206,13 +206,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const courses = [...new Map(user.sections.map((s) => [s.course_code, s])).values()];
   const teaches = user.sections.some((s) => s.teaching);
   const isAdmin = user.roles.includes("institution_admin");
+  // Timetable, assignments and resources are about one's own classes: staff with none (an
+  // admin who doesn't teach) don't get pages that could only ever be empty.
+  const hasClasses = user.kind !== "staff" || user.sections.length > 0;
   const nav: NavItem[] = [
     { href: "/today", label: "Today", Icon: TodayIcon, group: "Overview" },
-    { href: "/timetable", label: "Timetable", Icon: TimetableIcon, group: "Overview" },
+    ...(hasClasses ? [{ href: "/timetable", label: "Timetable", Icon: TimetableIcon, group: "Overview" as const }] : []),
     { href: "/calendar", label: "Calendar", Icon: CalendarIcon, group: "Overview" },
     ...(teaches ? [{ href: "/sections", label: "Sections", Icon: SectionsIcon, group: "Academics" as const }] : []),
-    { href: "/assignments", label: "Assignments", Icon: AssignmentsIcon, group: "Academics" },
-    { href: "/resources", label: "Resources", Icon: ResourcesIcon, group: "Academics" },
+    ...(hasClasses
+      ? [
+          { href: "/assignments", label: "Assignments", Icon: AssignmentsIcon, group: "Academics" as const },
+          { href: "/resources", label: "Resources", Icon: ResourcesIcon, group: "Academics" as const },
+        ]
+      : []),
     ...(teaches && user.institution?.attendance_enabled
       ? [{ href: "/attendance", label: "Attendance", Icon: ChecklistIcon, group: "Academics" as const }]
       : []),
@@ -233,7 +240,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         : []),
   ];
   // Phones get four tabs; everything else sits under More.
-  const primaryHrefs = ["/today", "/timetable", "/assignments", "/chat"];
+  const primaryHrefs = hasClasses ? ["/today", "/timetable", "/assignments", "/chat"] : ["/today", "/notices", "/chat", "/manage"];
   const primaryNav = nav.filter((n) => primaryHrefs.includes(n.href));
   const secondaryNav = nav.filter((n) => !primaryHrefs.includes(n.href));
   const isActive = (href: string) => at === href || at.startsWith(`${href}/`);
