@@ -299,4 +299,4 @@ export const THEME_CSS_KEY = "cv-theme-css";
  * Runs in <head> before the page paints: puts back the last theme and the person's light or
  * dark choice, so nothing flashes. Light unless they chose dark.
  */
-export const BOOT_SCRIPT = `(function(){var d=document.documentElement;try{d.dataset.theme=localStorage.getItem("${APPEARANCE_KEY}")==="dark"?"dark":"light";var c=localStorage.getItem("${THEME_CSS_KEY}");if(c){var s=document.createElement("style");s.id="cv-theme";s.textContent=c;document.head.appendChild(s)}}catch(e){d.dataset.theme="light"}})();`;
+export const BOOT_SCRIPT = `(function(){var d=document.documentElement;try{var p=location.pathname;d.dataset.theme=p!=="/"&&p!=="/sign-in"&&localStorage.getItem("${APPEARANCE_KEY}")==="dark"?"dark":"light";var c=localStorage.getItem("${THEME_CSS_KEY}");if(c){var s=document.createElement("style");s.id="cv-theme";s.textContent=c;document.head.appendChild(s)}}catch(e){d.dataset.theme="light"}})();`;

@@ -60,19 +60,41 @@ export function applyThemeCss(css: string) {
   if (el.textContent !== css) el.textContent = css;
 }
 
+/** The landing page is always light, whatever someone picked for the app. While it's showing,
+ *  the choice is still remembered but the page stays light. */
+let pinnedLight = false;
+
+function storedAppearance(): Appearance {
+  try {
+    return localStorage.getItem(APPEARANCE_KEY) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+/** Keeps the page light until the returned function runs, which puts back the person's choice. */
+export function pinLight() {
+  pinnedLight = true;
+  document.documentElement.dataset.theme = "light";
+  return () => {
+    pinnedLight = false;
+    document.documentElement.dataset.theme = storedAppearance();
+  };
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const loaded = useSiteTheme().data;
   const site = loaded ?? DEFAULT_SITE_THEME;
   const me = useMe();
   const [appearance, setLocal] = useState<Appearance>("light");
 
-  // What the before-paint script already put on <html>.
+  // The person's choice, as kept on the device (the landing page paints light regardless).
   useEffect(() => {
-    setLocal(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+    setLocal(storedAppearance());
   }, []);
 
   const apply = useCallback((a: Appearance) => {
-    document.documentElement.dataset.theme = a;
+    document.documentElement.dataset.theme = pinnedLight ? "light" : a;
     setLocal(a);
     store(APPEARANCE_KEY, a);
   }, []);

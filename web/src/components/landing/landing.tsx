@@ -4,9 +4,8 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { AppearanceToggle } from "@/components/appearance-toggle";
 import { LogoGlyph } from "@/components/icons";
-import { useTheme } from "@/components/theme-provider";
+import { pinLight, useTheme } from "@/components/theme-provider";
 import BlurText from "@/components/reactbits/BlurText";
 import { SignInDialog } from "@/components/sign-in-dialog";
 import s from "./landing.module.css";
@@ -66,6 +65,8 @@ export function Landing({
     email: signIn?.email,
   });
   const [guide, setGuide] = useGuideSwitch();
+  // The landing page is always light; the app keeps each person's own light or dark.
+  useEffect(() => pinLight(), []);
   return (
     <OpenSignIn.Provider value={(email) => setDialog({ open: true, email })}>
       <div className={s.page}>
@@ -181,7 +182,6 @@ function NavBar({ guide, onGuide }: { guide: boolean; onGuide: () => void }) {
           <span className={s.guideLabel}>Guide</span>
         </button>
       )}
-      <AppearanceToggle className={s.modeSwitch} />
       <SignInButton className={`${s.button} ${s.navButton}`}>Sign in</SignInButton>
     </header>
   );
@@ -406,7 +406,7 @@ function Menu() {
       <div className={s.menuScreens}>
         <figure data-rise>
           <Image
-            src="/landing/gcs-notices.jpg"
+            src="/landing/campus-notices.jpg"
             width={2880}
             height={1800}
             sizes="(max-width: 860px) 92vw, 48vw"
@@ -416,7 +416,7 @@ function Menu() {
         </figure>
         <figure data-rise>
           <Image
-            src="/landing/gcs-chat.jpg"
+            src="/landing/campus-chat.jpg"
             width={2880}
             height={1800}
             sizes="(max-width: 860px) 92vw, 48vw"
@@ -495,12 +495,12 @@ function Questions() {
       </div>
       <div className={s.faqPictures} data-rise>
         <Image
-          src="/landing/gcs-phone.jpg"
+          src="/landing/campus-phone.jpg"
           width={780}
           height={1688}
           sizes="(max-width: 860px) 70vw, 30vw"
           className={s.faqPhone}
-          alt="CampusVerse on a phone: Today with tomorrow's Web Development class in R-127."
+          alt="CampusVerse on a phone: Today with tomorrow's Artificial Intelligence class in R-127."
         />
       </div>
     </section>
@@ -552,7 +552,7 @@ function Footer() {
         </div>
         <div className={s.backAddress}>
           <Image
-            src="/landing/gcs-phone.jpg"
+            src="/landing/campus-phone.jpg"
             width={780}
             height={1688}
             sizes="88px"
