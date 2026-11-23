@@ -5,7 +5,7 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from "@expo-google-fonts/plus-jakarta-sans";
-import { focusManager, onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { focusManager, onlineManager, QueryClient } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack, useSegments } from "expo-router";
 import { NavigationBar } from "expo-navigation-bar";
@@ -20,6 +20,9 @@ import { LiveBanner } from "@/components/LiveBanner";
 import { ApiError } from "@/lib/api";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { usePush } from "@/lib/push";
+import { persister, SAVED_FOR, shouldSave } from "@/lib/offline";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import Constants from "expo-constants";
 import { ThemeProvider, useTheme } from "@/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -36,6 +39,8 @@ function makeClient() {
     defaultOptions: {
       queries: {
         staleTime: 20_000,
+        // Kept around long enough to be saved for opening offline (lib/offline.ts).
+        gcTime: SAVED_FOR,
         // Don't hammer the server over answers that won't change on a retry.
         retry: (count, err) => !(err instanceof ApiError && [401, 403, 404].includes(err.status)) && count < 2,
       },
@@ -59,11 +64,20 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={client}>
+        <PersistQueryClientProvider
+          client={client}
+          persistOptions={{
+            persister,
+            maxAge: SAVED_FOR,
+            // A new app version may read data differently: start fresh rather than misread it.
+            buster: Constants.expoConfig?.version ?? "",
+            dehydrateOptions: { shouldDehydrateQuery: shouldSave },
+          }}
+        >
           <AuthProvider>
             <Themed />
           </AuthProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

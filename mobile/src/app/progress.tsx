@@ -19,7 +19,7 @@ export default function Progress() {
             <Skeleton height={180} />
             <Skeleton height={180} />
           </>
-        ) : query.isError ? (
+        ) : query.isError && !query.data ? (
           <Failed onRetry={() => query.refetch()} />
         ) : !query.data?.length ? (
           <Empty icon="chart" title="Nothing yet" body="Marks and attendance show here once your teachers release them." />

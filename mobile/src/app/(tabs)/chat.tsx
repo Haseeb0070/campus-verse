@@ -48,7 +48,7 @@ export default function Chats() {
       <View style={{ paddingHorizontal: 16, gap: 16 }}>
         {query.isPending ? (
           <Skeleton height={290} />
-        ) : query.isError ? (
+        ) : query.isError && !query.data ? (
           <Failed onRetry={() => query.refetch()} />
         ) : list.length === 0 ? (
           <Empty

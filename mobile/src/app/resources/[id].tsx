@@ -40,7 +40,7 @@ export default function ResourceScreen() {
           <Skeleton height={170} />
           <Skeleton height={120} />
         </View>
-      ) : query.isError || !r ? (
+      ) : !r ? (
         <Failed onRetry={() => query.refetch()} />
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: insets.bottom + 32 }}>

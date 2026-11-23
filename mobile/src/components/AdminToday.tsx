@@ -49,7 +49,7 @@ export function AdminToday() {
 
         {overview.isPending ? (
           <Skeleton height={230} style={{ borderRadius: radius.xl }} />
-        ) : overview.isError ? (
+        ) : overview.isError && !overview.data ? (
           <Failed onRetry={() => overview.refetch()} />
         ) : data ? (
           <View style={{ backgroundColor: p.field, borderRadius: radius.xl, padding: 20, gap: 18 }}>

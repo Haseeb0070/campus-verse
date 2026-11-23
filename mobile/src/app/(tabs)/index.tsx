@@ -57,7 +57,7 @@ function ClassToday() {
 
         {next.isPending ? (
           <Skeleton height={250} style={{ borderRadius: radius.xl }} />
-        ) : next.isError ? (
+        ) : next.isError && !next.data ? (
           <Failed onRetry={() => next.refetch()} />
         ) : next.data ? (
           <UpNext o={next.data} tz={tz} today={today} now={now} chats={chats.data} />
@@ -69,7 +69,7 @@ function ClassToday() {
           <SectionHeader title="Rest of today" action="Week" onAction={() => router.navigate("/timetable")} />
           {classes.isPending ? (
             <Skeleton height={180} />
-          ) : classes.isError ? (
+          ) : classes.isError && !classes.data ? (
             <Failed onRetry={() => classes.refetch()} />
           ) : classes.data?.length ? (
             <TodayList list={classes.data} tz={tz} now={now} nextId={next.data?.date === today ? next.data : null} />

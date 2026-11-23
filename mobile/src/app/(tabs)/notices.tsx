@@ -47,7 +47,7 @@ export default function Notices() {
             <Skeleton height={130} />
             <Skeleton height={130} />
           </>
-        ) : query.isError ? (
+        ) : query.isError && !query.data ? (
           <Failed onRetry={() => query.refetch()} />
         ) : list.length === 0 ? (
           <Empty

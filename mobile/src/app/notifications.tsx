@@ -54,7 +54,7 @@ export default function Notifications() {
         <View style={{ padding: 16 }}>
           <Skeleton height={300} />
         </View>
-      ) : query.isError ? (
+      ) : query.isError && !query.data ? (
         <Failed onRetry={() => query.refetch()} />
       ) : (
         <FlatList

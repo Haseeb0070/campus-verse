@@ -31,7 +31,7 @@ export default function AssignmentScreen() {
           <Skeleton height={160} />
           <Skeleton height={220} />
         </View>
-      ) : query.isError || !a ? (
+      ) : !a ? (
         <Failed onRetry={() => query.refetch()} />
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: insets.bottom + 32 }} keyboardShouldPersistTaps="handled">

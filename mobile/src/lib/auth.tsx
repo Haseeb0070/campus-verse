@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ApiError, apiFetch, setSignedOutHandler } from "./api";
+import { clearSaved } from "./offline";
 import { unregisterForPush } from "./push";
 import { disconnectRealtime } from "./realtime";
 import { tokenStore } from "./token";
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     disconnectRealtime();
     await tokenStore.save(null);
     queryClient.clear();
+    await clearSaved(); // nothing of theirs stays on the phone
     setStatus("signedOut");
   }, [queryClient]);
 

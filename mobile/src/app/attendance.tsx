@@ -64,7 +64,7 @@ export default function Attendance() {
           <Skeleton height={64} />
           <Skeleton height={64} />
         </View>
-      ) : sheet.isError || !s ? (
+      ) : !s ? (
         <Failed message={errorDetail(sheet.error, "Couldn't open the register.")} onRetry={() => sheet.refetch()} />
       ) : (
         <>

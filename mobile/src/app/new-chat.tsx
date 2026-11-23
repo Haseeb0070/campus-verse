@@ -75,7 +75,7 @@ export default function NewChat() {
         <View style={{ paddingHorizontal: 16 }}>
           <Skeleton height={220} />
         </View>
-      ) : people.isError ? (
+      ) : people.isError && !people.data ? (
         <Failed onRetry={() => people.refetch()} />
       ) : (
         <FlatList

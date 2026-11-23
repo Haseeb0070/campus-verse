@@ -71,7 +71,7 @@ export default function PostScreen() {
         <View style={{ padding: 16 }}>
           <Skeleton height={200} />
         </View>
-      ) : post.isError || !post.data ? (
+      ) : !post.data ? (
         <Failed message="This post may have been deleted." onRetry={() => post.refetch()} />
       ) : (
         <FlatList

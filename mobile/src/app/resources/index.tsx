@@ -96,7 +96,7 @@ export default function Resources() {
               <Skeleton height={96} />
               <Skeleton height={96} />
             </View>
-          ) : query.isError ? (
+          ) : query.isError && !query.data ? (
             <Failed onRetry={() => query.refetch()} />
           ) : (
             <Empty

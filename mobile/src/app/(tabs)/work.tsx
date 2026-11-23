@@ -78,7 +78,7 @@ export default function Work() {
             <Skeleton height={104} />
             <Skeleton height={104} />
           </>
-        ) : query.isError ? (
+        ) : query.isError && !query.data ? (
           <Failed onRetry={() => query.refetch()} />
         ) : list.length === 0 ? (
           <Empty

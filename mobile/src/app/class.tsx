@@ -42,7 +42,7 @@ export default function ClassScreen() {
           <Skeleton height={150} />
           <Skeleton height={220} />
         </View>
-      ) : day.isError || !o ? (
+      ) : !o ? (
         <Failed message="This class isn't in the timetable for that day any more." onRetry={() => day.refetch()} />
       ) : (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: insets.bottom + 32 }}>

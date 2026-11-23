@@ -28,7 +28,7 @@ export default function EventScreen() {
           <Skeleton height={190} />
           <Skeleton height={110} />
         </View>
-      ) : query.isError || !e ? (
+      ) : !e ? (
         <Failed onRetry={() => query.refetch()} />
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: insets.bottom + 32 }}>

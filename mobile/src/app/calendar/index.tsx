@@ -78,7 +78,7 @@ export default function Calendar() {
               <Skeleton height={88} />
               <Skeleton height={88} />
             </View>
-          ) : query.isError ? (
+          ) : query.isError && !query.data ? (
             <Failed onRetry={() => query.refetch()} />
           ) : (
             <Empty

@@ -41,7 +41,7 @@ export default function Feed() {
               <Skeleton height={160} />
               <Skeleton height={160} />
             </View>
-          ) : feed.isError ? (
+          ) : feed.isError && !feed.data ? (
             <Failed onRetry={() => feed.refetch()} />
           ) : (
             <Empty

@@ -119,7 +119,7 @@ export default function Thread() {
           <Skeleton height={44} style={{ width: "55%", alignSelf: "flex-end" }} />
           <Skeleton height={56} style={{ width: "65%" }} />
         </View>
-      ) : chat.messages.isError ? (
+      ) : chat.messages.isError && !chat.messages.data ? (
         <View style={{ flex: 1, justifyContent: "center" }}>
           <Failed onRetry={() => chat.messages.refetch()} />
         </View>

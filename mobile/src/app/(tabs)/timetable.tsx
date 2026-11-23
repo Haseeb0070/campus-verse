@@ -120,7 +120,7 @@ export default function Timetable() {
               <Skeleton height={110} />
               <Skeleton height={110} />
             </>
-          ) : query.isError ? (
+          ) : query.isError && !query.data ? (
             <Failed onRetry={() => query.refetch()} />
           ) : list.length === 0 ? (
             <Empty icon="calendar" title="No classes" body={`Nothing on ${formatDay(day, { month: undefined })}. Swipe for other days.`} />
