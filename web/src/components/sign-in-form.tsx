@@ -92,7 +92,7 @@ export function SignInForm({ initialEmail = "", next }: { initialEmail?: string;
 
   async function handleForgot(event: React.FormEvent) {
     event.preventDefault();
-    if (!/^S+@S+.S+$/.test(email.trim())) {
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       setFieldErrors({ email: "Enter the email you sign in with." });
       return;
     }
