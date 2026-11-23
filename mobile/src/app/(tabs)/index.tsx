@@ -14,6 +14,7 @@ import type { Assignment, Conversation, Notice, Occurrence } from "@/lib/types";
 import { ConversationRow } from "@/components/conversations";
 import { EventRow } from "@/components/events";
 import { useEvents } from "@/lib/events";
+import { useFeed } from "@/lib/feed";
 import { courseTone, font, radius, useTheme } from "@/theme";
 
 export default function Today() {
@@ -84,6 +85,7 @@ function ClassToday() {
         <DueSoon list={work.data} pending={work.isPending} tz={tz} />
         <ComingUp tz={tz} today={today} />
         <RecentChats list={chats.data} pending={chats.isPending} tz={tz} />
+        <FeedPeek />
         <LatestNotice list={notices.data} pending={notices.isPending} />
       </View>
     </Screen>
@@ -343,6 +345,47 @@ function ComingUp({ tz, today }: { tz?: string; today: string }) {
           </T>
         </Card>
       )}
+    </View>
+  );
+}
+
+/** The newest post on the campus feed, and the way in. */
+function FeedPeek() {
+  const p = useTheme();
+  const feed = useFeed();
+  const post = feed.data?.pages[0]?.[0];
+  if (feed.isPending) return <Skeleton height={90} />;
+  return (
+    <View>
+      <SectionHeader title="Campus feed" action="Feed" onAction={() => router.push("/feed")} />
+      <Press
+        accessibilityRole="button"
+        accessibilityLabel={post ? `Newest post, by ${post.author.name}: ${post.body}. Opens the feed.` : "Open the campus feed"}
+        onPress={() => router.push("/feed")}
+      >
+        <Card style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: p.accentSoft, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="chat" size={20} color={p.accentInk} />
+          </View>
+          <View style={{ flex: 1 }}>
+            {post ? (
+              <>
+                <T variant="calloutStrong" numberOfLines={1}>
+                  {post.author.name} · {relativeTime(post.created_at)}
+                </T>
+                <T variant="callout" tone="ink2" numberOfLines={2}>
+                  {post.body || "Shared a file"}
+                </T>
+              </>
+            ) : (
+              <T variant="body" tone="ink2">
+                Nothing posted yet. Say hello to your classes.
+              </T>
+            )}
+          </View>
+          <Icon name="chevron" size={18} color={p.ink3} />
+        </Card>
+      </Press>
     </View>
   );
 }

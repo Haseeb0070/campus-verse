@@ -120,6 +120,8 @@ const shapes = {
     </>
   ),
   pencil: <Path d="M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4" />,
+  heart: <Path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z" />,
+  flag: <Path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
 } as const;
 
 export type IconName = keyof typeof shapes;
@@ -129,18 +131,21 @@ export function Icon({
   size = 20,
   color,
   strokeWidth = 1.8,
+  fill = "none",
 }: {
   name: IconName;
   size?: number;
   color: string;
   strokeWidth?: number;
+  /** Solid shapes (a liked heart); outlines by default. */
+  fill?: string;
 }) {
   return (
     <Svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={fill}
       stroke={color}
       strokeWidth={strokeWidth}
       strokeLinecap="round"

@@ -114,6 +114,8 @@ function Navigator() {
           <Stack.Screen name="resources/[id]" />
           <Stack.Screen name="calendar/index" />
           <Stack.Screen name="calendar/[id]" />
+          <Stack.Screen name="feed/index" />
+          <Stack.Screen name="feed/[id]" />
           <Stack.Screen name="search" options={{ animation: "fade" }} />
           <Stack.Screen name="new-chat" options={{ presentation: "modal" }} />
         </Stack.Protected>

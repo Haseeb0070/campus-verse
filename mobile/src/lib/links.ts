@@ -6,7 +6,8 @@ import type { Href } from "expo-router";
  * CampusVerse only the website has.
  */
 export function appRoute(link: string): Href | null {
-  const [path, query = ""] = link.split("#")[0].split("?");
+  const [beforeHash, hash = ""] = link.split("#");
+  const [path, query = ""] = beforeHash.split("?");
   const parts = path.split("/").filter(Boolean);
   const id = Number(parts[1]);
 
@@ -23,6 +24,11 @@ export function appRoute(link: string): Href | null {
       return Number.isFinite(id) && id > 0
         ? { pathname: "/resources/[id]", params: { id: String(id) } }
         : "/resources";
+    case "feed": {
+      // "/feed#post-12": one post.
+      const post = /^post-(\d+)$/.exec(hash)?.[1];
+      return post ? { pathname: "/feed/[id]", params: { id: post } } : "/feed";
+    }
     case "calendar":
       return Number.isFinite(id) && id > 0 ? { pathname: "/calendar/[id]", params: { id: String(id) } } : "/calendar";
     case "notices":
