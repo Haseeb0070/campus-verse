@@ -3,7 +3,8 @@ import { formatDateTime, formatDay, formatTime } from "@/lib/format";
 import type { Occurrence } from "@/lib/types";
 import { useTheme } from "@/theme";
 import { Icon } from "./Icon";
-import { Card, CourseTag, Pill, T } from "./ui";
+import { Button, Card, CourseTag, Pill, T } from "./ui";
+import { router } from "expo-router";
 
 export const KIND: Record<Occurrence["kind"], string> = { lecture: "Lecture", lab: "Lab", tutorial: "Tutorial" };
 
@@ -47,7 +48,8 @@ export function ClassCard({ o, timeZone, now }: { o: Occurrence; timeZone?: stri
 
   return (
     <View
-      accessible
+      // A class you teach keeps its Manage button reachable, so it isn't one merged element.
+      accessible={!o.can_manage}
       accessibilityLabel={`${o.course_title}, ${o.course_code} ${o.section_code}, ${start} to ${end}, ${place(o)}${
         change ? `. ${change.label}` : ""
       }${done ? ". Done" : live ? ". On now" : ""}`}
@@ -95,6 +97,15 @@ export function ClassCard({ o, timeZone, now }: { o: Occurrence; timeZone?: stri
           ) : null}
         </View>
         {change ? <Pill label={change.label} tone={change.tone} icon={cancelled ? "close" : "swap"} /> : null}
+        {o.can_manage ? (
+          <Button
+            label="Manage class"
+            icon="pencil"
+            variant="secondary"
+            style={{ minHeight: 40, marginTop: 4 }}
+            onPress={() => router.push({ pathname: "/class", params: { meeting: String(o.meeting_id), date: o.date } })}
+          />
+        ) : null}
       </Card>
     </View>
   );
