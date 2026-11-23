@@ -35,10 +35,17 @@ export async function signIn(email: string, password: string): Promise<SignInRes
       return { ok: false, needsCode: true };
     }
     if (err instanceof ApiError && err.status === 400) {
+      const codes = ((err.body as { errors?: { code?: string }[] } | null)?.errors ?? []).map((e) => e.code);
+      if (codes.includes("too_many_login_attempts")) {
+        return { ok: false, error: "Too many wrong passwords for this account. Wait 5 minutes, then try again, or use Forgot password." };
+      }
       return { ok: false, error: "That email and password don't match. Check them and try again." };
     }
     if (err instanceof ApiError && err.status === 429) {
-      return { ok: false, error: "Too many attempts. Wait a few minutes, then try again." };
+      return { ok: false, error: "Too many sign-ins from this network. Wait a minute, then try again." };
+    }
+    if (err instanceof ApiError && [502, 503, 504].includes(err.status)) {
+      return { ok: false, error: "CampusVerse is starting up. Try again in a minute." };
     }
     if (err instanceof ApiError && err.status === 401) {
       // 401 here means signed in but another step (like email verification) is pending.

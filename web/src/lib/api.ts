@@ -1,3 +1,5 @@
+import { announceWaking, isSleepingReply, wakeServer } from "./wake";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -23,7 +25,21 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
   if (method !== "GET" && method !== "HEAD") headers.set("X-CSRFToken", csrfToken());
 
-  const res = await fetch(path, { ...init, method, headers, credentials: "same-origin" });
+  let res = await fetch(path, { ...init, method, headers, credentials: "same-origin" });
+  // A sleeping API: the request never reached Django, so it's safe to send again once it's up.
+  if (isSleepingReply(res)) {
+    announceWaking(true);
+    try {
+      const giveUp = Date.now() + 120_000;
+      for (let wait = 2000; isSleepingReply(res) && Date.now() < giveUp; wait = Math.min(wait * 1.5, 8000)) {
+        wakeServer();
+        await new Promise((r) => setTimeout(r, wait));
+        res = await fetch(path, { ...init, method, headers, credentials: "same-origin" });
+      }
+    } finally {
+      announceWaking(false);
+    }
+  }
   if (res.status === 204) return undefined as T;
   const body = res.headers.get("content-type")?.includes("json") ? await res.json() : null;
   if (!res.ok) throw new ApiError(res.status, body);

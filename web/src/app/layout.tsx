@@ -5,6 +5,7 @@ import "@fontsource-variable/newsreader";
 import "./globals.css";
 import { BOOT_SCRIPT } from "@/lib/theme";
 import { Providers } from "./providers";
+import { WakingNotice } from "@/components/waking-notice";
 
 export const metadata: Metadata = {
   title: "CampusVerse",
@@ -24,6 +25,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen antialiased">
         <Providers>{children}</Providers>
+        <WakingNotice />
       </body>
     </html>
   );
