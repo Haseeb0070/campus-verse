@@ -188,14 +188,14 @@ export const CloseIcon = (p: IconProps) => (
 
 /** The CampusVerse logo without its tile: Verse, the guide, in its graduation cap (concept 3 in
  *  docs/brand/logo-concepts). The face takes the text colour, the eyes are cut out so the tile shows
- *  through, and the cap keeps its evergreen. Keep in step with docs/brand/verse-buddy.svg. */
+ *  through, and the cap is navy. Keep in step with docs/brand/verse-buddy.svg. */
 export function LogoGlyph({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="12 12 42 42" className={className} aria-hidden="true">
       <path fill="currentColor" fillRule="evenodd" d="M18 39a14 14 0 1 0 28 0a14 14 0 1 0-28 0ZM24.8 39a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0ZM34.8 39a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0Z" />
-      <g fill="#1f2b24">
+      <g fill="#192840">
         <path d="M32 13 49 20.5 32 28 15 20.5z" />
-        <path d="M49 20.5v9" stroke="#1f2b24" strokeWidth={2} strokeLinecap="round" />
+        <path d="M49 20.5v9" stroke="#192840" strokeWidth={2} strokeLinecap="round" />
         <circle cx="49" cy="31" r="2.2" />
       </g>
     </svg>

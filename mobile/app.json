@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "campusverse",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#f4efe6",
+    "backgroundColor": "#eef2f6",
     "ios": {
       "bundleIdentifier": "pk.campusverse.app",
       "supportsTablet": true,
@@ -18,7 +18,7 @@
     "android": {
       "package": "pk.campusverse.app",
       "adaptiveIcon": {
-        "backgroundColor": "#b4532a",
+        "backgroundColor": "#2f6fae",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -35,7 +35,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#b4532a",
+          "backgroundColor": "#2f6fae",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 96
         }

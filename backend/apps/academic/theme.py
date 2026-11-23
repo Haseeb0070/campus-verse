@@ -8,7 +8,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 
 #: Built-in themes, by key. Keep in step with THEMES in web/src/lib/theme.ts.
-PRESETS = ("evergreen", "indus", "maroon", "olive", "teal", "slate", "custom")
+PRESETS = ("campus", "evergreen", "indus", "maroon", "olive", "teal", "slate", "custom")
 
 #: The colours an admin sets for a custom theme, for light and for dark. Keep in step with
 #: CUSTOM_KEYS in web/src/lib/theme.ts.
@@ -27,7 +27,7 @@ CUSTOM_KEYS = (
 MODES = ("light", "dark")
 
 DEFAULT_THEME = {
-    "preset": "evergreen",
+    "preset": "campus",
     "guide_enabled": True,
     "guide_name": "Verse",
     # Off: everyone sees the guide_name above. On: each person may give the guide their own name.

@@ -7,7 +7,7 @@
  * Keep the keys in step with PRESETS in backend/apps/academic/theme.py.
  */
 
-export type ThemeKey = "evergreen" | "indus" | "maroon" | "olive" | "teal" | "slate";
+export type ThemeKey = "campus" | "evergreen" | "indus" | "maroon" | "olive" | "teal" | "slate";
 /** A built-in theme, or "custom": the admin's own colours. */
 export type PresetKey = ThemeKey | "custom";
 
@@ -28,13 +28,27 @@ export interface BuiltInTheme {
   dark: Tokens;
   /** The guide's colours when the admin hasn't chosen their own. */
   guide: { body: string; cap: string; tassel: string };
+  /** Every colour, paper and ink included, for a theme that sets its own (like a custom one). */
+  full?: Record<Mode, CustomColours>;
 }
 
 export const THEMES: BuiltInTheme[] = [
   {
+    key: "campus",
+    name: "Campus Blue",
+    blurb: "College blue on cool paper, navy sidebar. The default.",
+    light: { accent: "#2f6fae", accentInk: "#1d6f5f", onAccent: "#fffaf2", field: "#192840", fieldLine: "#2e3d55", side: "#192840" },
+    dark: { accent: "#3b82f6", accentInk: "#4fb3a0", onAccent: "#ffffff", field: "#172554", fieldLine: "#2e3b66", side: "#0e1629" },
+    guide: { body: "#2f6fae", cap: "#192840", tassel: "#e3a33b" },
+    full: {
+      light: { bg: "#eef2f6", surface: "#e6ebf1", fill: "#ffffff", ink: "#241e18", accent: "#2f6fae", on_accent: "#fffaf2", accent_ink: "#1d6f5f", active: "#2f6fae", field: "#192840", side: "#192840" },
+      dark: { bg: "#0f1115", surface: "#1b2027", fill: "#21262d", ink: "#f1f5f9", accent: "#3b82f6", on_accent: "#ffffff", accent_ink: "#4fb3a0", active: "#3b82f6", field: "#172554", side: "#0e1629" },
+    },
+  },
+  {
     key: "evergreen",
     name: "Evergreen",
-    blurb: "Terracotta on deep green, warm paper. The original.",
+    blurb: "Terracotta on deep green, warm paper.",
     light: { accent: "#b4532a", accentInk: "#8a3a1b", onAccent: "#fffaf2", field: "#243329", fieldLine: "#34483b", side: "#1f2b24" },
     dark: { accent: "#e07a50", accentInk: "#f0a988", onAccent: "#1c120c", field: "#22302a", fieldLine: "#34473b", side: "#131a15" },
     guide: { body: "#c4602f", cap: "#243329", tassel: "#e3a33b" },
@@ -81,7 +95,7 @@ export const THEMES: BuiltInTheme[] = [
   },
 ];
 
-export const DEFAULT_THEME_KEY: ThemeKey = "evergreen";
+export const DEFAULT_THEME_KEY: ThemeKey = "campus";
 
 export function themeByKey(key: string | undefined): BuiltInTheme {
   return THEMES.find((t) => t.key === key) ?? THEMES[0];
@@ -148,6 +162,7 @@ const BASE: Record<Mode, Pick<CustomColours, "bg" | "surface" | "fill" | "ink">>
 /** Every colour of a theme, as a custom theme holds them: the start of a custom theme. */
 export function coloursOf(key: string | undefined, mode: Mode): CustomColours {
   const t = themeByKey(key);
+  if (t.full) return { ...t.full[mode] };
   const m = mode === "light" ? t.light : t.dark;
   return {
     ...BASE[mode],
@@ -255,6 +270,7 @@ export function themeCss(key: string | undefined, custom?: SiteTheme["custom"]):
     return `html:root{${customVars(custom.light)}}html:root[data-theme="dark"]{${customVars(custom.dark)}}`;
   }
   const t = themeByKey(key);
+  if (t.full) return `html:root{${customVars(t.full.light)}}html:root[data-theme="dark"]{${customVars(t.full.dark)}}`;
   // `html:root` outranks globals.css's `:root`, whatever order the stylesheets load in.
   return `html:root{${vars(t.light)}}html:root[data-theme="dark"]{${vars(t.dark)}}`;
 }

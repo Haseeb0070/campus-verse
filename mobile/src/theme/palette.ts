@@ -41,7 +41,22 @@ export interface Palette {
 
 type Accent = { accent: string; accentInk: string; onAccent: string; field: string; fieldLine: string; side: string };
 
+/** Built-in themes that set every colour, paper and ink included, like a custom theme does. */
+const FULL: Record<string, Record<Mode, Record<string, string>>> = {
+  campus: {
+    light: { bg: "#eef2f6", surface: "#e6ebf1", fill: "#ffffff", ink: "#241e18", accent: "#2f6fae", on_accent: "#fffaf2", accent_ink: "#1d6f5f", active: "#2f6fae", field: "#192840", side: "#192840" },
+    dark: { bg: "#0f1115", surface: "#1b2027", fill: "#21262d", ink: "#f1f5f9", accent: "#3b82f6", on_accent: "#ffffff", accent_ink: "#4fb3a0", active: "#3b82f6", field: "#172554", side: "#0e1629" },
+  },
+};
+
+/** The default theme, before /api/theme answers or for one this app doesn't know. */
+const DEFAULT_PRESET = "campus";
+
 const PRESETS: Record<string, { light: Accent; dark: Accent }> = {
+  campus: {
+    light: { accent: "#2f6fae", accentInk: "#1d6f5f", onAccent: "#fffaf2", field: "#192840", fieldLine: "#2e3d55", side: "#192840" },
+    dark: { accent: "#3b82f6", accentInk: "#4fb3a0", onAccent: "#ffffff", field: "#172554", fieldLine: "#2e3b66", side: "#0e1629" },
+  },
   evergreen: {
     light: { accent: "#b4532a", accentInk: "#8a3a1b", onAccent: "#fffaf2", field: "#243329", fieldLine: "#34483b", side: "#1f2b24" },
     dark: { accent: "#e07a50", accentInk: "#f0a988", onAccent: "#1c120c", field: "#22302a", fieldLine: "#34473b", side: "#131a15" },
@@ -70,6 +85,7 @@ const PRESETS: Record<string, { light: Accent; dark: Accent }> = {
 
 /** Verse's colours for each preset, when the admin hasn't chosen their own. */
 const GUIDE: Record<string, { body: string; cap: string; tassel: string }> = {
+  campus: { body: "#2f6fae", cap: "#192840", tassel: "#e3a33b" },
   evergreen: { body: "#c4602f", cap: "#243329", tassel: "#e3a33b" },
   indus: { body: "#c06a12", cap: "#1e2f47", tassel: "#e8c25a" },
   maroon: { body: "#9e2b3a", cap: "#3b1d22", tassel: "#d9a63a" },
@@ -124,9 +140,10 @@ export function textOn(hex: string) {
 const HEX = /^#[0-9a-f]{6}$/i;
 
 export function buildPalette(mode: Mode, site?: SiteTheme | null): Palette {
-  const preset = PRESETS[site?.preset ?? ""] ?? PRESETS.evergreen;
+  const key = site?.preset === "custom" || PRESETS[site?.preset ?? ""] ? site!.preset : DEFAULT_PRESET;
+  const preset = PRESETS[key] ?? PRESETS[DEFAULT_PRESET];
   const p = mode === "light" ? preset.light : preset.dark;
-  const custom = site?.preset === "custom" ? site.custom?.[mode] ?? {} : {};
+  const custom = key === "custom" ? site?.custom?.[mode] ?? {} : FULL[key]?.[mode] ?? {};
   const pick = (key: string, fallback: string) => (HEX.test(custom[key] ?? "") ? custom[key]! : fallback);
 
   const bg = pick("bg", PAPER[mode].bg);
@@ -178,8 +195,8 @@ function guideOf(site?: SiteTheme | null): Palette["guide"] {
   const lightCustom = site?.preset === "custom" ? site.custom?.light : undefined;
   const fallback =
     lightCustom && HEX.test(lightCustom.accent ?? "")
-      ? { body: lightCustom.accent!, cap: HEX.test(lightCustom.field ?? "") ? lightCustom.field! : GUIDE.evergreen.cap, tassel: "#e3a33b" }
-      : GUIDE[site?.preset ?? ""] ?? GUIDE.evergreen;
+      ? { body: lightCustom.accent!, cap: HEX.test(lightCustom.field ?? "") ? lightCustom.field! : GUIDE[DEFAULT_PRESET].cap, tassel: "#e3a33b" }
+      : GUIDE[site?.preset ?? ""] ?? GUIDE[DEFAULT_PRESET];
   const own = (v: string | undefined, f: string) => (HEX.test(v ?? "") ? v! : f);
   return {
     name: site?.guide_name?.trim() || "Verse",

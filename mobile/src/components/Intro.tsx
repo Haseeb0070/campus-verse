@@ -24,7 +24,7 @@ const SIZE = 168;
 /** The native splash shows Verse 96px wide (imageWidth in app.json), so the first frame matches it. */
 const SPLASH_SCALE = 96 / SIZE;
 /** The native splash's background (expo-splash-screen backgroundColor in app.json). */
-const SPLASH_COLOUR = "#b4532a";
+const SPLASH_COLOUR = "#2f6fae";
 /** The sign-in tile and the glyph inside it (src/app/sign-in.tsx). */
 const TILE = 44;
 const TILE_RADIUS = 12;

@@ -61,7 +61,8 @@ export function applyThemeCss(css: string) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const site = useSiteTheme().data ?? DEFAULT_SITE_THEME;
+  const loaded = useSiteTheme().data;
+  const site = loaded ?? DEFAULT_SITE_THEME;
   const me = useMe();
   const [appearance, setLocal] = useState<Appearance>("light");
 
@@ -82,12 +83,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (accountAppearance === "light" || accountAppearance === "dark") apply(accountAppearance);
   }, [accountAppearance, apply]);
 
-  // The institution's theme, and remembered for the next first paint.
+  // The institution's theme, and remembered for the next first paint. Only once it has arrived:
+  // until then the page keeps what it painted with (the remembered theme, or the default in
+  // <head>), so a reload never flashes another theme while the API answers or wakes up.
   useEffect(() => {
-    const css = themeCss(site.preset, site.custom);
+    if (!loaded) return;
+    const css = themeCss(loaded.preset, loaded.custom);
     applyThemeCss(css);
     store(THEME_CSS_KEY, css);
-  }, [site.preset, site.custom]);
+  }, [loaded]);
 
   const setAppearance = useCallback(
     (a: Appearance) => {

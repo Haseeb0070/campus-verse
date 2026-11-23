@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "@fontsource-variable/plus-jakarta-sans";
 import "@fontsource-variable/newsreader";
 import "./globals.css";
-import { BOOT_SCRIPT } from "@/lib/theme";
+import { BOOT_SCRIPT, DEFAULT_THEME_KEY, themeCss } from "@/lib/theme";
 import { Providers } from "./providers";
 import { WakingNotice } from "@/components/waking-notice";
 
@@ -21,6 +21,9 @@ export default function RootLayout({
     // The before-paint script sets data-theme (light or dark) on <html>, so React leaves it be.
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* The default theme, in the page itself: a first visit paints in it straight away. The
+            remembered or loaded theme goes in a later <style>, which wins. */}
+        <style id="cv-default-theme" dangerouslySetInnerHTML={{ __html: themeCss(DEFAULT_THEME_KEY) }} />
         <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
       </head>
       <body className="min-h-screen antialiased">
