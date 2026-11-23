@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Linking, View } from "react-native";
 import { changeOf, isOff, KIND, place } from "@/components/classes";
 import { AdminToday } from "@/components/AdminToday";
@@ -12,6 +12,8 @@ import { addDays, formatDay, formatTime, greeting, minutesUntil, relativeTime, t
 import { useAssignments, useMe, useNextClass, useNotices, useTimetable } from "@/lib/queries";
 import type { Assignment, Conversation, Notice, Occurrence } from "@/lib/types";
 import { ConversationRow } from "@/components/conversations";
+import { EventRow } from "@/components/events";
+import { useEvents } from "@/lib/events";
 import { courseTone, font, radius, useTheme } from "@/theme";
 
 export default function Today() {
@@ -80,6 +82,7 @@ function ClassToday() {
         </View>
 
         <DueSoon list={work.data} pending={work.isPending} tz={tz} />
+        <ComingUp tz={tz} today={today} />
         <RecentChats list={chats.data} pending={chats.isPending} tz={tz} />
         <LatestNotice list={notices.data} pending={notices.isPending} />
       </View>
@@ -307,6 +310,39 @@ function DueSoon({ list, pending, tz }: { list?: Assignment[]; pending: boolean;
           </Press>
         ))}
       </View>
+    </View>
+  );
+}
+
+/** The next few events, exams and deadlines from the calendar, with the way into it. */
+function ComingUp({ tz, today }: { tz?: string; today: string }) {
+  const [range] = useState(() => ({
+    start: new Date(`${today}T00:00:00`).toISOString(),
+    end: new Date(`${addDays(today, 21)}T00:00:00`).toISOString(),
+  }));
+  const events = useEvents(range.start, range.end);
+  const now = useNow(60_000);
+  const next = (events.data ?? [])
+    .filter((e) => e.status !== "cancelled" && new Date(e.ends_at).getTime() > now)
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    .slice(0, 3);
+  if (events.isPending) return <Skeleton height={96} />;
+  return (
+    <View>
+      <SectionHeader title="Coming up" action="Calendar" onAction={() => router.push("/calendar")} />
+      {next.length ? (
+        <View style={{ gap: 10 }}>
+          {next.map((e) => (
+            <EventRow key={e.id} e={e} tz={tz} />
+          ))}
+        </View>
+      ) : (
+        <Card>
+          <T variant="body" tone="ink2">
+            Nothing on the calendar for the next three weeks.
+          </T>
+        </Card>
+      )}
     </View>
   );
 }

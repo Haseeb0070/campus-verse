@@ -23,6 +23,8 @@ export function appRoute(link: string): Href | null {
       return Number.isFinite(id) && id > 0
         ? { pathname: "/resources/[id]", params: { id: String(id) } }
         : "/resources";
+    case "calendar":
+      return Number.isFinite(id) && id > 0 ? { pathname: "/calendar/[id]", params: { id: String(id) } } : "/calendar";
     case "notices":
       return "/notices";
     case "timetable":
