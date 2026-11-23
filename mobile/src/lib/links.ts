@@ -46,3 +46,19 @@ export function appRoute(link: string): Href | null {
       return null;
   }
 }
+
+/** appRoute as a path string ("/assignment/12"), for rewriting links that open the app. */
+export function appPath(link: string): string | null {
+  const route = appRoute(link);
+  if (route === null || typeof route === "string") return route;
+  const { pathname, params = {} } = route as { pathname: string; params?: Record<string, string> };
+  const rest = { ...params };
+  let path = pathname.replace(/\[(\w+)\]/g, (_, key: string) => {
+    const value = rest[key] ?? "";
+    delete rest[key];
+    return encodeURIComponent(value);
+  });
+  const query = Object.entries(rest).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+  if (query) path += `?${query}`;
+  return path;
+}

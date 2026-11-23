@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pk.campusverse.app",
+      "sha256_cert_fingerprints": [
+        "F3:5D:0C:01:60:E6:68:45:0D:2A:46:21:9D:D6:31:39:DF:5E:60:D4:70:67:62:3F:71:40:C2:80:7A:4E:1D:B9"
+      ]
+    }
+  }
+]

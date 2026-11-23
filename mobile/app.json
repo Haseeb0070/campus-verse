@@ -24,7 +24,74 @@
       },
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": true,
-      "versionCode": 3
+      "versionCode": 3,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/today"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/timetable"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/chat"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/notices"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/assignments"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/calendar"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/feed"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/resources"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/progress"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/notifications"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/profile"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "output": "single",
