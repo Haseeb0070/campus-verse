@@ -153,8 +153,22 @@ function ProgressLink() {
   return (
     <View style={{ marginTop: 12, gap: 10 }}>
       <T variant="title" accessibilityRole="header" style={{ fontSize: 22 }}>
-        Progress
+        Courses
       </T>
+      <Press accessibilityRole="button" onPress={() => router.push("/resources")}>
+        <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: p.accentSoft, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="file" size={20} color={p.accentInk} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <T variant="bodyStrong">Course materials</T>
+            <T variant="callout" tone="ink3">
+              Slides, notes, readings and links from your teachers
+            </T>
+          </View>
+          <Icon name="chevron" size={18} color={p.ink3} />
+        </Card>
+      </Press>
       <Press accessibilityRole="button" onPress={() => router.push("/progress")}>
         <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: p.accentSoft, alignItems: "center", justifyContent: "center" }}>

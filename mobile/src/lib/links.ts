@@ -3,7 +3,7 @@ import type { Href } from "expo-router";
 /**
  * Notifications and search results carry the web app's links ("/assignments/12",
  * "/notices#notice-4"). This is where each one lives in the app, or null when it is a part of
- * CampusVerse only the website has (feed, resources, calendar).
+ * CampusVerse only the website has.
  */
 export function appRoute(link: string): Href | null {
   const [path, query = ""] = link.split("#")[0].split("?");
@@ -19,6 +19,10 @@ export function appRoute(link: string): Href | null {
       if (to && !parts[1]) return { pathname: "/new-chat", params: { to } };
       return Number.isFinite(id) && id > 0 ? { pathname: "/chat/[id]", params: { id: String(id) } } : "/chat";
     }
+    case "resources":
+      return Number.isFinite(id) && id > 0
+        ? { pathname: "/resources/[id]", params: { id: String(id) } }
+        : "/resources";
     case "notices":
       return "/notices";
     case "timetable":

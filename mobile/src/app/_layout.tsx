@@ -110,6 +110,8 @@ function Navigator() {
           <Stack.Screen name="notifications" />
           <Stack.Screen name="profile" />
           <Stack.Screen name="progress" />
+          <Stack.Screen name="resources/index" />
+          <Stack.Screen name="resources/[id]" />
           <Stack.Screen name="search" options={{ animation: "fade" }} />
           <Stack.Screen name="new-chat" options={{ presentation: "modal" }} />
         </Stack.Protected>
