@@ -100,9 +100,11 @@ export default function Profile() {
               <Row icon="chart" label="Marks and attendance" onPress={() => router.push("/progress")} />
               <Divider inset={52} />
               <Row icon="bell" label="Notifications" onPress={() => router.push("/notifications")} />
+              <Divider inset={52} />
+              <Row icon="user" label="Account and security" onPress={() => router.push("/security")} />
             </Card>
             <T variant="callout" tone="ink3" style={{ paddingHorizontal: 4, marginTop: 8 }}>
-              Two-step sign-in, your password, and managing classes live on the CampusVerse website.
+              Managing classes, people and the college lives on the CampusVerse website.
             </T>
           </Group>
 
