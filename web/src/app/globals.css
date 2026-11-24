@@ -165,18 +165,20 @@
   --text-caption--line-height: 1.33;
   --text-caption--letter-spacing: 0.01em;
 
-  --radius-control: 12px;
-  --radius-row: 12px;
-  --radius-card: 20px;
+  /* Manage → Theme can make these less round (--cv-radius-*, from lookCss in lib/theme.ts). */
+  --radius-control: var(--cv-radius-control, 12px);
+  --radius-row: var(--cv-radius-row, 12px);
+  --radius-card: var(--cv-radius-card, 20px);
 }
 
 /* Surfaces: solid cards with a hairline edge (the names stay "glass" so every page keeps
    working). glass is a card, glass-thick is anything that floats (menus, popovers, toasts),
    side is the evergreen sidebar and phone tab bar. */
+/* Manage → Theme can turn the card border and shadow off (--cv-card-border, --cv-card-shadow). */
 @utility glass {
   background: var(--cv-surface);
-  border: 1px solid var(--cv-rim);
-  box-shadow: var(--cv-shadow);
+  border: 1px solid var(--cv-card-border, var(--cv-rim));
+  box-shadow: var(--cv-card-shadow, var(--cv-shadow));
 }
 
 @utility glass-thick {

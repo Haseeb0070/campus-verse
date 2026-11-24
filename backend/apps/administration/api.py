@@ -529,6 +529,9 @@ class ThemeIO(Schema):
     guide_cap: str = ""
     guide_tassel: str = ""
     helper_enabled: bool = True
+    card_borders: bool = True
+    card_shadows: bool = True
+    corners: str = "round"
     custom: dict = {}
 
 

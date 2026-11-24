@@ -26,6 +26,9 @@ CUSTOM_KEYS = (
 )
 MODES = ("light", "dark")
 
+#: How round cards, buttons and fields are. Keep in step with CORNERS in web/src/lib/theme.ts.
+CORNERS = ("round", "medium", "sharp")
+
 DEFAULT_THEME = {
     "preset": "campus",
     "guide_enabled": True,
@@ -38,6 +41,10 @@ DEFAULT_THEME = {
     "guide_tassel": "",
     # The guide inside the app, which answers questions once someone has signed in.
     "helper_enabled": True,
+    # The look of cards across the site: a hairline border, a soft shadow, and how round corners are.
+    "card_borders": True,
+    "card_shadows": True,
+    "corners": "round",
     # Only read when preset is "custom": {"light": {key: "#hex"}, "dark": {...}}.
     "custom": {},
 }
@@ -65,6 +72,12 @@ def clean_theme(data: dict) -> dict:
 
     out["guide_enabled"] = bool(data.get("guide_enabled", True))
     out["helper_enabled"] = bool(data.get("helper_enabled", True))
+    out["card_borders"] = bool(data.get("card_borders", True))
+    out["card_shadows"] = bool(data.get("card_shadows", True))
+    corners = data.get("corners", "round")
+    if corners not in CORNERS:
+        raise ValidationError("Choose round, medium or sharp corners.")
+    out["corners"] = corners
     out["custom"] = _clean_custom(data.get("custom") or {}, required=preset == "custom")
 
     out["guide_rename"] = bool(data.get("guide_rename", False))

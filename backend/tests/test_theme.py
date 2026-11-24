@@ -111,3 +111,19 @@ def test_a_custom_theme_needs_every_colour_for_light_and_dark(client, campus):
     client.logout()
     public = client.get("/api/theme").json()
     assert public["preset"] == "custom" and public["custom"]["light"]["accent"] == "#1d6f5f"
+
+
+def test_card_look_defaults_and_checks():
+    from django.core.exceptions import ValidationError
+
+    from apps.academic.theme import clean_theme
+
+    out = clean_theme({"preset": "campus", "guide_name": "Verse"})
+    assert out["card_borders"] is True and out["card_shadows"] is True and out["corners"] == "round"
+    out = clean_theme({"preset": "campus", "guide_name": "Verse", "card_borders": False,
+                       "card_shadows": False, "corners": "sharp"})
+    assert (out["card_borders"], out["card_shadows"], out["corners"]) == (False, False, "sharp")
+    import pytest
+
+    with pytest.raises(ValidationError, match="corners"):
+        clean_theme({"preset": "campus", "guide_name": "Verse", "corners": "wavy"})

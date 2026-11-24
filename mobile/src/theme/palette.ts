@@ -35,6 +35,8 @@ export interface Palette {
   dangerSoft: string;
   success: string;
   shadow: string;
+  /** Card look from Manage → Theme: a hairline border, a soft shadow, how round corners are. */
+  cards: { border: boolean; shadow: boolean; radius: number };
   /** Verse, the guide: its name, colours, and whether the admin left it on (Manage → Theme). */
   guide: { name: string; body: string; cap: string; tassel: string; signedOut: boolean; inApp: boolean };
 }
@@ -109,6 +111,9 @@ export interface SiteTheme {
   guide_body?: string;
   guide_cap?: string;
   guide_tassel?: string;
+  card_borders?: boolean;
+  card_shadows?: boolean;
+  corners?: "round" | "medium" | "sharp";
 }
 
 export function mix(a: string, b: string, weightOfA: number) {
@@ -187,6 +192,11 @@ export function buildPalette(mode: Mode, site?: SiteTheme | null): Palette {
     dangerSoft: light ? "#f8dcd8" : "#43201c",
     success: light ? "#2f6b3f" : "#8fd19e",
     shadow: light ? "#4a341c" : "#000000",
+    cards: {
+      border: site?.card_borders !== false,
+      shadow: site?.card_shadows !== false,
+      radius: site?.corners === "sharp" ? 6 : site?.corners === "medium" ? 12 : 18,
+    },
     guide: guideOf(site),
   };
 }

@@ -10,6 +10,7 @@ import {
   DEFAULT_SITE_THEME,
   type SiteTheme,
   THEME_CSS_KEY,
+  lookCss,
   themeCss,
 } from "@/lib/theme";
 
@@ -110,7 +111,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // <head>), so a reload never flashes another theme while the API answers or wakes up.
   useEffect(() => {
     if (!loaded) return;
-    const css = themeCss(loaded.preset, loaded.custom);
+    const css = themeCss(loaded.preset, loaded.custom) + lookCss(loaded);
     applyThemeCss(css);
     store(THEME_CSS_KEY, css);
   }, [loaded]);

@@ -114,6 +114,10 @@ export interface SiteTheme {
   guide_tassel: string;
   /** The guide inside the app, for people who have signed in. */
   helper_enabled: boolean;
+  /** The look of cards: a hairline border, a soft shadow, and how round corners are. */
+  card_borders?: boolean;
+  card_shadows?: boolean;
+  corners?: Corners;
   /** The admin's own colours; read when preset is "custom". */
   custom: Partial<Record<Mode, CustomColours>>;
 }
@@ -249,6 +253,9 @@ export const DEFAULT_SITE_THEME: SiteTheme = {
   guide_cap: "",
   guide_tassel: "",
   helper_enabled: true,
+  card_borders: true,
+  card_shadows: true,
+  corners: "round",
   custom: {},
 };
 
@@ -262,6 +269,26 @@ function vars(t: Tokens) {
     `--cv-side:${t.side}`,
     `--cv-side-active:${t.accent}`,
   ].join(";");
+}
+
+export type Corners = "round" | "medium" | "sharp";
+
+/** Corner sizes for cards, rows and controls. Keep the keys in step with CORNERS in
+ *  backend/apps/academic/theme.py. */
+export const CORNERS: Record<Corners, { label: string; card: number; row: number; control: number }> = {
+  round: { label: "Round", card: 20, row: 12, control: 12 },
+  medium: { label: "Medium", card: 12, row: 8, control: 8 },
+  sharp: { label: "Sharp", card: 6, row: 4, control: 4 },
+};
+
+/** The card look (border, shadow, corners) as CSS. Empty when everything is left as it was. */
+export function lookCss(site: Pick<SiteTheme, "card_borders" | "card_shadows" | "corners">): string {
+  const rules: string[] = [];
+  if (site.card_borders === false) rules.push("--cv-card-border:transparent");
+  if (site.card_shadows === false) rules.push("--cv-card-shadow:none");
+  const c = CORNERS[site.corners ?? "round"] ?? CORNERS.round;
+  if (c !== CORNERS.round) rules.push(`--cv-radius-card:${c.card}px`, `--cv-radius-row:${c.row}px`, `--cv-radius-control:${c.control}px`);
+  return rules.length ? `html:root{${rules.join(";")}}` : "";
 }
 
 /** The CSS that puts a theme on the page, over the app's own tokens (globals.css). */

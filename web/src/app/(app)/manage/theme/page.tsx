@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { ChipGroup } from "@/components/chip-group";
 import { CheckIcon } from "@/components/icons";
 import { PageTitle } from "@/components/page-title";
 import { Switch } from "@/components/switch";
@@ -10,6 +11,8 @@ import { applyThemeCss, siteThemeKey } from "@/components/theme-provider";
 import { apiFetch, errorDetail } from "@/lib/api";
 import {
   coloursOf,
+  CORNERS,
+  type Corners,
   CUSTOM_KEYS,
   CUSTOM_LABELS,
   type CustomColours,
@@ -19,6 +22,7 @@ import {
   previewVars,
   type SiteTheme,
   THEMES,
+  lookCss,
   themeCss,
 } from "@/lib/theme";
 
@@ -58,12 +62,12 @@ export default function ThemeSettings() {
 
   // Picking a theme shows it on this page at once; leaving without saving puts the saved one back.
   useEffect(() => {
-    if (draft) applyThemeCss(themeCss(draft.preset, draft.custom));
+    if (draft) applyThemeCss(themeCss(draft.preset, draft.custom) + lookCss(draft));
   }, [draft]);
   useEffect(
     () => () => {
       const current = qc.getQueryData<SiteTheme>(siteThemeKey);
-      applyThemeCss(themeCss(current?.preset, current?.custom));
+      applyThemeCss(themeCss(current?.preset, current?.custom) + (current ? lookCss(current) : ""));
     },
     [qc],
   );
@@ -197,6 +201,42 @@ export default function ThemeSettings() {
             onChange={(custom) => set({ custom })}
           />
         )}
+      </section>
+
+      <section aria-labelledby="cards-h" className="glass flex flex-col gap-5 rounded-card p-6">
+        <div>
+          <h2 id="cards-h" className="text-title-2 font-bold">Cards</h2>
+          <p className="mt-1 max-w-xl text-footnote text-ink-2">
+            How the panels across the site look: the notices, the Today card, chats and settings. This
+            page shows each change straight away.
+          </p>
+        </div>
+        <span className="flex flex-wrap items-center justify-between gap-3 text-body font-medium">
+          <span>
+            Border around cards
+            <span className="block text-footnote font-normal text-ink-2">A thin line around each card</span>
+          </span>
+          <Switch checked={draft.card_borders !== false} onChange={(v) => set({ card_borders: v })} label="Border around cards" />
+        </span>
+        <span className="flex flex-wrap items-center justify-between gap-3 text-body font-medium">
+          <span>
+            Shadow under cards
+            <span className="block text-footnote font-normal text-ink-2">A soft shadow that lifts cards off the page</span>
+          </span>
+          <Switch checked={draft.card_shadows !== false} onChange={(v) => set({ card_shadows: v })} label="Shadow under cards" />
+        </span>
+        <span className="flex flex-wrap items-center justify-between gap-3 text-body font-medium">
+          <span>
+            Corners
+            <span className="block text-footnote font-normal text-ink-2">Cards, buttons and fields</span>
+          </span>
+          <ChipGroup<Corners>
+            label="Corners"
+            value={draft.corners ?? "round"}
+            onChange={(v) => set({ corners: v })}
+            options={(Object.keys(CORNERS) as Corners[]).map((k) => ({ value: k, label: CORNERS[k].label }))}
+          />
+        </span>
       </section>
 
       <section aria-labelledby="helper-h" className="glass flex flex-wrap items-start justify-between gap-4 rounded-card p-6">
