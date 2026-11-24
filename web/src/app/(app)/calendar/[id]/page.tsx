@@ -4,10 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { DatePicker, DateTimeField, todayIso } from "@/components/date-picker";
 import { ChevronLeftIcon, PinIcon, VideoIcon } from "@/components/icons";
 import { Linkified } from "@/components/linkified";
 import { ApiError, apiFetch, errorDetail } from "@/lib/api";
-import { formatTime, relativeTime } from "@/lib/format";
+import { formatTime, relativeTime, toLocalInput } from "@/lib/format";
 import { categoryTone, useAttendees, useEvent } from "@/lib/events";
 import type { CampusEvent } from "@/lib/events";
 import { useMe } from "@/lib/queries";
@@ -73,6 +74,9 @@ export default function EventPage() {
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
+  const [moving, setMoving] = useState(false);
+  const [moveTo, setMoveTo] = useState("");
+  const [moveWhy, setMoveWhy] = useState("");
   const notFound = event.error instanceof ApiError && event.error.status === 404;
   const e = event.data;
 
@@ -86,6 +90,7 @@ export default function EventPage() {
       queryClient.setQueryData(["events", "one", id], saved);
       await queryClient.invalidateQueries({ queryKey: ["events"] });
       setCancelling(false);
+      setMoving(false);
     } catch (err) {
       setError(errorDetail(err, "That didn't work. Try again."));
     } finally {
@@ -176,7 +181,45 @@ export default function EventPage() {
 
           {e.can_manage && e.status === "scheduled" && (
             <section aria-label="Manage" className="glass flex flex-col gap-3 rounded-card p-5">
-              {cancelling ? (
+              {moving ? (
+                <form noValidate className="flex flex-col gap-3"
+                  onSubmit={(ev) => {
+                    ev.preventDefault();
+                    const at = e.all_day ? new Date(`${moveTo.slice(0, 10)}T00:00`) : new Date(moveTo);
+                    if (Number.isNaN(at.getTime())) return setError("Pick the new date.");
+                    act("POST", "/move", { starts_at: at.toISOString(), reason: moveWhy });
+                  }}>
+                  <p className="text-headline font-semibold">Move to another date</p>
+                  <p className="text-footnote text-ink-2">
+                    It keeps its length and place. Everyone it&apos;s for gets a notification with the new date.
+                  </p>
+                  <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
+                    {e.all_day ? "New date" : "New date and time"}
+                    {e.all_day ? (
+                      <DatePicker value={moveTo.slice(0, 10)} label="New date" min={todayIso()}
+                        onChange={(d) => setMoveTo(`${d}T00:00`)}
+                        className="h-11 w-full rounded-control border border-transparent bg-fill px-3 text-body" />
+                    ) : (
+                      <DateTimeField value={moveTo} label="New date and time" min={todayIso()} onChange={setMoveTo}
+                        className="h-11 w-full rounded-control border border-transparent bg-fill px-3 text-body" />
+                    )}
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
+                    Why (optional, shown to everyone)
+                    <input value={moveWhy} maxLength={200} onChange={(ev) => setMoveWhy(ev.target.value)}
+                      placeholder="The hall is booked that day."
+                      className="h-11 w-full rounded-control border border-transparent bg-fill px-3 text-body outline-none focus:border-accent" />
+                  </label>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setMoving(false)}
+                      className="press h-10 rounded-full bg-fill-strong px-4 text-footnote font-semibold">Back</button>
+                    <button type="submit" disabled={busy || !moveTo}
+                      className="press h-10 rounded-full bg-accent px-4 text-footnote font-semibold text-on-accent disabled:opacity-60">
+                      {busy ? "Moving…" : "Move it"}
+                    </button>
+                  </div>
+                </form>
+              ) : cancelling ? (
                 <form noValidate onSubmit={(ev) => { ev.preventDefault(); act("POST", "/cancel", { reason }); }}
                   className="flex flex-col gap-3">
                   <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
@@ -201,6 +244,10 @@ export default function EventPage() {
                     className="press inline-flex h-10 items-center rounded-full bg-fill-strong px-4 text-footnote font-semibold">
                     Edit
                   </Link>
+                  <button onClick={() => { setMoveTo(toLocalInput(new Date(e.starts_at))); setMoveWhy(""); setMoving(true); }}
+                    className="press h-10 rounded-full bg-fill-strong px-4 text-footnote font-semibold">
+                    {e.category === "exam" ? "Move exam" : "Move to another date"}
+                  </button>
                   <button onClick={() => setCancelling(true)}
                     className="press h-10 rounded-full px-4 text-footnote font-semibold text-danger-ink hover:bg-danger/10">
                     Cancel event

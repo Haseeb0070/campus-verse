@@ -162,3 +162,54 @@ def test_events_api(client, campus, classmate):
     assert client.delete(f"/api/events/{eid}/registration").json()["my_status"] is None
     client.force_login(campus.outsider)
     assert client.get(f"/api/events/{eid}").status_code == 404
+
+
+def test_moving_an_exam_keeps_its_length_and_tells_everyone(campus, classmate):
+    start = soon(days=3)
+    exam = make(campus, category="exam", title="Midterm", starts_at=start,
+                ends_at=start + timedelta(hours=2))
+    later = exam.starts_at + timedelta(days=4)
+    with pytest.raises(PermissionDenied):
+        services.move_event(campus.ayesha, exam, starts_at=later)
+    with pytest.raises(ValidationError, match="different"):
+        services.move_event(campus.teacher, exam, starts_at=exam.starts_at)
+    services.move_event(campus.teacher, exam, starts_at=later, reason="Hall is booked")
+    exam.refresh_from_db()
+    assert exam.starts_at == later and exam.ends_at - exam.starts_at == timedelta(hours=2)
+    note = Notification.objects.get(recipient=campus.ayesha, title="Moved: Midterm")
+    assert note.body.startswith("Now ") and "Hall is booked" in note.body
+    assert AuditLog.objects.filter(action="event.moved").exists()
+
+
+def test_changing_the_date_in_the_edit_form_also_tells_everyone(campus):
+    event = make(campus)
+    services.update_event(campus.teacher, event, title="Graph theory seminar (updated)")
+    assert not any(t.startswith("Moved:") for t in titles(campus.ayesha))
+    services.update_event(campus.teacher, event, starts_at=event.starts_at + timedelta(days=1),
+                          ends_at=event.ends_at + timedelta(days=1))
+    assert any(t.startswith("Moved:") for t in titles(campus.ayesha))
+
+
+def test_move_api(client, campus):
+    exam = make(campus, category="exam", title="Quiz")
+    client.force_login(campus.teacher)
+    later = (exam.starts_at + timedelta(days=2)).isoformat()
+    r = client.post(f"/api/events/{exam.pk}/move", {"starts_at": later, "reason": ""},
+                    content_type="application/json")
+    assert r.status_code == 200, r.content
+    client.force_login(campus.ayesha)
+    r = client.post(f"/api/events/{exam.pk}/move", {"starts_at": later},
+                    content_type="application/json")
+    assert r.status_code == 403
+
+
+def test_notifications_give_times_in_the_colleges_time_zone(campus):
+    from datetime import datetime
+    from datetime import timezone as dt_tz
+
+    start = datetime(2030, 3, 4, 4, 0, tzinfo=dt_tz.utc)  # 09:00 in Lahore
+    exam = make(campus, category="exam", title="Finals", starts_at=start,
+                ends_at=start + timedelta(hours=2))
+    services.move_event(campus.teacher, exam, starts_at=start + timedelta(days=1))
+    bodies = Notification.objects.filter(recipient=campus.ayesha).values_list("body", flat=True)
+    assert any("09:00" in b for b in bodies) and not any("04:00" in b for b in bodies)

@@ -167,6 +167,20 @@ def update(request, event_id: int, payload: EventIn):
                           Status(200, _out(_get(request, event_id), request.user)))[1])
 
 
+class MoveIn(Schema):
+    starts_at: datetime
+    reason: str = ""
+
+
+@router.post("/{event_id}/move", response={200: EventOut, 403: ErrorOut, 422: ErrorOut})
+def move(request, event_id: int, payload: MoveIn):
+    """Another date or time for the event, the same length; everyone it is for is told."""
+    event = _get(request, event_id)
+    return _call(lambda: (services.move_event(request.user, event, starts_at=payload.starts_at,
+                                              reason=payload.reason),
+                          Status(200, _out(_get(request, event_id), request.user)))[1])
+
+
 @router.post("/{event_id}/cancel", response={200: EventOut, 403: ErrorOut, 422: ErrorOut})
 def cancel(request, event_id: int, payload: CancelIn):
     event = _get(request, event_id)

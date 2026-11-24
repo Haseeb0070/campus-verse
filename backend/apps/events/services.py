@@ -1,4 +1,5 @@
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -117,13 +118,12 @@ def create_event(user, *, targets: list[tuple[str, int]], **fields) -> Event:
     )
     audit.record(actor=user, action="event.created", target=event,
                  changes={"targets": [f"{t}:{i}" for t, i in targets]})
-    when = timezone.localtime(event.starts_at).strftime("%a %d %b, %H:%M")
     notify(
         audience_user_ids(targets, event.institution_id),
         kind=Notification.Kind.EVENT, institution_id=event.institution_id,
         title=f"{event.get_category_display()}: {event.title}",
-        body=("All day " + timezone.localtime(event.starts_at).strftime("%a %d %b")
-              if event.all_day else when) + (f" · {event.location}" if event.location else ""),
+        body=("All day " if event.all_day else "") + _when(event, event.starts_at)
+        + (f" · {event.location}" if event.location else ""),
         link=f"/calendar/{event.pk}", actor_id=user.pk, dedupe_key=f"event:{event.pk}",
     )
     return event
@@ -153,6 +153,53 @@ def update_event(user, event: Event, **fields) -> Event:
     if changed:
         audit.record(actor=user, action="event.updated", target=event, changes=changed)
     _promote(event)  # a bigger capacity may free places
+    if before["starts_at"] != event.starts_at:
+        _announce_move(user, event, before["starts_at"])
+    return event
+
+
+def _when(event: Event, at) -> str:
+    # In the college's own time zone, not the server's (UTC).
+    local = timezone.localtime(at, ZoneInfo(event.institution.timezone))
+    return local.strftime("%a %d %b") + ("" if event.all_day else local.strftime(", %H:%M"))
+
+
+def _announce_move(user, event: Event, was, reason: str = "") -> None:
+    """Tells everyone the event is for that it moved, and when to now."""
+    body = f"Now {_when(event, event.starts_at)}, was {_when(event, was)}"
+    if event.location:
+        body += f" · {event.location}"
+    if reason:
+        body += f". {reason}"
+    notify(
+        audience_user_ids(targets_of(event), event.institution_id),
+        kind=Notification.Kind.EVENT, institution_id=event.institution_id,
+        title=f"Moved: {event.title}", body=body[:300],
+        link=f"/calendar/{event.pk}", actor_id=user.pk,
+        dedupe_key=f"event:{event.pk}:moved:{event.starts_at.isoformat()}",
+    )
+
+
+@transaction.atomic
+def move_event(user, event: Event, *, starts_at, reason: str = "") -> Event:
+    """Moves an event (an exam, say) to another date or time, keeping how long it lasts, and
+    tells everyone it is for."""
+    if not can_manage(user, event):
+        raise PermissionDenied("Only the organiser can move this event.")
+    if event.status == Event.Status.CANCELLED:
+        raise ValidationError("This event was cancelled.")
+    if starts_at == event.starts_at:
+        raise ValidationError("Pick a different date or time.")
+    was = event.starts_at
+    length = event.ends_at - event.starts_at
+    event.starts_at = starts_at
+    event.ends_at = starts_at + length
+    _clean(event)
+    event.save(update_fields=["starts_at", "ends_at", "updated_at"])
+    reason = (reason or "").strip()[:200]
+    audit.record(actor=user, action="event.moved", target=event,
+                 changes={"starts_at": [str(was), str(event.starts_at)], "reason": reason})
+    _announce_move(user, event, was, reason)
     return event
 
 
