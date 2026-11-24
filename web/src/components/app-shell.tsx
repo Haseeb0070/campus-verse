@@ -148,7 +148,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const unauthorized = me.error instanceof ApiError && me.error.status === 401;
   useEffect(() => {
-    if (unauthorized) router.replace(`/sign-in?next=${encodeURIComponent(pathname)}`);
+    // A full page load, so the landing page starts clean (its own title and light look).
+    if (unauthorized) window.location.replace(`/?next=${encodeURIComponent(pathname)}`);
   }, [unauthorized, router, pathname]);
 
   // Search from anywhere: Ctrl/Cmd+K, or "/" when not typing in a field.
@@ -178,7 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     } finally {
       disconnectRealtime();
       queryClient.clear();
-      router.replace("/sign-in");
+      router.replace("/");
     }
   }
 

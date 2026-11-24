@@ -56,9 +56,12 @@ function useRise<T extends HTMLElement>() {
 export function Landing({
   signIn,
   onSignInClose,
+  next,
 }: {
   signIn?: { email?: string; next?: string | null };
   onSignInClose?: () => void;
+  /** Where signing in goes afterwards: the page a signed-out visitor first tried to open. */
+  next?: string | null;
 } = {}) {
   const [dialog, setDialog] = useState<{ open: boolean; email?: string }>({
     open: Boolean(signIn),
@@ -83,7 +86,7 @@ export function Landing({
         <SignInDialog
           open={dialog.open}
           email={dialog.email}
-          next={signIn?.next}
+          next={signIn?.next ?? next}
           onClose={() => {
             setDialog({ open: false });
             onSignInClose?.();
