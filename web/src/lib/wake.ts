@@ -7,7 +7,6 @@
  */
 
 const DIRECT = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
-const EVENT = "cv-waking";
 
 let lastPing = 0;
 
@@ -23,12 +22,3 @@ export function isSleepingReply(res: Response): boolean {
   return [429, 502, 503, 504].includes(res.status) && !res.headers.get("content-type")?.includes("json");
 }
 
-export function announceWaking(waking: boolean) {
-  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(EVENT, { detail: waking }));
-}
-
-export function onWaking(listener: (waking: boolean) => void) {
-  const handler = (e: Event) => listener(Boolean((e as CustomEvent).detail));
-  window.addEventListener(EVENT, handler);
-  return () => window.removeEventListener(EVENT, handler);
-}
