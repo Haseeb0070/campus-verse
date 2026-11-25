@@ -109,3 +109,17 @@ def test_preferences_api(client, campus):
                        {"changes": {"account": {"in_app": False}}},
                        content_type="application/json")
     assert bad.status_code == 422
+
+
+def test_lecture_reminders_switch_off_on_their_own(campus):
+    from apps.notifications.models import Notification
+    from apps.notifications.preferences import update_preferences
+    from apps.notifications.services import notify
+
+    update_preferences(campus.ayesha, {"reminders": {"in_app": False}})
+    Kind = Notification.Kind
+    for kind, key in ((Kind.CLASS_REMINDER, "r"), (Kind.CLASS_CHANGED, "c")):
+        notify([campus.ayesha.pk], kind=kind, institution_id=campus.inst.pk, title=key,
+               dedupe_key=f"test:{key}")
+    shown = Notification.objects.filter(recipient=campus.ayesha, in_app=True)
+    assert list(shown.values_list("title", flat=True)) == ["c"]

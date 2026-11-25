@@ -14,7 +14,10 @@ GROUPS: list[dict] = [
     {"key": "notices", "label": "Other notices", "in_app": True, "email": False,
      "detail": "Everything else posted to your courses, department or campus."},
     {"key": "classes", "label": "Class changes", "in_app": True, "email": True,
-     "detail": "Cancelled, moved or room-changed classes."},
+     "detail": "Cancelled, moved or room-changed classes, a teacher running late, and CR/GR "
+                "requests."},
+    {"key": "reminders", "label": "Lecture reminders", "in_app": True, "email": False,
+     "detail": "A note shortly before each lecture: 10 minutes for students, 15 for teachers."},
     {"key": "assignments", "label": "Assignments and grades", "in_app": True, "email": True,
      "detail": "New work, reminders a day before deadlines, and released grades."},
     {"key": "events", "label": "Events and exams", "in_app": True, "email": False,
@@ -33,7 +36,7 @@ DEFAULTS = {g["key"]: g for g in GROUPS}
 KIND_GROUP = {
     Kind.NOTICE: "notices",
     Kind.CLASS_CHANGED: "classes",
-    Kind.CLASS_REMINDER: "classes",
+    Kind.CLASS_REMINDER: "reminders",
     Kind.CLASS_REP: "classes",
     Kind.ASSIGNMENT_OPENED: "assignments",
     Kind.ASSIGNMENT_DUE_SOON: "assignments",
