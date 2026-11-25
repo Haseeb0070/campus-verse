@@ -40,6 +40,9 @@ export function appRoute(link: string): Href | null {
       return "/progress";
     case "notifications":
       return "/notifications";
+    case "requests":
+      // "/requests#request-12": CR/GR changes waiting on a teacher or CR.
+      return "/requests";
     case "profile":
       return "/profile";
     default:

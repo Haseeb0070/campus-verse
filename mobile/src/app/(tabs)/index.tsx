@@ -15,6 +15,7 @@ import { ConversationRow } from "@/components/conversations";
 import { EventRow } from "@/components/events";
 import { useEvents } from "@/lib/events";
 import { useFeed } from "@/lib/feed";
+import { useRepRequests, useRepsMine, waitingOn } from "@/lib/reps";
 import { courseTone, font, radius, useTheme } from "@/theme";
 
 export default function Today() {
@@ -46,7 +47,7 @@ function ClassToday() {
       title={formatDay(today, { day: undefined, month: undefined })}
       actions={<HeaderActions profile />}
       verse={soon ? "excited" : "happy"}
-      refreshKeys={[["timetable"], ["assignments"], ["chat"], ["notices"], ["notifications"]]}
+      refreshKeys={[["timetable"], ["assignments"], ["chat"], ["notices"], ["notifications"], ["reps"]]}
     >
       <View style={{ paddingHorizontal: 16, gap: 26 }}>
         {firstName ? (
@@ -54,6 +55,8 @@ function ClassToday() {
             {greeting(tz, new Date(now))}, {firstName}.
           </T>
         ) : null}
+
+        <RequestsWaiting />
 
         {next.isPending ? (
           <Skeleton height={250} style={{ borderRadius: radius.xl }} />
@@ -121,6 +124,7 @@ function UpNext({
   const change = changeOf(o, tz);
   const chat = chats?.find((c) => c.kind === "section" && c.section_id === o.section_id);
   const teacher = o.teachers[0];
+  const manage = (o.can_manage || !!o.rep_role) && !isOff(o);
 
   return (
     <View
@@ -165,7 +169,7 @@ function UpNext({
       <View style={{ flexDirection: "row", gap: 10 }}>
         {chat ? (
           <Button
-            label="Subject chat"
+            label={manage ? "Chat" : "Subject chat"}
             icon="chat"
             style={{ flex: 1 }}
             onPress={() => router.push({ pathname: "/chat/[id]", params: { id: String(chat.id) } })}
@@ -173,11 +177,48 @@ function UpNext({
         ) : null}
         {o.mode === "online" && o.online_url ? (
           <Button label="Join" variant="field" style={{ flex: 1 }} onPress={() => Linking.openURL(o.online_url)} />
-        ) : (
+        ) : manage ? null : (
           <Button label="Timetable" variant="field" style={{ flex: chat ? 0 : 1 }} onPress={() => router.navigate("/timetable")} />
         )}
+        {/* Its teacher changes the lecture (cancel, room, move, running late); a CR/GR asks to. */}
+        {manage ? (
+          <Button
+            label={o.can_manage ? "Change" : "Cancel or shift"}
+            icon="pencil"
+            variant="field"
+            style={{ flex: 1 }}
+            onPress={() => router.push({ pathname: "/class", params: { meeting: String(o.meeting_id), date: o.date } })}
+          />
+        ) : null}
       </View>
     </View>
+  );
+}
+
+/** Class requests waiting on you (a teacher approving, or a CR agreeing to a GR's cancellation). */
+function RequestsWaiting() {
+  const p = useTheme();
+  const me = useMe().data;
+  const mine = useRepsMine(!!me && me.kind !== "staff").data;
+  const teaches = me?.sections.some((s) => s.teaching) ?? false;
+  const isRep = Object.keys(mine?.sections ?? {}).length > 0;
+  const waiting = waitingOn(useRepRequests(teaches || isRep).data);
+  if (!waiting.length) return null;
+  return (
+    <Press accessibilityRole="button" onPress={() => router.push("/requests")}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: p.warnBg, borderRadius: radius.lg, padding: 14 }}>
+        <Icon name="swap" size={20} color={p.warnInk} />
+        <View style={{ flex: 1 }}>
+          <T variant="calloutStrong" style={{ color: p.warnInk }}>
+            {waiting.length === 1 ? "1 class request is waiting for you" : `${waiting.length} class requests are waiting for you`}
+          </T>
+          <T variant="callout" style={{ color: p.warnInk }} numberOfLines={1}>
+            CR and GR changes to approve
+          </T>
+        </View>
+        <Icon name="chevron" size={16} color={p.warnInk} />
+      </View>
+    </Press>
   );
 }
 

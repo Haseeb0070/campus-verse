@@ -134,6 +134,7 @@ function Navigator() {
           <Stack.Screen name="feed/[id]" />
           <Stack.Screen name="class" />
           <Stack.Screen name="attendance" />
+          <Stack.Screen name="requests" />
           <Stack.Screen name="security" />
           <Stack.Screen name="search" options={{ animation: "fade" }} />
           <Stack.Screen name="new-chat" options={{ presentation: "modal" }} />

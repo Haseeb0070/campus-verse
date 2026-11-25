@@ -24,6 +24,7 @@ export function changeOf(o: Occurrence, timeZone?: string): { label: string; ton
     };
   }
   if (o.status === "room_changed") return { label: `Room changed${o.note ? ` · ${o.note}` : ""}`, tone: "warn" };
+  if (o.late_minutes) return { label: `Starts ${o.late_minutes} min late`, tone: "warn" };
   return null;
 }
 
@@ -97,9 +98,9 @@ export function ClassCard({ o, timeZone, now }: { o: Occurrence; timeZone?: stri
           ) : null}
         </View>
         {change ? <Pill label={change.label} tone={change.tone} icon={cancelled ? "close" : "swap"} /> : null}
-        {o.can_manage ? (
+        {o.can_manage || o.rep_role ? (
           <Button
-            label="Manage class"
+            label={o.can_manage ? "Manage class" : "Cancel or shift"}
             icon="pencil"
             variant="secondary"
             style={{ minHeight: 40, marginTop: 4 }}

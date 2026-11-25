@@ -114,6 +114,10 @@ export interface Occurrence {
   moved_from: string | null;
   change_id: number | null;
   can_manage: boolean;
+  /** "cr" / "gr" when the viewer is their section's CR or GR: they may cancel or shift it. */
+  rep_role?: "cr" | "gr" | null;
+  /** The teacher said they're running this many minutes late (0: on time). */
+  late_minutes?: number;
   /** Where the class came from (an import or sync source) and when it was last synchronized. */
   source: string | null;
   synced_at: string | null;

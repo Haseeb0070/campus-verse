@@ -92,3 +92,13 @@ export function useClassChange() {
   });
   return { make, undo };
 }
+
+/** The teacher is running late (minutes 0: on time after all); students are told at once. */
+export function useLate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { meeting_id: number; date: string; minutes: number; note?: string }) =>
+      apiFetch("/api/timetable/late", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["timetable"] }),
+  });
+}

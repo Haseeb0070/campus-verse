@@ -13,6 +13,7 @@ import { API_URL } from "@/lib/config";
 import { initials } from "@/lib/format";
 import { type NotificationPreference, useNotificationPreferences } from "@/lib/notifications";
 import { useMe } from "@/lib/queries";
+import { useRepsMine } from "@/lib/reps";
 import type { Me } from "@/lib/types";
 import { useTheme } from "@/theme";
 
@@ -22,6 +23,9 @@ export default function Profile() {
   const me = useMe();
   const auth = useAuth();
   const m = me.data;
+  const reps = useRepsMine(!!m && m.kind !== "staff").data;
+  // Teachers approve CR/GR changes there; a CR or GR follows what they asked for.
+  const showRequests = !!m && (m.sections.some((s) => s.teaching) || Object.keys(reps?.sections ?? {}).length > 0);
 
   function confirmSignOut() {
     if (Platform.OS === "web") {
@@ -98,13 +102,19 @@ export default function Profile() {
           <Group title="More">
             <Card padded={false}>
               <Row icon="chart" label="Marks and attendance" onPress={() => router.push("/progress")} />
+              {showRequests ? (
+                <>
+                  <Divider inset={52} />
+                  <Row icon="swap" label="Class requests" onPress={() => router.push("/requests")} />
+                </>
+              ) : null}
               <Divider inset={52} />
               <Row icon="bell" label="Notifications" onPress={() => router.push("/notifications")} />
               <Divider inset={52} />
               <Row icon="user" label="Account and security" onPress={() => router.push("/security")} />
             </Card>
             <T variant="callout" tone="ink3" style={{ paddingHorizontal: 4, marginTop: 8 }}>
-              Managing classes, people and the college lives on the CampusVerse website.
+              Managing sections, subjects, people and CRs lives on the CampusVerse website.
             </T>
           </Group>
 

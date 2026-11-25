@@ -69,9 +69,17 @@ export function Press({
   const scale = useSharedValue(1);
   const reduced = useReducedMotion();
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  // How the button sits in its row (flex: 1, alignSelf, width, margins) belongs on the outer
+  // Pressable, or "flex: 1" buttons don't stretch; the look stays on the inner view.
+  const { flex, flexGrow, flexShrink, flexBasis, alignSelf, width, margin, marginTop, marginBottom,
+    marginLeft, marginRight, marginHorizontal, marginVertical, ...look } = StyleSheet.flatten(style) ?? {};
+  const outer = { flex, flexGrow, flexShrink, flexBasis, alignSelf, width, margin, marginTop, marginBottom,
+    marginLeft, marginRight, marginHorizontal, marginVertical };
+  const inner = flex !== undefined || flexGrow !== undefined ? [look, { flexGrow: 1 }] : look;
   return (
     <Pressable
       {...rest}
+      style={outer}
       onPressIn={(e) => {
         if (!reduced) scale.set(withSpring(scaleTo, { damping: 30, stiffness: 600 }));
         onPressIn?.(e);
@@ -85,7 +93,7 @@ export function Press({
         onPress?.(e);
       }}
     >
-      <Animated.View style={[style, animated]}>{children}</Animated.View>
+      <Animated.View style={[inner, animated]}>{children}</Animated.View>
     </Pressable>
   );
 }
