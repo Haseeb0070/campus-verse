@@ -104,3 +104,14 @@ export function startOfWeek(isoDate: string) {
   const d = new Date(`${isoDate}T12:00:00Z`);
   return addDays(isoDate, -((d.getUTCDay() + 6) % 7));
 }
+
+/**
+ * A few characters for a subject's coloured tile: the course number ("CC-310" → "310"), which
+ * tells subjects apart where the class code ("BSCS24") is the same on every row and too long to
+ * fit. Falls back to the first three characters.
+ */
+export function tileLabel(text: string | null | undefined): string {
+  const course = (text ?? "").split(" · ")[0].trim();
+  const number = /(\d{2,4})[A-Za-z]?\s*$/.exec(course)?.[1];
+  return number ?? course.replace(/[^A-Za-z0-9+]/g, "").slice(0, 3).toUpperCase();
+}

@@ -8,7 +8,15 @@ import { Avatar, Press, T } from "./ui";
 
 export function conversationAvatar(c: Conversation) {
   if (c.kind === "direct" && c.other) return { text: c.other.initials, color: "sky" };
-  return { text: (c.section_code ?? c.title).slice(0, 2).toUpperCase(), color: c.color ?? "slate" };
+  return { text: tileLabel(c.title), color: c.color ?? "slate" };
+}
+
+/** The course number for a subject's tile ("CC-310 · BSCS24" → "310"): the class code is the
+ *  same on every row and too long to fit. Falls back to three letters. Same as the website's. */
+export function tileLabel(text: string): string {
+  const course = text.split(" · ")[0].trim();
+  const number = /(\d{2,4})[A-Za-z]?\s*$/.exec(course)?.[1];
+  return number ?? course.replace(/[^A-Za-z0-9+]/g, "").slice(0, 3).toUpperCase();
 }
 
 export function ConversationRow({ c, tz }: { c: Conversation; tz?: string }) {

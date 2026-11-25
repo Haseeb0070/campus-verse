@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ChevronLeftIcon } from "@/components/icons";
 import { ApiError, apiFetch } from "@/lib/api";
-import { courseBg } from "@/lib/format";
+import { courseBg, tileLabel } from "@/lib/format";
 import { useRoster } from "@/lib/queries";
 import type { Person } from "@/lib/types";
 
@@ -71,7 +71,7 @@ export default function RosterPage() {
               className={`grid size-14 shrink-0 place-items-center rounded-[16px] text-headline font-bold text-white ${courseBg[roster.data.section.color]}`}
               aria-hidden="true"
             >
-              {roster.data.section.code}
+              {tileLabel(roster.data.section.course_code)}
             </span>
             <div>
               <h1 className="text-title-1 font-bold">{roster.data.section.course_title}</h1>

@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { BellIcon, ChevronLeftIcon, PaperclipIcon, SendIcon } from "@/components/icons";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useChat, useConversations } from "@/lib/chat";
-import { courseBg, fileSize, formatDay, formatTime } from "@/lib/format";
+import { courseBg, fileSize, formatDay, formatTime, tileLabel } from "@/lib/format";
 import { useMe } from "@/lib/queries";
 import type { ChatMessage } from "@/lib/types";
 
@@ -149,7 +149,7 @@ export function Thread({ conversationId }: { conversationId: number }) {
             }`}
             aria-hidden="true"
           >
-            {conversation?.section_code ?? ""}
+            {conversation ? tileLabel(conversation.title) : ""}
           </span>
         )}
         <span className="min-w-0 flex-1">

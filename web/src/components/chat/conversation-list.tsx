@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useConversations } from "@/lib/chat";
 import { NewMessageButton } from "./new-message";
-import { courseBg, formatTime, relativeTime } from "@/lib/format";
+import { courseBg, formatTime, relativeTime, tileLabel } from "@/lib/format";
 import type { Conversation } from "@/lib/types";
 import { PageTitle } from "@/components/page-title";
 
@@ -92,7 +92,7 @@ export function ConversationRow({
           }`}
           aria-hidden="true"
         >
-          {c.section_code ?? c.title.slice(0, 2)}
+          {tileLabel(c.title)}
         </span>
       )}
       <span className="min-w-0 flex-1">
