@@ -59,7 +59,7 @@ export default function AssignmentPage() {
       {notFound && (
         <div className="glass rounded-card p-6">
           <p className="text-headline font-semibold">This assignment isn&apos;t available</p>
-          <p className="mt-1 text-body text-ink-2">It may not be open yet, or it&apos;s for another section.</p>
+          <p className="mt-1 text-body text-ink-2">It may not be open yet, or it&apos;s for another subject.</p>
         </div>
       )}
       {assignment.isPending && <p className="text-body text-ink-2">Loading…</p>}
@@ -297,7 +297,7 @@ function TeacherPanel({ a, tz }: { a: Assignment; tz?: string }) {
       {releaseError && <p role="alert" className="text-footnote text-danger-ink">{releaseError}</p>}
 
       {roster.isPending && <p className="text-body text-ink-2">Loading…</p>}
-      {roster.data?.length === 0 && <p className="text-body text-ink-2">No students in this section yet.</p>}
+      {roster.data?.length === 0 && <p className="text-body text-ink-2">No students in this subject yet.</p>}
       <ul className="flex flex-col gap-2">
         {roster.data?.map((row) => (
           <GradeRow key={`${row.student.id}-${row.grade?.points ?? ""}`} a={a} row={row} tz={tz} />

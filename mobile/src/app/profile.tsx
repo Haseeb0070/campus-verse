@@ -64,7 +64,7 @@ export default function Profile() {
           </Group>
 
           {m.sections.length ? (
-            <Group title={m.kind === "teacher" ? "Sections you teach" : "Your sections"}>
+            <Group title={m.kind === "teacher" ? "Subjects you teach" : "Your subjects"}>
               <Card padded={false}>
                 {m.sections.map((s, i) => (
                   <View key={s.id}>

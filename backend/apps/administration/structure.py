@@ -175,7 +175,14 @@ def save_course(user, course: Course | None, *, department_id, code, title, colo
 # Sections -----------------------------------------------------------------------------------
 
 
-def create_section(user, *, course_id, term_id, code, program_id=None) -> Section:
+def create_section(user, *, course_id, term_id, code=None, program_id=None,
+                   cohort_id=None) -> Section:
+    """A subject: a course taught to a section (cohort) in a term. Given a section, the subject
+    takes its code and program and starts with all its students."""
+    from apps.academic.models import Cohort
+
+    from .cohorts import enroll_members, require_manage
+
     course = Course.objects.filter(pk=course_id).first()
     term = AcademicTerm.objects.filter(pk=term_id).first()
     _same_institution(user, course)
@@ -183,26 +190,40 @@ def create_section(user, *, course_id, term_id, code, program_id=None) -> Sectio
     require_department(user, course.department_id)
     if not course.is_active:
         raise ValidationError("That course is archived. Restore it first.")
+    cohort = None
     program = None
-    if program_id:
+    if cohort_id:
+        cohort = Cohort.objects.filter(pk=cohort_id).select_related("program").first()
+        _same_institution(user, cohort)
+        require_manage(user, cohort)
+        if cohort.status != Cohort.Status.ACTIVE:
+            raise ValidationError("That section is archived. Restore it first.")
+        code, program = cohort.code, cohort.program
+    elif not code:
+        raise ValidationError("Choose the section this subject is for.")
+    elif program_id:
         program = Program.objects.filter(pk=program_id).first()
         _same_institution(user, program)
     with transaction.atomic():
         offering, _ = CourseOffering.objects.get_or_create(
             course=course, term=term, defaults={"institution_id": user.institution_id}
         )
-        section = Section(institution_id=user.institution_id, offering=offering,
-                          code=_code(code, "Section"), program=program)
-        return _save(section, actor=user, action="section.created",
-                     changes={"course": course.code, "term": term.code},
-                     duplicate=f"{course.code} already has a section {section.code} that term.")
+        section = Section(institution_id=user.institution_id, offering=offering, cohort=cohort,
+                          code=cohort.code if cohort else _code(code, "Section"), program=program)
+        _save(section, actor=user, action="section.created",
+              changes={"course": course.code, "term": term.code, "section": section.code},
+              duplicate=f"{section.code} already has {course.code} that term.")
+        enroll_members(section)
+        return section
 
 
 def update_section(user, section: Section, *, code=None, program_id=..., status=None) -> Section:
     _same_institution(user, section)
     require_department(user, section.offering.course.department_id)
     fields = {}
-    if code is not None:
+    if code is not None and code != section.code:
+        if section.cohort_id:
+            raise ValidationError("This subject takes its section's code. Change the section.")
         fields["code"] = _code(code, "Section")
     if program_id is not ...:
         if program_id:

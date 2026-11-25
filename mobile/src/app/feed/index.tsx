@@ -47,7 +47,7 @@ export default function Feed() {
             <Empty
               icon="chat"
               title="Nothing posted yet"
-              body="Posts to your sections, courses and campus show here."
+              body="Posts to your subjects, courses and campus show here."
               action={<Button label="Write the first post" icon="pencil" onPress={() => setWriting(true)} style={{ marginTop: 6 }} />}
             />
           )

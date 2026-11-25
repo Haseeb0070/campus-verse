@@ -119,7 +119,7 @@ export default function SignIn() {
             Your college,{"\n"}on one screen.
           </T>
           <T variant="body" tone="onFieldMuted" style={{ marginTop: 16, fontSize: 16, lineHeight: 24 }}>
-            Timetable, room changes, notices, coursework and section chat, with your college email.
+            Timetable, room changes, notices, coursework and subject chat, with your college email.
           </T>
         </Animated.View>
 

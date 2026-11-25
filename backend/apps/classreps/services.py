@@ -1,7 +1,7 @@
 """What a CR or GR may do, and the path each request takes.
 
-- A CR/GR acts for their class: the sections of their term with the class's code (for example
-  every subject's "G1+G2" section), but only those they are enrolled in.
+- A CR/GR acts for their section (academic.Cohort) in one term: every subject it has that term,
+  but only those they are enrolled in.
 - Cancelling or shifting a lecture, or taking attendance, makes a RepRequest:
   - a GR's cancellation first needs a CR of the class to agree;
   - then, if every teacher of that subject lets CR/GR changes through without approval, it is
@@ -18,7 +18,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.academic.models import Section
+from apps.academic.models import Cohort, CohortMember, Section
 from apps.enrollment.models import SectionEnrollment, TeacherAssignment
 from apps.governance import audit
 from apps.identity.roles import coordinated_department_ids, is_institution_admin
@@ -38,11 +38,12 @@ Action = RepRequest.Action
 
 
 def rep_role(user, section: Section) -> str | None:
-    """'cr' or 'gr' when the person represents this section's class (and is in it), else None."""
-    if getattr(user, "kind", None) != "student" or section.institution_id != user.institution_id:
+    """'cr' or 'gr' when the person represents this subject's section (and is in it), else None."""
+    if (getattr(user, "kind", None) != "student" or section.institution_id != user.institution_id
+            or not section.cohort_id):
         return None
     rep = ClassRep.objects.filter(
-        student=user, term_id=section.offering.term_id, group_code=section.code
+        student=user, term_id=section.offering.term_id, cohort_id=section.cohort_id
     ).first()
     if rep is None:
         return None
@@ -53,16 +54,16 @@ def rep_role(user, section: Section) -> str | None:
 
 
 def rep_sections(user) -> dict[int, str]:
-    """Section id -> 'cr'/'gr' for every section the person may act on as a CR/GR."""
-    reps = list(ClassRep.objects.filter(student=user).values_list("term_id", "group_code", "role"))
+    """Subject id -> 'cr'/'gr' for every subject the person may act on as a CR/GR."""
+    reps = list(ClassRep.objects.filter(student=user).values_list("term_id", "cohort_id", "role"))
     if not reps:
         return {}
-    by_class = {(t, g): r for t, g, r in reps}
+    by_section = {(t, c): r for t, c, r in reps}
     out = {}
-    for sid, term_id, code in SectionEnrollment.objects.filter(
+    for sid, term_id, cohort_id in SectionEnrollment.objects.filter(
         student=user, status=SectionEnrollment.Status.ACTIVE
-    ).values_list("section_id", "section__offering__term_id", "section__code"):
-        role = by_class.get((term_id, code))
+    ).values_list("section_id", "section__offering__term_id", "section__cohort_id"):
+        role = by_section.get((term_id, cohort_id))
         if role:
             out[sid] = role
     return out
@@ -74,15 +75,22 @@ def teacher_ids(section: Section) -> set[int]:
     )
 
 
-def can_assign(user, section: Section) -> bool:
-    """The section's teachers, its department's coordinators and institution admins."""
+def can_assign(user, cohort: Cohort) -> bool:
+    """Institution admins, and coordinators of the section's program's department."""
+    if cohort.institution_id != user.institution_id:
+        return False
+    if is_institution_admin(user):
+        return True
+    return bool(cohort.program_id) and (
+        cohort.program.department_id in coordinated_department_ids(user))
+
+
+def can_see_reps(user, section: Section) -> bool:
+    """Who may see a subject's CR and GR: its teachers, and whoever may choose them."""
     if section.institution_id != user.institution_id:
         return False
-    return (
-        user.pk in teacher_ids(section)
-        or is_institution_admin(user)
-        or section.offering.course.department_id in coordinated_department_ids(user)
-    )
+    return user.pk in teacher_ids(section) or (
+        section.cohort_id is not None and can_assign(user, section.cohort))
 
 
 def needs_approval(section: Section) -> bool:
@@ -108,42 +116,118 @@ def lecture_start(meeting, day: date) -> datetime:
 # Assigning CR and GR --------------------------------------------------------------------------
 
 
+def name_of(person) -> str:
+    return person.get_full_name() or person.email
+
+
+class RoleTaken(Exception):
+    """The section already has a CR (or GR) that term and the caller didn't say to replace them."""
+
+    def __init__(self, holder: ClassRep):
+        self.holder = holder
+        chosen = f" (chosen by {name_of(holder.assigned_by)})" if holder.assigned_by_id else ""
+        super().__init__(f"{name_of(holder.student)} is already the "
+                         f"{holder.get_role_display()} of {holder.cohort.code}{chosen}.")
+
+
 @transaction.atomic
-def set_rep(user, section: Section, student, role: str | None) -> None:
-    """Names a student of the section CR or GR of its class, or (role None) takes it away."""
-    if not can_assign(user, section):
-        raise PermissionDenied("Only this class's teachers and admins can choose its CR and GR.")
-    if not SectionEnrollment.objects.filter(
-        student=student, section=section, status=SectionEnrollment.Status.ACTIVE
-    ).exists():
+def set_rep(user, cohort: Cohort, term, student, role: str | None, *,
+            replace: bool = False) -> None:
+    """Names a student of the section its CR or GR for the term, or (role None) takes it away.
+
+    A section has one CR and one GR a term. Naming a second one raises RoleTaken unless
+    `replace`, which takes the role from the current holder and tells them, and whoever chose
+    them. The CR/GR then acts in every subject the section has that term."""
+    if not can_assign(user, cohort):
+        raise PermissionDenied("Only admins and the department's coordinators choose a "
+                               "section's CR and GR.")
+    if term.institution_id != cohort.institution_id:
+        raise ValidationError("That term isn't in your institution.")
+    if not CohortMember.objects.filter(cohort=cohort, student=student,
+                                       status=CohortMember.Status.ACTIVE).exists():
         raise ValidationError("That student isn't in this section.")
-    key = {"student": student, "term_id": section.offering.term_id, "group_code": section.code}
+    key = {"student": student, "term": term, "cohort": cohort}
     if role is None:
         ClassRep.objects.filter(**key).delete()
         audit.record(actor=user, action="classrep.removed", target=student,
-                     changes={"class": section.code})
+                     changes={"section": cohort.code, "term": term.code})
         return
     if role not in ClassRep.Role.values:
         raise ValidationError("Choose CR or GR.")
+    # Locks the section's roles, so two people naming a CR at once can't both win.
+    holders = list(ClassRep.objects.select_for_update().filter(
+        term=term, cohort=cohort, role=role
+    ).exclude(student=student).select_related("student", "assigned_by", "cohort"))
+    if holders and not replace:
+        raise RoleTaken(holders[0])
+    for old in holders:
+        old_id = old.pk
+        old.delete()
+        audit.record(actor=user, action="classrep.replaced", target=old.student,
+                     changes={"section": cohort.code, "role": role, "by": student.pk})
+        label = old.get_role_display()
+        notify([old.student_id], kind=Notification.Kind.CLASS_REP,
+               institution_id=cohort.institution_id,
+               title=f"You're no longer the {label} of {cohort.code}",
+               body=f"{name_of(student)} is the {label} now.",
+               link="/timetable", actor_id=user.pk,
+               dedupe_key=f"rep-replaced:{old_id}")
+        if old.assigned_by_id and old.assigned_by_id != user.pk:
+            notify([old.assigned_by_id], kind=Notification.Kind.CLASS_REP,
+                   institution_id=cohort.institution_id,
+                   title=f"{cohort.code} has a new {label}",
+                   body=f"{name_of(user)} made {name_of(student)} {label}, "
+                        f"replacing {name_of(old.student)}, whom you chose.",
+                   link=f"/manage/academic/cohorts/{cohort.pk}", actor_id=user.pk,
+                   dedupe_key=f"rep-replaced-chooser:{old_id}")
     ClassRep.objects.update_or_create(
-        **key, defaults={"role": role, "institution_id": section.institution_id,
+        **key, defaults={"role": role, "institution_id": cohort.institution_id,
                          "assigned_by": user},
     )
     audit.record(actor=user, action="classrep.assigned", target=student,
-                 changes={"class": section.code, "role": role})
-    notify([student.pk], kind=Notification.Kind.CLASS_REP, institution_id=section.institution_id,
-           title=f"You're the {role.upper()} of {section.code}",
-           body="You can cancel or shift your class's lectures and take attendance. "
-                "Teachers are told each time.",
+                 changes={"section": cohort.code, "term": term.code, "role": role})
+    notify([student.pk], kind=Notification.Kind.CLASS_REP, institution_id=cohort.institution_id,
+           title=f"You're the {role.upper()} of {cohort.code}",
+           body="You can cancel or shift your section's lectures and take attendance, in every "
+                "subject. Teachers are told each time.",
            link="/timetable", actor_id=user.pk,
-           dedupe_key=f"rep-role:{student.pk}:{section.offering.term_id}:{section.code}:{role}")
+           dedupe_key=f"rep-role:{student.pk}:{term.pk}:{cohort.pk}:{role}")
 
 
-def reps_of(section: Section) -> dict[int, str]:
-    """Student id -> role, for the section's class."""
-    return dict(ClassRep.objects.filter(
-        term_id=section.offering.term_id, group_code=section.code
-    ).values_list("student_id", "role"))
+def reps_for(cohort: Cohort, term) -> list[ClassRep]:
+    """The section's CR and GR that term, CR first."""
+    return list(ClassRep.objects.filter(term=term, cohort=cohort)
+                .select_related("student", "assigned_by").order_by("role", "id"))
+
+
+def reps_of(section: Section) -> list[ClassRep]:
+    """A subject's CR and GR: its section's, for its term."""
+    if not section.cohort_id:
+        return []
+    return list(ClassRep.objects.filter(term_id=section.offering.term_id,
+                                        cohort_id=section.cohort_id)
+                .select_related("student", "assigned_by").order_by("role", "id"))
+
+
+def carry_reps(user, from_term, to_term) -> int:
+    """A new term starts with last term's CRs and GRs, for students still in their section."""
+    added = 0
+    for rep in ClassRep.objects.filter(term=from_term).select_related("cohort"):
+        if not CohortMember.objects.filter(cohort=rep.cohort, student_id=rep.student_id,
+                                           status=CohortMember.Status.ACTIVE).exists():
+            continue
+        if ClassRep.objects.filter(term=to_term, cohort=rep.cohort, role=rep.role).exists():
+            continue
+        _, created = ClassRep.objects.get_or_create(
+            term=to_term, cohort=rep.cohort, student_id=rep.student_id,
+            defaults={"role": rep.role, "institution_id": rep.institution_id,
+                      "assigned_by_id": rep.assigned_by_id},
+        )
+        added += created
+    if added:
+        audit.record(actor=user, action="classrep.carried", target=to_term,
+                     changes={"from": from_term.code, "reps": added})
+    return added
 
 
 # Teachers' choices ----------------------------------------------------------------------------
@@ -214,7 +298,7 @@ def request_change(rep, *, meeting, day: date, action: str, new_date: date | Non
     section = meeting.section
     role = rep_role(rep, section)
     if role is None:
-        raise PermissionDenied("Only this class's CR or GR can do that.")
+        raise PermissionDenied("Only this section's CR or GR can do that.")
     if is_blocked(rep, section):
         raise PermissionDenied("This subject's teacher has taken back your CR/GR changes for "
                                "their lectures. Ask them to allow you again.")
@@ -250,7 +334,7 @@ def request_change(rep, *, meeting, day: date, action: str, new_date: date | Non
                  changes={"action": action, "date": day.isoformat()})
 
     crs = set(ClassRep.objects.filter(
-        term_id=section.offering.term_id, group_code=section.code, role=ClassRep.Role.CR
+        term_id=section.offering.term_id, cohort_id=section.cohort_id, role=ClassRep.Role.CR
     ).exclude(student=rep).values_list("student_id", flat=True))
     if role == ClassRep.Role.GR and action == Action.CANCEL and crs:
         req.stage = Stage.CR_APPROVAL

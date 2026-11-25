@@ -46,7 +46,7 @@ export default function ShareResourcePage() {
     const e: Record<string, string> = {};
     const max = options.data?.max_mb ?? 20;
     if (!course) e.course = "Choose a course.";
-    if (course && targets.length === 0) e.targets = "Choose at least one section.";
+    if (course && targets.length === 0) e.targets = "Choose at least one subject.";
     if (!title.trim()) e.title = "Give the resource a title.";
     if (source === "file" && !file) e.file = "Choose a file.";
     if (source === "file" && file && file.size > max * 1024 * 1024)
@@ -97,7 +97,7 @@ export default function ShareResourcePage() {
       {options.isSuccess && courses.length === 0 ? (
         <div className="glass rounded-card p-6">
           <p className="text-headline font-semibold">No courses to share with</p>
-          <p className="mt-1 text-body text-ink-2">You can share material with sections you teach.</p>
+          <p className="mt-1 text-body text-ink-2">You can share material with subjects you teach.</p>
         </div>
       ) : (
         <form
@@ -147,7 +147,7 @@ export default function ShareResourcePage() {
                   <label key={s.key} className="flex items-center gap-2.5 text-body">
                     <input type="checkbox" checked={targets.includes(s.key) || targets.includes(wholeKey)}
                       disabled={targets.includes(wholeKey)} onChange={() => toggle(s.key)} className="size-5" />
-                    Section {s.code}
+                    {s.code}
                     <span className="text-ink-2">· {s.reach} {s.reach === 1 ? "person" : "people"}</span>
                   </label>
                 ))}

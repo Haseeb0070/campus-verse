@@ -165,7 +165,7 @@ function UpNext({
       <View style={{ flexDirection: "row", gap: 10 }}>
         {chat ? (
           <Button
-            label="Section chat"
+            label="Subject chat"
             icon="chat"
             style={{ flex: 1 }}
             onPress={() => router.push({ pathname: "/chat/[id]", params: { id: String(chat.id) } })}

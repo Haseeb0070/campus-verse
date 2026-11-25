@@ -5,7 +5,6 @@ from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 
 from apps.academic.models import Section
-from apps.identity.models import User
 from apps.scheduling.models import ClassMeeting
 
 from . import services
@@ -176,30 +175,21 @@ def reply(request, request_id: int, payload: ReplyIn):
 class RepOut(Schema):
     student_id: int
     role: str
+    name: str
+    chosen_by: str
+
+
+def rep_out(r) -> dict:
+    return {"student_id": r.student_id, "role": r.role, "name": services.name_of(r.student),
+            "chosen_by": services.name_of(r.assigned_by) if r.assigned_by_id else ""}
 
 
 @router.get("/sections/{section_id}", response={200: list[RepOut], 403: ErrorOut})
 def section_reps(request, section_id: int):
-    section = Section.objects.filter(pk=section_id,
-                                     institution_id=request.user.institution_id).first()
-    if section is None or not services.can_assign(request.user, section):
-        raise HttpError(403, "Only this class's teachers and admins can see its CR and GR.")
-    return [{"student_id": k, "role": v} for k, v in services.reps_of(section).items()]
-
-
-class AssignIn(Schema):
-    student_id: int
-    role: str | None  # "cr", "gr", or null to take it away
-
-
-@router.put("/sections/{section_id}", response={200: list[RepOut], 403: ErrorOut,
-                                                 422: ErrorOut})
-def assign(request, section_id: int, payload: AssignIn):
-    section = Section.objects.filter(pk=section_id,
-                                     institution_id=request.user.institution_id).first()
-    student = User.objects.filter(pk=payload.student_id,
-                                  institution_id=request.user.institution_id).first()
-    if section is None or student is None:
-        raise HttpError(404, "Not found")
-    _call(lambda: services.set_rep(request.user, section, student, payload.role))
-    return section_reps(request, section_id)
+    """A subject's CR and GR (its section's, that term), for its teachers and the section's
+    managers. They are chosen in Manage → Academic → Sections."""
+    section = Section.objects.filter(pk=section_id, institution_id=request.user.institution_id
+                                     ).select_related("cohort__program").first()
+    if section is None or not services.can_see_reps(request.user, section):
+        raise HttpError(403, "Only this subject's teachers and admins can see its CR and GR.")
+    return [rep_out(r) for r in services.reps_of(section)]

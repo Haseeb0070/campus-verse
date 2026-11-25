@@ -6,11 +6,12 @@ from zoneinfo import ZoneInfo
 import pytest
 from django.core.exceptions import PermissionDenied, ValidationError
 
+from apps.academic.models import CohortMember, Program
 from apps.attendance.models import AttendanceSession
 from apps.classreps import services
 from apps.classreps.models import ClassRep, RepBlock, RepRequest
 from apps.enrollment.models import SectionEnrollment
-from apps.identity.models import User
+from apps.identity.models import RoleAssignment, User
 from apps.notifications.models import Notification
 from apps.scheduling.models import ClassMeeting, ScheduleChange
 from apps.scheduling.reminders import send_lecture_reminders
@@ -44,14 +45,15 @@ def quiet(monkeypatch):
 
 @pytest.fixture
 def klass(campus):
-    """Section 3B with a Monday lecture, Ayesha as CR and Sana as GR."""
+    """Section 3B with a Monday lecture, Ayesha as CR and Sana as GR (the admin chose them)."""
     sana = User.objects.create_user(email="sana@test.edu", password="x", kind=User.Kind.STUDENT,
                                     institution=campus.inst)
     SectionEnrollment.objects.create(institution=campus.inst, section=campus.s3b, student=sana)
+    CohortMember.objects.create(institution=campus.inst, cohort=campus.c3b, student=sana)
     meeting = ClassMeeting.objects.create(institution=campus.inst, section=campus.s3b, weekday=0,
                                           starts_at=time(10, 0), ends_at=time(11, 0))
-    services.set_rep(campus.teacher, campus.s3b, campus.ayesha, "cr")
-    services.set_rep(campus.teacher, campus.s3b, sana, "gr")
+    services.set_rep(campus.admin, campus.c3b, campus.term, campus.ayesha, "cr")
+    services.set_rep(campus.admin, campus.c3b, campus.term, sana, "gr")
     campus.sana, campus.meeting = sana, meeting
     # A Monday in the term, well ahead of now.
     day = date(2026, 12, 7)
@@ -63,16 +65,64 @@ def titles(user):
     return list(Notification.objects.filter(recipient=user).values_list("title", flat=True))
 
 
-def test_teachers_and_admins_name_reps_students_cannot(campus):
-    with pytest.raises(PermissionDenied):
-        services.set_rep(campus.ayesha, campus.s3b, campus.ayesha, "cr")
-    services.set_rep(campus.admin, campus.s3b, campus.ayesha, "cr")
+def coordinator_of(campus):
+    """A CS coordinator, with section 3B in a CS program so it's theirs to manage."""
+    program = Program.objects.create(institution=campus.inst, department=campus.cs,
+                                     name="BS Computer Science", code="BSCS")
+    campus.c3b.program = program
+    campus.c3b.save()
+    coord = User.objects.create_user(email="coord@test.edu", password="x",
+                                     kind=User.Kind.TEACHER, institution=campus.inst)
+    RoleAssignment.objects.create(institution=campus.inst, user=coord, department=campus.cs,
+                                  role=RoleAssignment.Role.DEPARTMENT_COORDINATOR)
+    return coord
+
+
+def test_admins_and_coordinators_name_reps_teachers_and_students_cannot(campus):
+    for who in (campus.ayesha, campus.teacher):
+        with pytest.raises(PermissionDenied):
+            services.set_rep(who, campus.c3b, campus.term, campus.ayesha, "cr")
+    services.set_rep(campus.admin, campus.c3b, campus.term, campus.ayesha, "cr")
     assert services.rep_role(campus.ayesha, campus.s3b) == "cr"
     assert "You're the CR of 3B" in titles(campus.ayesha)
     with pytest.raises(ValidationError, match="isn't in this section"):
-        services.set_rep(campus.teacher, campus.s3b, campus.hamza, "gr")  # Hamza is in 3C
-    services.set_rep(campus.teacher, campus.s3b, campus.ayesha, None)
+        services.set_rep(campus.admin, campus.c3b, campus.term, campus.hamza, "gr")  # in 3C
+    coord = coordinator_of(campus)
+    services.set_rep(coord, campus.c3b, campus.term, campus.ayesha, None)
     assert services.rep_role(campus.ayesha, campus.s3b) is None
+    with pytest.raises(PermissionDenied):  # 3C has no program in their department
+        services.set_rep(coord, campus.c3c, campus.term, campus.hamza, "cr")
+
+
+def test_one_cr_per_section_and_replacing_tells_everyone(klass, client):
+    """Ayesha is CR (the admin chose her); a coordinator naming Sana CR must say "replace"."""
+    coord = coordinator_of(klass)
+    with pytest.raises(services.RoleTaken,
+                       match=r"ayesha@test\.edu is already the CR of 3B \(chosen by"):
+        services.set_rep(coord, klass.c3b, klass.term, klass.sana, "cr")
+    assert services.rep_role(klass.ayesha, klass.s3b) == "cr"
+
+    client.force_login(coord)
+    url = f"/api/manage/sections/{klass.c3b.pk}/reps"
+    body = {"term_id": klass.term.pk, "student_id": klass.sana.pk, "role": "cr"}
+    r = client.put(url, body, content_type="application/json")
+    assert r.status_code == 409 and "already the CR" in r.json()["detail"]
+    r = client.put(url, body | {"replace": True}, content_type="application/json")
+    assert r.status_code == 200
+    assert [(x["student_id"], x["role"]) for x in r.json()["reps"]] == [(klass.sana.pk, "cr")]
+    assert services.rep_role(klass.ayesha, klass.s3b) is None
+    assert "You're no longer the CR of 3B" in titles(klass.ayesha)
+    assert "3B has a new CR" in titles(klass.admin)  # who chose Ayesha
+    # Sana went from GR to CR, so the section has no GR now, and a new one needs no "replace".
+    services.set_rep(coord, klass.c3b, klass.term, klass.ayesha, "gr")
+    assert services.rep_role(klass.ayesha, klass.s3b) == "gr"
+
+    # Teachers see the subject's CR/GR; they can't change it.
+    client.force_login(klass.teacher)
+    seen = client.get(f"/api/reps/sections/{klass.s3b.pk}").json()
+    assert {(x["name"], x["role"]) for x in seen} == {("sana@test.edu", "cr"),
+                                                     ("ayesha@test.edu", "gr")}
+    assert client.put(url, body, content_type="application/json").status_code == 403
 
 
 def test_trusted_change_applies_at_once_and_asks_the_teacher(klass, freezer):

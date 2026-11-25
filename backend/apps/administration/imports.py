@@ -107,7 +107,7 @@ def build_plan(institution_id: int, term: AcademicTerm, rows: list[dict]) -> dic
         plan.append(row)
         section = sections.get((r.get("course_code", "").lower(), r.get("section", "").lower()))
         if section is None:
-            row.message = f"There's no section {row.section} in {term.name}."
+            row.message = f"There's no subject {row.section} in {term.name}."
             continue
         row.section_id = section.pk
         day = DAYS.get(r.get("day", "").lower())

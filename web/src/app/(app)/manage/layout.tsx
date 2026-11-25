@@ -7,7 +7,7 @@ import { useMe } from "@/lib/queries";
 const tabs: { href: string; label: string; coordinators?: boolean; coordinatorsOnly?: boolean }[] = [
   { href: "/manage", label: "Overview" },
   { href: "/manage/people", label: "People" },
-  { href: "/manage/academic", label: "Courses & sections", coordinators: true },
+  { href: "/manage/academic", label: "Sections & subjects", coordinators: true },
   { href: "/manage/department/people", label: "Department people", coordinators: true, coordinatorsOnly: true },
   { href: "/manage/department/reports", label: "Department report", coordinators: true, coordinatorsOnly: true },
   { href: "/manage/import", label: "Imports & sync" },

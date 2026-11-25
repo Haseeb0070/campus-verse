@@ -48,7 +48,7 @@ export default function AssignmentsPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-body font-semibold text-ink-2">
-            {teaches ? "Work you've set and work you're doing" : "Coursework for your sections"}
+            {teaches ? "Work you've set and work you're doing" : "Coursework for your subjects"}
           </p>
           <PageTitle className="mt-1 text-large-title font-bold" text="Assignments" />
         </div>
@@ -73,7 +73,7 @@ export default function AssignmentsPage() {
           <p className="text-headline font-semibold">No assignments yet</p>
           <p className="mt-1 text-body text-ink-2">
             {teaches
-              ? "Set the first one for a section you teach."
+              ? "Set the first one for a subject you teach."
               : "Work your teachers set will show up here with its due date."}
           </p>
         </div>

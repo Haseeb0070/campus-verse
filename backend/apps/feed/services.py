@@ -46,10 +46,10 @@ def post_audiences(user) -> list[dict]:
         key = f"section:{s.pk}"
         options.setdefault(key, {
             "key": key, "scope_type": "section", "scope_id": s.pk,
-            "label": f"{s.offering.course.code} · {s.code}", "group": "Sections",
+            "label": f"{s.offering.course.code} · {s.code}", "group": "Subjects",
             "detail": s.offering.course.title,
         })
-    order = {"Sections": 0, "Departments": 1, "Institution": 2}
+    order = {"Subjects": 0, "Departments": 1, "Institution": 2}
     return sorted(options.values(), key=lambda o: (order.get(o["group"], 3), o["label"]))
 
 

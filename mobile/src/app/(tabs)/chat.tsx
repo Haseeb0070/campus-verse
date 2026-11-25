@@ -37,7 +37,7 @@ export default function Chats() {
             value={tab}
             onChange={setTab}
             options={[
-              { key: "sections", label: "Sections", count: unread("sections") },
+              { key: "sections", label: "Subjects", count: unread("sections") },
               { key: "direct", label: "Direct", count: unread("direct") },
               { key: "requests", label: "Requests", count: requests.length },
             ]}
@@ -80,7 +80,7 @@ export default function Chats() {
 
         {tab === "sections" && list.length > 0 ? (
           <T variant="callout" tone="ink3" style={{ paddingHorizontal: 4 }}>
-            Every section you’re in has its own chat, with your teacher in it.
+            Every subject you’re in has its own chat, with your teacher in it.
           </T>
         ) : null}
         {tab === "direct" && list.length > 0 ? (

@@ -159,7 +159,7 @@ export default function ResourcesPage() {
           <p className="text-headline font-semibold">Nothing shared yet</p>
           <p className="mt-1 text-body text-ink-2">
             {canShare
-              ? "Share slides, notes, readings or links with the sections you teach."
+              ? "Share slides, notes, readings or links with the subjects you teach."
               : "Slides, notes and readings your teachers share will be kept here, grouped by course."}
           </p>
         </div>

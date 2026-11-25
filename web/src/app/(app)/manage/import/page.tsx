@@ -28,9 +28,9 @@ const statusChip: Record<ImportRow["status"], { label: string; cls: string }> = 
 const KINDS: Record<ImportKind, { label: string; about: string; missing: string; item: string }> = {
   timetable: {
     label: "Timetable",
-    about: "Weekly classes for the current term, matched by course, section, day and start time.",
+    about: "Weekly classes for the current term, matched by course, section code, day and start time.",
     missing: "existing classes aren't in this file (kept as is)",
-    item: "Section",
+    item: "Subject",
   },
   people: {
     label: "People",
@@ -40,7 +40,7 @@ const KINDS: Record<ImportKind, { label: string; about: string; missing: string;
   },
   enrollment: {
     label: "Enrollment",
-    about: "Who is in which section this term (role student or teacher), by email or ID. People must exist first.",
+    about: "Who is in which section, by email or ID: leave the course empty to put a student in the section and all its subjects (moving them from their old one), or give a course for one subject, or a teacher. People must exist first.",
     missing: "current enrollments aren't in this file (kept as is)",
     item: "Person",
   },

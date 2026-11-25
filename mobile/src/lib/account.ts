@@ -85,7 +85,7 @@ export type CorrectionTopic = "name" | "email" | "enrollment" | "other";
 export const TOPICS: { key: CorrectionTopic; label: string }[] = [
   { key: "name", label: "My name" },
   { key: "email", label: "My email" },
-  { key: "enrollment", label: "My courses or sections" },
+  { key: "enrollment", label: "My courses or subjects" },
   { key: "other", label: "Something else" },
 ];
 

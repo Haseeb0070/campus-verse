@@ -15,16 +15,16 @@ export default function SectionsPage() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <header>
-        <p className="text-body font-semibold text-ink-2">Sections you teach</p>
-        <PageTitle className="mt-1 text-large-title font-bold" text="My sections" />
+        <p className="text-body font-semibold text-ink-2">Subjects you teach</p>
+        <PageTitle className="mt-1 text-large-title font-bold" text="My subjects" />
       </header>
 
       {sections.isPending && <p className="text-body text-ink-2">Loading…</p>}
       {sections.data?.length === 0 && (
         <div className="glass rounded-card p-6">
-          <p className="text-headline font-semibold">You&apos;re not teaching any sections</p>
+          <p className="text-headline font-semibold">You&apos;re not teaching any subjects</p>
           <p className="mt-1 text-body text-ink-2">
-            Sections appear here once your admin assigns you to them.
+            Subjects appear here once your admin assigns you to them.
           </p>
         </div>
       )}
@@ -44,7 +44,7 @@ export default function SectionsPage() {
                 <span className="min-w-0">
                   <span className="block truncate text-headline font-semibold">{s.course_title}</span>
                   <span className="block text-footnote text-ink-2">
-                    {s.course_code} · Section {s.code} · {s.term}
+                    {s.course_code} · {s.code} · {s.term}
                   </span>
                 </span>
               </div>
@@ -64,7 +64,7 @@ export default function SectionsPage() {
                     href={`/chat/${chatId}`}
                     className="press rounded-full bg-fill-strong px-4 py-2 text-footnote font-semibold"
                   >
-                    Section chat
+                    Subject chat
                   </Link>
                 )}
                 <Link

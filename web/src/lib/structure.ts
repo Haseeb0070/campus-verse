@@ -57,6 +57,9 @@ export interface SectionRow {
   color: CourseColor;
   program: string | null;
   program_id: number | null;
+  /** The section (group of students) this subject is taught to. */
+  cohort_id: number | null;
+  cohort: string | null;
   term: string;
   teachers: string[];
   students: number;
@@ -101,5 +104,58 @@ export function usePersonSearch(kind: "student" | "teacher", q: string, enabled:
     queryFn: () =>
       apiFetch<StructurePerson[]>(`/api/manage/structure/people?kind=${kind}&q=${encodeURIComponent(q)}`),
     enabled,
+  });
+}
+
+/** A section: a group of students who study together ("BS CS · 2024–2028 · Morning · A"). The
+ *  API calls it a cohort; people see "Section". Each term it has subjects (SectionRow). */
+export interface CohortRow {
+  id: number;
+  code: string;
+  label: string;
+  name: string;
+  shift: "" | "morning" | "evening";
+  start_year: number | null;
+  end_year: number | null;
+  program_id: number | null;
+  program: string | null;
+  status: "active" | "archived";
+  students: number;
+  /** This term's. */
+  subjects: number;
+  cr: string | null;
+  gr: string | null;
+}
+
+export interface CohortDetail extends CohortRow {
+  term_id: number | null;
+  term: string | null;
+  can_manage: boolean;
+  members: (StructurePerson & { status: "active" | "left"; role: "cr" | "gr" | null })[];
+  subject_list: {
+    id: number;
+    course_code: string;
+    course_title: string;
+    color: CourseColor;
+    status: "active" | "archived";
+    teachers: string[];
+    students: number;
+  }[];
+  reps: { student_id: number; role: "cr" | "gr"; name: string; chosen_by: string }[];
+}
+
+export const cohortsKey = ["manage", "cohorts"] as const;
+
+export function useCohorts(termId: number | null, status: "active" | "archived" = "active") {
+  return useQuery({
+    queryKey: [...cohortsKey, "list", termId, status],
+    queryFn: () => apiFetch<CohortRow[]>(`/api/manage/sections?status=${status}${termId ? `&term_id=${termId}` : ""}`),
+  });
+}
+
+export function useCohort(id: number, termId: number | null) {
+  return useQuery({
+    queryKey: [...cohortsKey, id, termId],
+    queryFn: () => apiFetch<CohortDetail>(`/api/manage/sections/${id}${termId ? `?term_id=${termId}` : ""}`),
   });
 }

@@ -9,10 +9,11 @@ import { Switch } from "@/components/switch";
 import { apiFetch, errorDetail } from "@/lib/api";
 import { courseBg } from "@/lib/format";
 import { useMe } from "@/lib/queries";
-import { structureKey, useSections, useStructure } from "@/lib/structure";
+import { structureKey, useCohorts, useSections, useStructure } from "@/lib/structure";
 import type { CourseRow, Structure } from "@/lib/structure";
 import type { CourseColor } from "@/lib/types";
 import { PageTitle } from "@/components/page-title";
+import { CohortForm } from "@/components/manage/structure-forms";
 
 const field =
   "h-11 w-full rounded-control border border-transparent bg-[var(--cv-bg)] px-3 text-body outline-none focus:border-accent";
@@ -54,70 +55,124 @@ function FormBox({ children, onSubmit, error }: {
   );
 }
 
-// Sections ----------------------------------------------------------------------------------
+// Sections (groups of students) ------------------------------------------------------------
 
-function SectionsCard({ s, termId }: { s: Structure; termId: number }) {
-  const sections = useSections(termId);
+function CohortsCard({ s, termId }: { s: Structure; termId: number }) {
+  const [showArchived, setShowArchived] = useState(false);
+  const cohorts = useCohorts(termId, showArchived ? "archived" : "active");
+  const [adding, setAdding] = useState(false);
+  const rows = cohorts.data ?? [];
+
+  return (
+    <section aria-labelledby="cohorts-h" className="glass flex flex-col gap-3 rounded-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 id="cohorts-h" className="text-headline font-semibold">
+            Sections <span className="text-ink-3">{rows.length}</span>
+          </h2>
+          <p className="text-footnote text-ink-2">
+            A group of students, such as BS CS 2024–2028 Morning A. Its students are in all its subjects, and its CR and GR act in every one.
+          </p>
+        </div>
+        <span className="flex gap-2">
+          <button className={quiet} onClick={() => setShowArchived((v) => !v)}>{showArchived ? "Show active" : "Archived"}</button>
+          <button className={quiet} aria-expanded={adding} onClick={() => setAdding((a) => !a)}>Add section</button>
+        </span>
+      </div>
+      {adding && <CohortForm s={s} onDone={() => setAdding(false)} />}
+      {cohorts.isSuccess && rows.length === 0 && (
+        <p className="text-body text-ink-2">{showArchived ? "No archived sections." : "No sections yet. Add one for each group of students."}</p>
+      )}
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {rows.map((c) => (
+          <li key={c.id}>
+            <Link href={`/manage/academic/cohorts/${c.id}?term=${termId}`}
+              className="press flex h-full flex-col gap-1 rounded-row bg-fill p-3 hover:bg-fill-strong">
+              <span className="flex items-center gap-2">
+                <span className="rounded-md bg-accent/12 px-1.5 py-px text-caption font-semibold text-accent-ink">{c.code}</span>
+                <span className="truncate text-body font-semibold">{c.label}</span>
+              </span>
+              <span className="text-footnote text-ink-2">
+                {c.students} {c.students === 1 ? "student" : "students"} · {c.subjects} {c.subjects === 1 ? "subject" : "subjects"} this term
+              </span>
+              <span className="text-footnote text-ink-2">
+                CR {c.cr ?? <span className="text-ink-3">not chosen</span>} · GR {c.gr ?? <span className="text-ink-3">not chosen</span>}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// Subjects ----------------------------------------------------------------------------------
+
+function SubjectsCard({ s, termId }: { s: Structure; termId: number }) {
+  const subjects = useSections(termId);
+  const cohorts = useCohorts(termId);
   const { save, error, busy } = useSave();
   const [adding, setAdding] = useState(false);
   const [courseId, setCourseId] = useState("");
-  const [code, setCode] = useState("");
-  const [programId, setProgramId] = useState("");
+  const [cohortId, setCohortId] = useState("");
   const active = s.courses.filter((c) => c.is_active);
-  const groups = new Map<number, typeof rows>();
-  const rows = sections.data ?? [];
-  for (const r of rows) groups.set(r.course_id, [...(groups.get(r.course_id) ?? []), r]);
+  const rows = subjects.data ?? [];
+  // Grouped by section, so each section's whole term is in one place.
+  const groups = new Map<string, typeof rows>();
+  for (const r of rows) {
+    const key = r.cohort ? `${r.code} · ${r.cohort}` : `${r.code} (no section)`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
 
   return (
-    <section aria-labelledby="sections-h" className="glass flex flex-col gap-3 rounded-card p-5">
+    <section aria-labelledby="subjects-h" className="glass flex flex-col gap-3 rounded-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="sections-h" className="text-headline font-semibold">
-          Sections <span className="text-ink-3">{rows.length}</span>
-        </h2>
-        <button className={quiet} aria-expanded={adding} onClick={() => setAdding((a) => !a)}>Add section</button>
+        <div>
+          <h2 id="subjects-h" className="text-headline font-semibold">
+            Subjects <span className="text-ink-3">{rows.length}</span>
+          </h2>
+          <p className="text-footnote text-ink-2">A course taught to one section this term, with its teachers.</p>
+        </div>
+        <button className={quiet} aria-expanded={adding} onClick={() => setAdding((a) => !a)}>Add subject</button>
       </div>
       {adding && (
         <FormBox error={error} onSubmit={() => save("POST", "/sections", {
-          course_id: Number(courseId), term_id: termId, code, program_id: programId ? Number(programId) : null,
-        }, () => { setCode(""); setAdding(false); })}>
-          <div className="grid gap-3 sm:grid-cols-[2fr_1fr_2fr]">
+          course_id: Number(courseId), term_id: termId, cohort_id: Number(cohortId),
+        }, () => { setCourseId(""); setAdding(false); })}>
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className={label}>Course
               <Select value={courseId} onChange={setCourseId} label="Course" placeholder="Choose a course" className={field}
                 options={active.map((c) => ({ value: String(c.id), label: c.code, detail: c.title }))} />
             </label>
             <label className={label}>Section
-              <input value={code} maxLength={16} onChange={(e) => setCode(e.target.value)} placeholder="3D" className={field} />
-            </label>
-            <label className={label}>Program (optional)
-              <Select value={programId} onChange={setProgramId} label="Program" placeholder="None" className={field}
-                options={[{ value: "", label: "None" }, ...s.programs.map((p) => ({ value: String(p.id), label: p.name }))]} />
+              <Select value={cohortId} onChange={setCohortId} label="Section" placeholder="Choose a section" className={field}
+                options={(cohorts.data ?? []).map((c) => ({ value: String(c.id), label: c.code, detail: c.label }))} />
             </label>
           </div>
+          <p className="text-footnote text-ink-2">Everyone in the section is enrolled in the new subject.</p>
           <div className="flex justify-end">
-            <button type="submit" className={primary} disabled={busy || !courseId || !code.trim()}>Add section</button>
+            <button type="submit" className={primary} disabled={busy || !courseId || !cohortId}>Add subject</button>
           </div>
         </FormBox>
       )}
-      {sections.isSuccess && rows.length === 0 && (
-        <p className="text-body text-ink-2">No sections in this term yet.</p>
+      {subjects.isSuccess && rows.length === 0 && (
+        <p className="text-body text-ink-2">No subjects in this term yet.</p>
       )}
       <ul className="flex flex-col gap-1">
-        {[...groups.values()].map((list) => (
-          <li key={list[0].course_id} className="flex flex-col gap-1.5 rounded-row p-2">
-            <span className="flex items-center gap-2 text-body font-semibold">
-              <span className={`size-3 rounded ${courseBg[list[0].color]}`} aria-hidden="true" />
-              {list[0].course_code} <span className="font-normal text-ink-2">{list[0].course_title}</span>
-            </span>
-            <div className="flex flex-wrap gap-2 pl-5">
+        {[...groups.entries()].map(([group, list]) => (
+          <li key={group} className="flex flex-col gap-1.5 rounded-row p-2">
+            <span className="text-body font-semibold">{group}</span>
+            <div className="flex flex-wrap gap-2">
               {list.map((r) => (
                 <Link key={r.id} href={`/manage/academic/sections/${r.id}`}
                   className={`press flex flex-col rounded-[12px] px-3 py-2 text-footnote hover:bg-fill-strong ${
                     r.status === "archived" ? "bg-fill text-ink-3" : "bg-fill"}`}>
-                  <span className="font-semibold">
-                    Section {r.code}{r.status === "archived" && " · archived"}
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <span className={`size-2.5 rounded ${courseBg[r.color]}`} aria-hidden="true" />
+                    {r.course_code}{r.status === "archived" && " · archived"}
                   </span>
                   <span className="text-ink-2">
-                    {r.students} {r.students === 1 ? "student" : "students"} · {r.teachers.join(", ") || "no teacher yet"}
+                    {r.course_title} · {r.teachers.join(", ") || "no teacher yet"}
                   </span>
                 </Link>
               ))}
@@ -334,7 +389,7 @@ function TermsCard({ s }: { s: Structure }) {
             ) : current && t.starts_on > current.starts_on ? (
               <span className="flex flex-wrap gap-1">
                 <button className="rounded-full px-3 py-1.5 text-footnote font-semibold text-accent-ink hover:bg-fill"
-                  title={`Each class in ${current.name} joins this term's sections with the same name`}
+                  title={`Each section's students join its subjects in this term`}
                   onClick={() => save("POST", `/terms/${t.id}/carry-from/${current.id}`, {})}>
                   Carry students from {current.name}
                 </button>
@@ -392,10 +447,10 @@ function NextSemester({ s, onDone }: { s: Structure; onDone: () => void }) {
       await queryClient.invalidateQueries();
       setDone(
         [
-          r.sections_copied && `${r.sections_copied} sections copied`,
+          r.sections_copied && `${r.sections_copied} subjects copied`,
           r.teachers_copied && `${r.teachers_copied} teachers kept`,
           `${r.students_carried} enrollments carried over`,
-          r.sections_closed && `${r.sections_closed} old sections closed`,
+          r.sections_closed && `${r.sections_closed} old subjects closed`,
         ].filter(Boolean).join(", ") + ".",
       );
     } catch (err) {
@@ -412,8 +467,8 @@ function NextSemester({ s, onDone }: { s: Structure; onDone: () => void }) {
         <p>{done}</p>
         {!copySections && (
           <p className="text-ink-2">
-            Next: import the new semester&apos;s timetable and subjects, then use “Carry students” on
-            the new term so each class joins its new sections.
+            Next: add the new semester&apos;s subjects for each section (or import the timetable), then
+            use “Carry students” on the new term so each section&apos;s students join them.
           </p>
         )}
         <button className={`${quiet} self-start`} onClick={onDone}>Done</button>
@@ -442,13 +497,13 @@ function NextSemester({ s, onDone }: { s: Structure; onDone: () => void }) {
       </div>
       <div className="flex flex-col gap-3 text-ink-2">
         {option(carry, setCarry, "Carry the students over",
-          "Each class joins the new term's sections with the same name (G1+G2 stays G1+G2).")}
-        {option(copySections, setCopySections, "Copy the subjects and sections",
+          "Each section's students join its new-term subjects, and its CR and GR carry on.")}
+        {option(copySections, setCopySections, "Copy the subjects",
           "Only when the same subjects run again. Otherwise import the new timetable afterwards.")}
-        {option(copyTeachers, setCopyTeachers, "Keep the same teachers on copied sections",
-          "Each copied section keeps its teachers.", !copySections)}
+        {option(copyTeachers, setCopyTeachers, "Keep the same teachers on copied subjects",
+          "Each copied subject keeps its teachers.", !copySections)}
         {option(closeOld, setCloseOld, `Close ${current.name}`,
-          "Its sections are archived and enrollments marked completed. Nothing is deleted.")}
+          "Its subjects are archived and enrollments marked completed. Nothing is deleted.")}
         {option(makeCurrent, setMakeCurrent, "Make it the current semester",
           "Timetables and Today switch to the new term.")}
       </div>
@@ -517,8 +572,8 @@ export default function AcademicPage() {
     <>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-body font-semibold text-ink-2">Terms, courses, sections and who&apos;s in them</p>
-          <PageTitle className="mt-1 text-large-title font-bold" text="Courses & sections" />
+          <p className="text-body font-semibold text-ink-2">Terms, sections, subjects and who&apos;s in them</p>
+          <PageTitle className="mt-1 text-large-title font-bold" text="Sections & subjects" />
         </div>
         {s && s.terms.length > 0 && (
           <label className="flex items-center gap-2 text-footnote font-semibold text-ink-2">
@@ -533,7 +588,8 @@ export default function AcademicPage() {
       {structure.isError && <p role="alert" className="glass rounded-card p-6 text-body">You can&apos;t manage courses.</p>}
       {s && (
         <>
-          {chosen && <SectionsCard s={s} termId={Number(chosen)} />}
+          {chosen && <CohortsCard s={s} termId={Number(chosen)} />}
+          {chosen && <SubjectsCard s={s} termId={Number(chosen)} />}
           <CoursesCard s={s} />
           <DepartmentsCard s={s} />
           {s.is_admin && <TermsCard s={s} />}

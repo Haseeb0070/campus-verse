@@ -160,7 +160,7 @@ def test_preview_classifies_every_row_and_changes_nothing(campus, rooms):
     ]
     assert rows[5]["new_room"] == "Z-999" and "(new room)" in rows[5]["detail"]
     assert rows[0]["changes"] == {"room": ["B-204", "B-210"]}
-    assert "no section CS-301 · 9Z" in rows[3]["message"]
+    assert "no subject CS-301 · 9Z" in rows[3]["message"]
     assert "Same class as line 2" in rows[6]["message"]
     assert rows[1]["clash"] and rows[2]["clash"]
     assert rows[7]["mode"] == "online"

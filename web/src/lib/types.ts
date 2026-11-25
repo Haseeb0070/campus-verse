@@ -48,7 +48,7 @@ export interface Audience {
   scope_type: string;
   scope_id: number;
   label: string;
-  group: "Institution" | "Departments" | "Sections";
+  group: "Institution" | "Departments" | "Subjects";
   detail: string;
   reach: number;
 }
@@ -84,6 +84,8 @@ export interface SectionSummary {
   color: CourseColor;
   term: string;
   students: number;
+  /** The section the subject is taught to, e.g. "BS CS · 2024–2028 · Morning · A". */
+  section_label?: string | null;
 }
 
 export interface Person {

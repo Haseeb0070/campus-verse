@@ -75,7 +75,7 @@ function useNextClassReply(teaching: boolean): Reply {
 
 const STUDY_TIPS = [
   "Study in 25-minute blocks with a 5-minute break. After four, take a longer one.",
-  "Explain today’s lecture to a friend in your section chat. If you can teach it, you know it.",
+  "Explain today’s lecture to a friend in your subject chat. If you can teach it, you know it.",
   "Write tomorrow’s first task before you close your notes tonight. Starting is the hard part.",
   "Put your phone in another room for one focused hour. You’ll be surprised.",
   "Redo one solved problem without looking. That beats reading the solution three times.",
@@ -137,10 +137,10 @@ export const STUDENT_QUESTIONS: Question[] = [
 
 const TEACHING_TIPS = [
   "Pin the one notice that matters most this week; students read pinned notices first.",
-  "Open the section chat for ten minutes after class. Quick answers save a lot of email.",
+  "Open the subject chat for ten minutes after class. Quick answers save a lot of email.",
   "Release grades with a short comment on the most common mistake. It teaches the whole class.",
   "Mark attendance in the first five minutes, on your phone, while students settle.",
-  "Post the next class’s reading in the section chat the evening before.",
+  "Post the next class’s reading in the subject chat the evening before.",
   "Schedule reminders as notices: write them on Monday, let them go out on Thursday.",
 ];
 
@@ -193,7 +193,7 @@ export const TEACHER_QUESTIONS: Question[] = [
       const published = list.filter((n) => n.status === "published" && !n.expired);
       const scheduled = list.filter((n) => n.status === "scheduled").length;
       const drafts = list.filter((n) => n.status === "draft").length;
-      if (!list.length) return { text: "You haven’t posted a notice yet. Your sections will see one as soon as you do.", link: { href: "/notices", label: "Write a notice" } };
+      if (!list.length) return { text: "You haven’t posted a notice yet. Your subjects' students will see one as soon as you do.", link: { href: "/notices", label: "Write a notice" } };
       const latest = published[0];
       const head = latest ? `“${latest.title}” reached ${plural(latest.reach, "person", "people")}.` : "Nothing is live right now.";
       const extra = [scheduled && `${scheduled} scheduled`, drafts && plural(drafts, "draft")].filter(Boolean).join(" and ");
@@ -207,10 +207,10 @@ export const TEACHER_QUESTIONS: Question[] = [
       const teaching = useTeaching();
       if (teaching.isPending) return null;
       const list = teaching.data ?? [];
-      if (!list.length) return { text: "You aren’t assigned to any section yet. Ask the college office to add you." };
+      if (!list.length) return { text: "You aren’t assigned to any subject yet. Ask the college office to add you." };
       // Per section: the same students often sit in several of one teacher's sections.
       const parts = list.map((s) => `${s.course_code} ${s.code} has ${plural(s.students, "student")}`);
-      return { text: `You teach ${plural(list.length, "section")}: ${parts.join("; ")}.`, link: { href: "/sections", label: "See sections" } };
+      return { text: `You teach ${plural(list.length, "subject")}: ${parts.join("; ")}.`, link: { href: "/sections", label: "See subjects" } };
     },
   },
   { id: "unread", ask: "Unread messages?", useReply: useUnread },
@@ -236,7 +236,7 @@ export const ADMIN_QUESTIONS: Question[] = [
       const d = o.data;
       const share = d.active_people ? Math.round((d.signed_in_week / d.active_people) * 100) : 0;
       return {
-        text: `${plural(d.students, "student")}, ${plural(d.teachers, "teacher")} and ${plural(d.sections, "active section")}. ${d.signed_in_week} of ${d.active_people} people (${share}%) signed in this week.`,
+        text: `${plural(d.students, "student")}, ${plural(d.teachers, "teacher")} and ${plural(d.sections, "active subject")}. ${d.signed_in_week} of ${d.active_people} people (${share}%) signed in this week.`,
         link: { href: "/manage", label: "Open overview" },
       };
     },

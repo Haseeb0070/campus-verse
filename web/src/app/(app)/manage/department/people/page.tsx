@@ -23,7 +23,7 @@ const KINDS = [
   { value: "teacher", label: "Teachers" },
 ];
 
-/** For department coordinators: the students and teachers in their departments' sections. */
+/** For department coordinators: the students and teachers in their departments' subjects. */
 export default function DepartmentPeoplePage() {
   const [q, setQ] = useState("");
   const [typed, setTyped] = useState("");
@@ -46,7 +46,7 @@ export default function DepartmentPeoplePage() {
     <>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-body font-semibold text-ink-2">Students and teachers in your departments&apos; sections</p>
+          <p className="text-body font-semibold text-ink-2">Students and teachers in your departments&apos; subjects</p>
           <PageTitle className="mt-1 text-large-title font-bold" text="Department people" />
         </div>
         <a
@@ -89,7 +89,7 @@ export default function DepartmentPeoplePage() {
                   {p.external_id && <span className="text-footnote text-ink-3">{p.external_id}</span>}
                 </span>
                 <span className="block text-footnote text-ink-2">
-                  {p.email} · {p.sections} {p.sections === 1 ? "section" : "sections"} ·{" "}
+                  {p.email} · {p.sections} {p.sections === 1 ? "subject" : "subjects"} ·{" "}
                   {p.last_login ? `last signed in ${relativeTime(p.last_login)}` : "never signed in"}
                 </span>
               </span>

@@ -17,7 +17,7 @@ export default function ManageOverview() {
     ? [
         ["Students", data.students, `${data.invited} invited, not signed up yet`],
         ["Teachers", data.teachers, `${data.staff} staff`],
-        ["Active sections", data.sections, `across ${data.departments} departments`],
+        ["Active subjects", data.sections, `across ${data.departments} departments`],
         ["Signed in this week", data.signed_in_week, `of ${data.active_people} active people`],
       ]
     : [];

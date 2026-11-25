@@ -222,7 +222,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { href: "/today", label: "Today", Icon: TodayIcon, group: "Overview" },
     ...(hasClasses ? [{ href: "/timetable", label: "Timetable", Icon: TimetableIcon, group: "Overview" as const }] : []),
     { href: "/calendar", label: "Calendar", Icon: CalendarIcon, group: "Overview" },
-    ...(teaches ? [{ href: "/sections", label: "Sections", Icon: SectionsIcon, group: "Academics" as const }] : []),
+    ...(teaches ? [{ href: "/sections", label: "Subjects", Icon: SectionsIcon, group: "Academics" as const }] : []),
     ...(hasClasses
       ? [
           { href: "/assignments", label: "Assignments", Icon: AssignmentsIcon, group: "Academics" as const },

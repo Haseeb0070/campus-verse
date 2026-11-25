@@ -1,8 +1,8 @@
-"""Starting a new semester. The new term is created; courses, sections and teachers can be
-copied (for subjects that repeat); students are carried over by class: everyone active in a
-section named "G1+G2" last term joins every new-term section named "G1+G2". The old term can be
-closed (sections archived, enrollments completed) and the new one made current. Every step is
-audit-logged and runs in one transaction."""
+"""Starting a new semester. The new term is created; subjects and their teachers can be copied
+(for subjects that repeat); students are carried over by section: each section's students join
+its new-term subjects, and its CR and GR carry on. The old term can be closed (subjects archived,
+enrollments completed) and the new one made current. Every step is audit-logged and runs in one
+transaction."""
 
 from dataclasses import dataclass
 
@@ -26,8 +26,13 @@ class RolloverResult:
 
 
 def carry_students(admin, from_term: AcademicTerm, to_term: AcademicTerm) -> int:
-    """Enrolls each class into the new term's sections with the same name. Returns how many
-    enrollments were added (people already enrolled are left alone)."""
+    """Enrolls each section's students in its new-term subjects. A subject without a section
+    (from before sections existed) takes the students of last term's subjects with the same code.
+    Returns how many enrollments were added (people already enrolled are left alone)."""
+    from apps.classreps.services import carry_reps
+
+    from .cohorts import enroll_members
+
     require_admin(admin)
     if from_term.pk == to_term.pk:
         raise ValidationError("Choose a different term to carry students from.")
@@ -43,6 +48,9 @@ def carry_students(admin, from_term: AcademicTerm, to_term: AcademicTerm) -> int
         by_code.setdefault(code.lower(), set()).add(student)
     added = 0
     for section in Section.objects.filter(offering__term=to_term, status=Section.Status.ACTIVE):
+        if section.cohort_id:
+            added += enroll_members(section)
+            continue
         students = by_code.get(section.code.lower(), set())
         if not students:
             continue
@@ -54,6 +62,7 @@ def carry_students(admin, from_term: AcademicTerm, to_term: AcademicTerm) -> int
         ]
         SectionEnrollment.objects.bulk_create(new)
         added += len(new)
+    carry_reps(admin, from_term, to_term)
     if added:
         audit.record(actor=admin, action="term.students_carried", target=to_term,
                      changes={"from": from_term.code, "enrollments": added})
@@ -82,7 +91,7 @@ def start_semester(admin, from_term: AcademicTerm, *, name: str, code: str, star
             for section in offering.sections.filter(status=Section.Status.ACTIVE):
                 new_section = Section.objects.create(
                     institution_id=section.institution_id, offering=new_offering,
-                    code=section.code, program=section.program,
+                    code=section.code, program=section.program, cohort_id=section.cohort_id,
                 )
                 result.sections_copied += 1
                 if copy_teachers:

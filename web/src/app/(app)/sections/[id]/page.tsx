@@ -1,41 +1,25 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ChipGroup } from "@/components/chip-group";
 import { ChevronLeftIcon } from "@/components/icons";
-import { ApiError, apiFetch, errorDetail } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { courseBg } from "@/lib/format";
 import { useRoster } from "@/lib/queries";
 import type { Person } from "@/lib/types";
 
-type RepChoice = "" | "cr" | "gr";
-const REP_OPTIONS: { value: RepChoice; label: string }[] = [
-  { value: "", label: "Student" },
-  { value: "cr", label: "CR" },
-  { value: "gr", label: "GR" },
-];
+type Rep = { student_id: number; role: "cr" | "gr"; name: string; chosen_by: string };
 
-/** CR and GR of this section's class, for its teachers and admins to choose. */
+/** The subject's CR and GR (its section's, this term). Admins and coordinators choose them. */
 function useReps(sectionId: number) {
-  const qc = useQueryClient();
-  const key = ["reps", "section", sectionId];
   const list = useQuery({
-    queryKey: key,
-    queryFn: () => apiFetch<{ student_id: number; role: "cr" | "gr" }[]>(`/api/reps/sections/${sectionId}`),
+    queryKey: ["reps", "section", sectionId],
+    queryFn: () => apiFetch<Rep[]>(`/api/reps/sections/${sectionId}`),
     retry: false,
   });
-  const set = useMutation({
-    mutationFn: ({ studentId, role }: { studentId: number; role: RepChoice }) =>
-      apiFetch<{ student_id: number; role: "cr" | "gr" }[]>(`/api/reps/sections/${sectionId}`, {
-        method: "PUT",
-        body: JSON.stringify({ student_id: studentId, role: role || null }),
-      }),
-    onSuccess: (data) => qc.setQueryData(key, data),
-  });
-  const roleOf = (id: number): RepChoice => list.data?.find((r) => r.student_id === id)?.role ?? "";
-  return { list, set, roleOf, allowed: list.isSuccess };
+  const roleOf = (id: number) => list.data?.find((r) => r.student_id === id)?.role ?? "";
+  return { list, roleOf, allowed: list.isSuccess };
 }
 
 function PersonRow({ person, badge, children }: { person: Person; badge?: string; children?: React.ReactNode }) {
@@ -69,13 +53,13 @@ export default function RosterPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <Link href="/sections" className="inline-flex items-center gap-1 text-footnote font-semibold text-accent-ink">
-        <ChevronLeftIcon className="size-4" /> My sections
+        <ChevronLeftIcon className="size-4" /> My subjects
       </Link>
 
       {notFound && (
         <div className="glass rounded-card p-6">
           <p className="text-headline font-semibold">This roster isn&apos;t available</p>
-          <p className="mt-1 text-body text-ink-2">You can only see rosters for sections you teach.</p>
+          <p className="mt-1 text-body text-ink-2">You can only see rosters for subjects you teach.</p>
         </div>
       )}
       {roster.isPending && <p className="text-body text-ink-2">Loading…</p>}
@@ -92,9 +76,11 @@ export default function RosterPage() {
             <div>
               <h1 className="text-title-1 font-bold">{roster.data.section.course_title}</h1>
               <p className="text-body text-ink-2">
-                {roster.data.section.course_code} · Section {roster.data.section.code} ·{" "}
-                {roster.data.section.term}
+                {roster.data.section.course_code} · {roster.data.section.code} · {roster.data.section.term}
               </p>
+              {roster.data.section.section_label && (
+                <p className="text-footnote text-ink-3">Section: {roster.data.section.section_label}</p>
+              )}
             </div>
             <span className="ml-auto flex flex-wrap gap-2">
               <a href={`/api/sections/${id}/roster.csv`} download className="press inline-flex h-9 items-center rounded-full bg-fill-strong px-3.5 text-footnote font-semibold">Class list (Excel)</a>
@@ -117,33 +103,35 @@ export default function RosterPage() {
             <h2 id="students-h" className="mb-1 px-2.5 text-headline font-semibold">
               Students <span className="text-ink-3">{roster.data.students.length}</span>
             </h2>
+            {reps.allowed && (
+              <p className="mb-2 px-2.5 text-footnote text-ink-2">
+                Section {roster.data.section.code}:{" "}
+                {(["cr", "gr"] as const).map((role, i) => {
+                  const r = reps.list.data?.find((x) => x.role === role);
+                  return (
+                    <span key={role}>
+                      {i > 0 && " · "}
+                      <span className="font-semibold text-ink">{role.toUpperCase()}</span> {r ? r.name : "not chosen yet"}
+                    </span>
+                  );
+                })}
+              </p>
+            )}
             {roster.data.students.length === 0 ? (
               <p className="px-2.5 py-2 text-body text-ink-2">No students enrolled yet.</p>
             ) : (
               <ul>
                 {roster.data.students.map((p) => (
-                  <PersonRow key={p.id} person={p} badge={reps.roleOf(p.id).toUpperCase() || undefined}>
-                    {reps.allowed && (
-                      <ChipGroup<RepChoice>
-                        label={`Role of ${p.name}`}
-                        value={reps.roleOf(p.id)}
-                        onChange={(role) => reps.set.mutate({ studentId: p.id, role })}
-                        options={REP_OPTIONS}
-                      />
-                    )}
-                  </PersonRow>
+                  <PersonRow key={p.id} person={p} badge={reps.roleOf(p.id).toUpperCase() || undefined} />
                 ))}
               </ul>
             )}
             {reps.allowed && (
               <p className="mt-3 px-2.5 text-footnote text-ink-2">
-                The CR and GR act for the whole class {roster.data.section.code}, in every subject: they can
-                cancel or shift lectures and take attendance. Each subject&apos;s teacher is told, or approves
-                first (their setting in Class requests). A GR&apos;s cancellation also needs the CR.
+                The CR and GR act for the whole section in every subject: they can cancel or shift lectures and
+                take attendance. You&apos;re told, or approve first (your setting in Class requests). Admins choose
+                them in Manage.
               </p>
-            )}
-            {reps.set.isError && (
-              <p role="alert" className="mt-2 px-2.5 text-footnote text-danger-ink">{errorDetail(reps.set.error, "Couldn't change the role.")}</p>
             )}
             <p className="mt-2 px-2.5 text-caption text-ink-3">
               Enrollment comes from your institution&apos;s records. Ask your admin to fix anything

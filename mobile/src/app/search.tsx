@@ -67,7 +67,7 @@ export default function Search() {
 
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 20, paddingBottom: insets.bottom + 32 }}>
         {debounced.length < 2 ? (
-          <Empty icon="search" title="Search everything" body="Notices, coursework, courses, files and events across your sections." />
+          <Empty icon="search" title="Search everything" body="Notices, coursework, courses, files and events across your subjects." />
         ) : query.isError && !query.data ? (
           <Failed onRetry={() => query.refetch()} />
         ) : query.data && !groups.length ? (

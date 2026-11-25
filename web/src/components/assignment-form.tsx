@@ -157,7 +157,7 @@ export function AssignmentForm({ existing }: { existing?: Assignment }) {
           ) : (
             <label className={label}>
               Section
-              <Select value={section} onChange={setSectionId} label="Section" placeholder="Choose a section"
+              <Select value={section} onChange={setSectionId} label="Subject" placeholder="Choose a subject"
                 className={field}
                 options={(sections.data ?? []).map((s) => ({
                   value: String(s.id), label: `${s.course_code} · ${s.code}`, detail: s.course_title,

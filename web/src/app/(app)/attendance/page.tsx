@@ -52,7 +52,7 @@ function Roster({ sheet, onSaved }: { sheet: Sheet; onSaved: (s: Sheet) => void 
   }
 
   if (sheet.marks.length === 0) {
-    return <p className="glass rounded-card p-6 text-body text-ink-2">Nobody is enrolled in this section yet.</p>;
+    return <p className="glass rounded-card p-6 text-body text-ink-2">Nobody is enrolled in this subject yet.</p>;
   }
 
   return (
@@ -196,8 +196,8 @@ function AttendanceInner() {
 
       <div className="glass grid gap-3 rounded-card p-4 sm:grid-cols-3">
         <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
-          Section
-          <Select value={sectionId ? String(sectionId) : ""} label="Section" className={field}
+          Subject
+          <Select value={sectionId ? String(sectionId) : ""} label="Subject" className={field}
             onChange={(v) => go({ section: Number(v), meeting: undefined })}
             options={sections.map((s) => ({ value: String(s.id), label: `${s.course_code} · ${s.code}`, detail: s.course_title }))} />
         </label>

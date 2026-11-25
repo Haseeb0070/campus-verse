@@ -123,14 +123,83 @@ class CourseOffering(InstitutionScopedModel):
         return f"{self.course.code} · {self.term.name}"
 
 
+class Cohort(InstitutionScopedModel):
+    """A group of students who study together through their degree: "BS Computer Science ·
+    2024–2028 · Morning · A". Shown to people as a **Section**. Each term it has subjects (the
+    Section model below, shown as **Subject**), and its students are enrolled in all of them; its
+    CR and GR (apps.classreps) act for it in every subject."""
+
+    class Shift(models.TextChoices):
+        MORNING = "morning", "Morning"
+        EVENING = "evening", "Evening"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active"
+        ARCHIVED = "archived"
+
+    program = models.ForeignKey(Program, null=True, blank=True, on_delete=models.PROTECT,
+                                related_name="cohorts")
+    code = models.CharField(max_length=16, help_text='Short name used everywhere, e.g. "CS24-MA"')
+    name = models.CharField(max_length=40, blank=True, help_text='e.g. "A"')
+    shift = models.CharField(max_length=8, choices=Shift.choices, blank=True)
+    start_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    end_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    history = HistoricalRecords()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["institution", "code"], name="uniq_cohort_code")
+        ]
+        ordering = ["-start_year", "code"]
+
+    @property
+    def label(self) -> str:
+        """ "BS Computer Science · 2024–2028 · Morning · A", leaving out what isn't set."""
+        years = (f"{self.start_year}–{self.end_year}" if self.start_year and self.end_year
+                 else str(self.start_year or self.end_year or ""))
+        parts = [self.program.name if self.program_id else "", years,
+                 self.get_shift_display() if self.shift else "", self.name]
+        return " · ".join(p for p in parts if p) or self.code
+
+    def __str__(self):
+        return self.code
+
+
+class CohortMember(InstitutionScopedModel):
+    """A student's place in a section. Joining enrolls them in its subjects; leaving drops them."""
+
+    class Status(models.TextChoices):
+        ACTIVE = "active"
+        LEFT = "left"
+
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, related_name="members")
+    student = models.ForeignKey("identity.User", on_delete=models.CASCADE,
+                                related_name="cohort_memberships")
+    status = models.CharField(max_length=8, choices=Status.choices, default=Status.ACTIVE)
+    history = HistoricalRecords()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["cohort", "student"], name="uniq_cohort_member")
+        ]
+
+    def __str__(self):
+        return f"{self.student} in {self.cohort}"
+
+
 class Section(InstitutionScopedModel):
-    """The unit of membership: students enroll in sections, teachers are assigned to them."""
+    """A subject: one course taught to one cohort (section) in one term. Students enroll in it,
+    teachers are assigned to it. People see it as a **Subject**; the name Section stays in code."""
 
     class Status(models.TextChoices):
         ACTIVE = "active"
         ARCHIVED = "archived"
 
     offering = models.ForeignKey(CourseOffering, on_delete=models.PROTECT, related_name="sections")
+    #: The section (cohort) this subject is taught to. Its code is the cohort's code.
+    cohort = models.ForeignKey(Cohort, null=True, blank=True, on_delete=models.PROTECT,
+                               related_name="subjects")
     code = models.CharField(max_length=16)  # "3B"
     program = models.ForeignKey(Program, null=True, blank=True, on_delete=models.SET_NULL)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)

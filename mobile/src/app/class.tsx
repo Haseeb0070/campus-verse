@@ -232,9 +232,9 @@ function ChangeForm({ o, tz }: { o: Occurrence; tz?: string }) {
       />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <T variant="body" style={{ flex: 1 }}>
-          Tell the section now
+          Tell the students now
         </T>
-        <Toggle label="Tell the section now" value={notify} onChange={setNotify} />
+        <Toggle label="Tell the students now" value={notify} onChange={setNotify} />
       </View>
       {error ? (
         <T variant="callout" tone="danger" accessibilityLiveRegion="polite">

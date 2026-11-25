@@ -106,6 +106,9 @@ class SectionRowOut(Schema):
     color: str
     program: str | None
     program_id: int | None
+    #: The section (cohort) this subject is taught to.
+    cohort_id: int | None
+    cohort: str | None
     term: str
     teachers: list[str]
     students: int
@@ -125,9 +128,13 @@ class SectionDetailOut(SectionRowOut):
 
 
 class SectionIn(Schema):
+    """A subject: a course for a section in a term. Give the section (cohort_id); a bare code is
+    only for subjects without one."""
+
     course_id: int
     term_id: int
-    code: str
+    cohort_id: int | None = None
+    code: str | None = None
     program_id: int | None = None
 
 
@@ -185,7 +192,7 @@ def _person(u) -> dict:
 
 def _sections(request):
     qs = Section.objects.filter(institution_id=request.user.institution_id).select_related(
-        "offering__course", "offering__term", "program"
+        "offering__course", "offering__term", "program", "cohort__program"
     )
     allowed = structure.department_ids_for(request.user)
     if allowed is not None:
@@ -199,6 +206,7 @@ def _row(s: Section, teachers: list[str], students: int) -> dict:
         "id": s.pk, "code": s.code, "status": s.status, "course_id": course.pk,
         "course_code": course.code, "course_title": course.title, "color": course.color,
         "program": s.program.name if s.program else None, "program_id": s.program_id,
+        "cohort_id": s.cohort_id, "cohort": s.cohort.label if s.cohort_id else None,
         "term": s.offering.term.name, "teachers": teachers, "students": students,
     }
 
@@ -523,7 +531,7 @@ def department_people_csv(request, department: int | None = None, kind: str = ""
              u.last_login.strftime("%Y-%m-%d") if u.last_login else "Never")
             for u in _dept_people(request, department, "", kind)]
     return csv_response("department people.csv", ["College ID", "First name", "Last name",
-                                                  "Email", "Type", "Sections", "Last signed in"],
+                                                  "Email", "Type", "Subjects", "Last signed in"],
                         rows)
 
 

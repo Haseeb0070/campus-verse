@@ -23,6 +23,8 @@ from django.db import transaction
 
 from apps.academic.models import (
     AcademicTerm,
+    Cohort,
+    CohortMember,
     Course,
     CourseOffering,
     Department,
@@ -118,7 +120,9 @@ class Command(BaseCommand):
         )
 
     def enroll_students(self, inst, password):
-        """Every student on the class list has an account and sits in all seven G1+G2 sections."""
+        """Every student on the class list has an account, is in section G1+G2 and sits in all
+        seven of its subjects."""
+        cohort = Cohort.objects.filter(institution=inst, code=SECTION).first()
         sections = list(
             Section.objects.filter(
                 institution=inst, code=SECTION, offering__course__code__in=COURSES,
@@ -141,6 +145,9 @@ class Command(BaseCommand):
                 )
                 EmailAddress.objects.create(user=student, email=email, verified=True, primary=True)
                 created += 1
+            if cohort is not None:
+                CohortMember.objects.get_or_create(institution=inst, cohort=cohort,
+                                                   student=student)
             for section in sections:
                 _, new = SectionEnrollment.objects.get_or_create(
                     institution=inst, section=section, student=student
@@ -184,11 +191,12 @@ class Command(BaseCommand):
             for key, (local, first, last) in TEACHERS.items()
         }
 
+        cohort = scoped(Cohort, program=bscs, code=SECTION, start_year=2023, end_year=2028)
         sections = {}
         for code, (title, colour, teacher) in COURSES.items():
             course = scoped(Course, department=cs, code=code, title=title, color=colour)
             offering = scoped(CourseOffering, course=course, term=term)
-            section = scoped(Section, offering=offering, code=SECTION, program=bscs)
+            section = scoped(Section, offering=offering, cohort=cohort, code=SECTION, program=bscs)
             scoped(TeacherAssignment, section=section, teacher=teachers[teacher])
             sections[code] = section
 

@@ -45,7 +45,7 @@ export function ConversationList({ myId }: { myId?: number }) {
       )}
       {conversations.data?.length === 0 && (
         <p className="px-2 text-body text-ink-2">
-          Your section chats appear here once you&apos;re enrolled in a class.
+          Your subject chats appear here once you&apos;re enrolled in a subject.
         </p>
       )}
       <ul className="flex flex-col gap-0.5">

@@ -26,7 +26,7 @@ export default function ProgressPage() {
 
       {progress.isPending && <p className="text-body text-ink-2">Loading…</p>}
       {progress.isSuccess && courses.length === 0 && (
-        <p className="glass rounded-card p-6 text-body text-ink-2">You aren&apos;t enrolled in any sections yet.</p>
+        <p className="glass rounded-card p-6 text-body text-ink-2">You aren&apos;t enrolled in any subjects yet.</p>
       )}
 
       {/* Courses sit side by side on wide screens instead of one tall column, and each card keeps
@@ -58,7 +58,7 @@ function CourseCard({ c }: { c: CourseProgress }) {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-headline font-semibold">{c.course_title}</span>
           <span className="block truncate text-footnote text-ink-2">
-            {c.course_code} · Section {c.section_code} · {c.term}
+            {c.course_code} · {c.section_code} · {c.term}
           </span>
         </span>
       </header>

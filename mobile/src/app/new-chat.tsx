@@ -48,7 +48,7 @@ export default function NewChat() {
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <StackHeader title="New message" subtitle="Classmates and teachers you share a section with" />
+      <StackHeader title="New message" subtitle="Classmates and teachers you share a subject with" />
       <View style={{ padding: 16 }}>
         <TextInput
           value={q}

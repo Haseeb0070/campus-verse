@@ -189,7 +189,7 @@ export default function ResourcePage() {
       {notFound && (
         <div className="glass rounded-card p-6">
           <p className="text-headline font-semibold">This resource isn&apos;t available</p>
-          <p className="mt-1 text-body text-ink-2">It may be shared with a section you&apos;re not in.</p>
+          <p className="mt-1 text-body text-ink-2">It may be shared with a subject you&apos;re not in.</p>
         </div>
       )}
 

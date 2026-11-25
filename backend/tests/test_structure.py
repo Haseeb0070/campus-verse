@@ -67,7 +67,7 @@ def test_sections_teachers_and_enrollment(campus):
     section = structure.create_section(campus.admin, course_id=course.pk, term_id=term.pk,
                                        code="3d")
     assert (section.code, section.offering) == ("3D", campus.offering)  # reuses the offering
-    with pytest.raises(ValidationError, match="already has a section 3B"):
+    with pytest.raises(ValidationError, match="3B already has CS-301 that term"):
         structure.create_section(campus.admin, course_id=course.pk, term_id=term.pk, code="3B")
 
     with pytest.raises(ValidationError, match="is a student"):

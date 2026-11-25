@@ -439,7 +439,7 @@ export default function ProfilePage() {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-body font-semibold">{s.course_title}</span>
                   <span className="block text-footnote text-ink-2">
-                    {s.course_code} · Section {s.code} · {s.term}
+                    {s.course_code} · {s.code} · {s.term}
                   </span>
                 </span>
                 <span className="shrink-0 rounded-full bg-fill-strong px-2.5 py-1 text-caption font-semibold text-ink-2">

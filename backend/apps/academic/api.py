@@ -19,6 +19,8 @@ class SectionSummaryOut(Schema):
     color: str
     term: str
     students: int
+    #: The section (cohort) the subject is taught to, e.g. "BS CS · 2024–2028 · Morning · A".
+    section_label: str | None = None
 
 
 class PersonOut(Schema):
@@ -44,6 +46,7 @@ def _summary(section: Section, students: int) -> dict:
         "color": course.color,
         "term": section.offering.term.name,
         "students": students,
+        "section_label": section.cohort.label if section.cohort_id else None,
     }
 
 
@@ -62,7 +65,7 @@ def teaching(request):
     ids = TeacherAssignment.objects.filter(teacher=request.user).values("section_id")
     sections = (
         Section.objects.filter(pk__in=ids, institution_id=request.user.institution_id)
-        .select_related("offering__course", "offering__term")
+        .select_related("offering__course", "offering__term", "cohort__program")
         .annotate(
             active=Count("enrollments", filter=Q(enrollments__status="active"), distinct=True)
         )
@@ -76,7 +79,7 @@ def roster(request, section_id: int):
     """Only people who manage the section (its teachers, coordinators, admins) see who's in it.
     Anyone else gets the same 404 as for a section that doesn't exist."""
     section = (
-        Section.objects.select_related("offering__course", "offering__term")
+        Section.objects.select_related("offering__course", "offering__term", "cohort__program")
         .filter(pk=section_id, institution_id=request.user.institution_id)
         .first()
     )
@@ -103,7 +106,7 @@ def roster(request, section_id: int):
 
 def _managed_section(request, section_id: int) -> Section:
     section = (
-        Section.objects.select_related("offering__course", "offering__term")
+        Section.objects.select_related("offering__course", "offering__term", "cohort__program")
         .filter(pk=section_id, institution_id=request.user.institution_id)
         .first()
     )

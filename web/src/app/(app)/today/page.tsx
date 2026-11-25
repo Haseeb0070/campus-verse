@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AdminToday } from "@/components/admin-today";
 import { AssignmentStatusChip } from "@/components/assignment-status";
+import { ChangeClassDialog } from "@/components/change-class-dialog";
 import { ConversationRow } from "@/components/chat/conversation-list";
 import { ClassRow } from "@/components/class-row";
 import { Pushpin } from "@/components/pushpin";
@@ -86,6 +87,7 @@ function ClassToday() {
   const unreadNotes = useNotifications().data?.unread ?? 0;
 
   const upNext = next.data;
+  const [managing, setManaging] = useState<Occurrence | null>(null);
   const now = useNow();
   const startMs = upNext ? new Date(upNext.starts_at).getTime() : 0;
   const endMs = upNext ? new Date(upNext.ends_at).getTime() : 0;
@@ -179,7 +181,7 @@ function ClassToday() {
             <div>
               <h2 className="text-title-1 font-bold">{upNext.course_title}</h2>
               <p className="mt-1 text-body text-white/80">
-                {upNext.course_code} · Section {upNext.section_code}
+                {upNext.course_code} · {upNext.section_code}
                 {upNext.teachers.length > 0 && ` · ${upNext.teachers.join(", ")}`}
               </p>
             </div>
@@ -217,7 +219,7 @@ function ClassToday() {
                 href={sectionChat ? `/chat/${sectionChat.id}` : "/chat"}
                 className="press inline-flex h-10 items-center gap-2 rounded-control bg-white px-4 text-footnote font-semibold text-hero-ink"
               >
-                <ChatIcon className="size-4" /> Section chat
+                <ChatIcon className="size-4" /> Subject chat
                 {sectionChat && sectionChat.unread > 0 && (
                   <span className="rounded-full bg-accent px-1.5 text-caption text-on-accent">
                     {sectionChat.unread}
@@ -225,6 +227,16 @@ function ClassToday() {
                   </span>
                 )}
               </Link>
+              {/* Teachers change the lecture (cancel, move, room, running late); a CR/GR asks to. */}
+              {(upNext.can_manage || upNext.rep_role) && upNext.status !== "cancelled" && (
+                <button
+                  type="button"
+                  onClick={() => setManaging(upNext)}
+                  className="press inline-flex h-10 items-center gap-2 rounded-control border border-white/25 bg-white/10 px-4 text-footnote font-semibold hover:bg-white/16"
+                >
+                  <CalendarIcon className="size-4" /> {upNext.can_manage ? "Change" : "Cancel or shift"}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -306,6 +318,16 @@ function ClassToday() {
           <NoticesCard />
         </AnimatedContent>
       </div>
+
+      {managing && (
+        <ChangeClassDialog
+          key={`${managing.meeting_id}-${managing.date}-${managing.status}`}
+          occ={managing}
+          timeZone={tz}
+          onClose={() => setManaging(null)}
+          asRep={managing.can_manage ? null : managing.rep_role}
+        />
+      )}
     </div>
   );
 }
@@ -408,7 +430,7 @@ function RecentChats({ myId }: { myId?: number }) {
     <Card title="Recent chats" count={unread} countLabel="unread" query={conversations} link={{ href: "/chat", label: "All chats" }}>
       {conversations.isSuccess && list.length === 0 && (
         <EmptyNote Icon={ChatIcon} tone="bg-accent/12 text-accent-ink" title="No messages yet">
-          Every section you&apos;re in has its own chat. Say hello in{" "}
+          Every subject you&apos;re in has its own chat. Say hello in{" "}
           <Link href="/chat" className="font-semibold text-accent-ink hover:underline">
             Chat
           </Link>

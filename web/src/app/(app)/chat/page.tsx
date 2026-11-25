@@ -33,7 +33,7 @@ function OpenWith() {
       )}
       <p className="text-headline font-semibold">Pick a conversation</p>
       <p className="mt-1 text-body text-ink-2">
-        Every section you&apos;re in has its own chat. Use New message to write to a classmate,
+        Every subject you&apos;re in has its own chat. Use New message to write to a classmate,
         teacher or staff member one to one.
       </p>
     </div>

@@ -1,11 +1,17 @@
 """People and enrollment imports, in the same validate → preview → apply pipeline as the
-timetable (imports.py). People are matched by the institution's own ID first, then by email;
-enrollment by course + section + person. Missing records are reported, never removed."""
+timetable (imports.py). People are matched by the institution's own ID first, then by email.
+
+Enrollment rows name a section (its short code) and a person:
+- no course: the student joins the section, and so all its subjects (moving them from the
+  section they're in, if any);
+- with a course: that one subject of the section, for a teacher, or a student taking it from
+  outside the section (a repeater, an elective).
+Missing records are reported, never removed."""
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
-from apps.academic.models import Section
+from apps.academic.models import Cohort, CohortMember, Section
 from apps.enrollment.models import SectionEnrollment, TeacherAssignment
 from apps.identity.models import User
 
@@ -18,11 +24,11 @@ PEOPLE_TEMPLATE = (
     "email,first_name,last_name,kind,external_id\n"
     "ayesha.k@uni.edu,Ayesha,Khan,student,2023-CS-118\n"
 )
-ENROLLMENT_REQUIRED = ["course_code", "section", "person"]
+ENROLLMENT_REQUIRED = ["section", "person"]
 ENROLLMENT_TEMPLATE = (
-    "course_code,section,person,role\n"
-    "CS-301,3B,2023-CS-118,student\n"
-    "CS-301,3B,imran.s@uni.edu,teacher\n"
+    "section,person,course_code,role\n"
+    "BSCS24-MA,2024-CS-118,,student\n"
+    "BSCS24-MA,imran.s@uni.edu,CS-301,teacher\n"
 )
 
 
@@ -122,6 +128,10 @@ def build_enrollment(institution_id: int, term, rows: list[dict]) -> dict:
         for s in Section.objects.filter(institution_id=institution_id, offering__term=term)
         .select_related("offering__course")
     }
+    cohorts = {c.code.lower(): c for c in Cohort.objects.filter(institution_id=institution_id,
+                                                                status=Cohort.Status.ACTIVE)}
+    places = {m.student_id: m.cohort for m in CohortMember.objects.filter(
+        cohort__in=cohorts.values(), status=CohortMember.Status.ACTIVE).select_related("cohort")}
     members = User.objects.filter(institution_id=institution_id)
     by_email = {u.email.lower(): u for u in members}
     by_id = {u.external_id: u for u in members if u.external_id}
@@ -131,15 +141,20 @@ def build_enrollment(institution_id: int, term, rows: list[dict]) -> dict:
                    .values_list("section_id", "teacher_id"))
     plan, seen, touched = [], {}, set()
     for i, r in enumerate(rows, start=2):
-        code, sec = r.get("course_code", "").strip(), r.get("section", "").strip()
-        who = r.get("person", "").strip()
+        code, sec = (r.get("course_code") or "").strip(), (r.get("section") or "").strip()
+        who = (r.get("person") or "").strip()
         role = (r.get("role") or "student").strip().lower()
-        row = _row(i, label=who, detail=f"{code} · {sec} · {role}", role=role,
-                   section_id=None, user_id=None)
+        row = _row(i, label=who, detail=f"{code} · {sec} · {role}" if code else f"{sec} · {role}",
+                   role=role, section_id=None, cohort_id=None, user_id=None)
         plan.append(row)
-        section = sections.get((code.lower(), sec.lower()))
-        if section is None:
-            row["message"] = f"There's no section {code} · {sec} in {term.name}."
+        cohort = cohorts.get(sec.lower())
+        section = sections.get((code.lower(), sec.lower())) if code else None
+        if code and section is None:
+            row["message"] = (f"Section {sec} has no subject {code} in {term.name}."
+                              if cohort else f"There's no subject {code} · {sec} in {term.name}.")
+            continue
+        if not code and cohort is None:
+            row["message"] = f"There's no section {sec}. Add it in Sections & subjects first."
             continue
         person = by_id.get(who) or by_email.get(who.lower())
         if person is None:
@@ -155,12 +170,27 @@ def build_enrollment(institution_id: int, term, rows: list[dict]) -> dict:
         if role == "teacher" and person.kind == User.Kind.STUDENT:
             row["message"] = f"{person.email} is a student, not a teacher."
             continue
-        key = (section.pk, person.pk, role)
+        if role == "teacher" and not code:
+            row["message"] = "Give the course a teacher teaches."
+            continue
+        key = (section.pk if section else f"c{cohort.pk}", person.pk, role)
         if key in seen:
             row["message"] = f"Same as line {seen[key]}."
             continue
         seen[key] = i
-        row["section_id"], row["user_id"] = section.pk, person.pk
+        row["user_id"] = person.pk
+        if not code:  # the whole section
+            row["cohort_id"] = cohort.pk
+            now = places.get(person.pk)
+            if now is None:
+                row["status"] = "new"
+            elif now.pk == cohort.pk:
+                row["status"] = "unchanged"
+            else:
+                row["status"] = "update"
+                row["changes"] = {"section": [now.code, cohort.code]}
+            continue
+        row["section_id"] = section.pk
         touched.add(section.pk)
         if role == "teacher":
             row["status"] = "unchanged" if (section.pk, person.pk) in teaching else "new"
@@ -183,14 +213,20 @@ def build_enrollment(institution_id: int, term, rows: list[dict]) -> dict:
 
 
 def enrollment_signature(plan: dict) -> list:
-    return [(r["status"], r["section_id"], r["user_id"], r["role"]) for r in plan["rows"]
-            if r["status"] in ("new", "update")]
+    return [(r["status"], r["section_id"], r.get("cohort_id"), r["user_id"], r["role"])
+            for r in plan["rows"] if r["status"] in ("new", "update")]
 
 
 def apply_enrollment(run, plan: dict, actor) -> dict:
-    enrolled = assigned = reactivated = 0
+    from .cohorts import add_students
+
+    enrolled = assigned = reactivated = joined = 0
     for r in plan["rows"]:
         if r["status"] not in ("new", "update"):
+            continue
+        if r.get("cohort_id"):  # into the section and all its subjects, moving if need be
+            cohort = Cohort.objects.get(pk=r["cohort_id"])
+            joined += add_students(actor, cohort, [r["user_id"]], move=True)
             continue
         if r["role"] == "teacher":
             TeacherAssignment.objects.get_or_create(
@@ -210,6 +246,6 @@ def apply_enrollment(run, plan: dict, actor) -> dict:
         else:
             enrolled += 1
     return {"enrolled": enrolled, "reactivated": reactivated, "teachers_assigned": assigned,
-            "skipped": plan["summary"]["error"]}
+            "joined_sections": joined, "skipped": plan["summary"]["error"]}
 
 

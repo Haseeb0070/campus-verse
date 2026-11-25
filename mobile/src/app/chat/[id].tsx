@@ -272,7 +272,7 @@ function Messages({
           No messages yet
         </T>
         <T variant="callout" tone="ink3" style={{ textAlign: "center", marginTop: 6 }}>
-          {conv?.kind === "section" ? "Say hello to your section." : "Start the conversation."}
+          {conv?.kind === "section" ? "Say hello to your classmates." : "Start the conversation."}
         </T>
       </View>
     );

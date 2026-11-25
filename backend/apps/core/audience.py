@@ -227,7 +227,7 @@ def audience_options(user) -> list[dict]:
     for s in sections:
         options.append({
             "key": f"section:{s.pk}", "scope_type": "section", "scope_id": s.pk,
-            "label": f"{s.offering.course.code} · {s.code}", "group": "Sections",
+            "label": f"{s.offering.course.code} · {s.code}", "group": "Subjects",
             "detail": s.offering.course.title,
             "reach": s.students + s.teachers,
         })

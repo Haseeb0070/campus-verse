@@ -114,7 +114,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         <h2 className="text-headline font-semibold">Invite someone</h2>
         <p className="text-footnote text-ink-2">
           They get an email with a link to set their password. Choosing &ldquo;teacher&rdquo; doesn&apos;t give them
-          any sections or roles; assign those separately.
+          any sections, subjects or roles; assign those separately.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -210,7 +210,7 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
             ))}
           </span>
           <span className="block text-footnote text-ink-2">
-            {p.email} · {p.sections} {p.sections === 1 ? "section" : "sections"} ·{" "}
+            {p.email} · {p.sections} {p.sections === 1 ? "subject" : "subjects"} ·{" "}
             {p.last_login ? `last signed in ${relativeTime(p.last_login)}` : "never signed in"}
           </span>
         </span>

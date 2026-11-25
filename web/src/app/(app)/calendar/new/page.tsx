@@ -39,7 +39,7 @@ function NewEvent() {
         <div className="glass rounded-card p-6">
           <p className="text-headline font-semibold">You can&apos;t add events yet</p>
           <p className="mt-1 text-body text-ink-2">
-            Teachers add events for the sections they teach. Ask your admin to add campus-wide ones.
+            Teachers add events for the subjects they teach. Ask your admin to add campus-wide ones.
           </p>
         </div>
       ) : (

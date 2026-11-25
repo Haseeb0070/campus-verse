@@ -42,7 +42,7 @@ export interface Audience {
   scope_type: string;
   scope_id: number;
   label: string;
-  group: "Institution" | "Departments" | "Sections";
+  group: "Institution" | "Departments" | "Subjects";
   detail: string;
   reach: number;
 }

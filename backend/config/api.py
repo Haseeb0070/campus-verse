@@ -11,6 +11,7 @@ from ninja.security import django_auth
 
 from apps.academic.api import router as sections_router
 from apps.administration.api import router as manage_router
+from apps.administration.cohorts_api import router as cohorts_router
 from apps.administration.structure_api import router as structure_router
 from apps.assignments.api import router as assignments_router
 from apps.attendance.api import progress_router
@@ -170,6 +171,7 @@ api.add_router("/sections", sections_router)
 api.add_router("/assignments", assignments_router)
 api.add_router("/notifications", notifications_router)
 api.add_router("/manage/structure", structure_router)
+api.add_router("/manage/sections", cohorts_router)
 api.add_router("/manage", manage_router)
 api.add_router("/feed", feed_router)
 api.add_router("/resources", resources_router)

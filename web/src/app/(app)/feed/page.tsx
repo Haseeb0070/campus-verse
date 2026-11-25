@@ -47,7 +47,7 @@ export default function FeedPage() {
         <div className="glass rounded-card p-6">
           <p className="text-headline font-semibold">{q ? "No posts match" : "Nothing here yet"}</p>
           <p className="mt-1 text-body text-ink-2">
-            {q ? "Try other words." : "Ask a question or share something useful with your section."}
+            {q ? "Try other words." : "Ask a question or share something useful with your classmates."}
           </p>
         </div>
       )}

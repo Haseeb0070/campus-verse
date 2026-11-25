@@ -113,7 +113,7 @@ export function Thread({ conversationId }: { conversationId: number }) {
       <div className="glass grid h-full place-items-center rounded-card p-6 text-center">
         <div>
           <p className="text-headline font-semibold">This chat isn&apos;t available</p>
-          <p className="mt-1 text-body text-ink-2">It may belong to a section you&apos;re not in.</p>
+          <p className="mt-1 text-body text-ink-2">It may belong to a subject you&apos;re not in.</p>
           <Link href="/chat" className="mt-3 inline-block text-body font-semibold text-accent-ink">
             Back to your chats
           </Link>
@@ -212,7 +212,7 @@ export function Thread({ conversationId }: { conversationId: number }) {
                   ? asking
                     ? `Your first message goes to ${otherName} as a request. You can write more once they accept.`
                     : `Only you and ${otherName} can read this chat.`
-                  : "Everyone in this section and its teachers can read it."}
+                  : "Everyone in this subject and its teachers can read it."}
               </p>
             </div>
           )}

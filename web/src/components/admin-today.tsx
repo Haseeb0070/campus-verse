@@ -12,7 +12,7 @@ import { useMe, useNotices } from "@/lib/queries";
 
 const ACTIONS = [
   { href: "/manage/people", title: "People", detail: "Add, invite, edit and reset accounts" },
-  { href: "/manage/academic", title: "Courses & sections", detail: "Terms, subjects, sections and teachers" },
+  { href: "/manage/academic", title: "Sections & subjects", detail: "Terms, sections, subjects, CRs and teachers" },
   { href: "/manage/import", title: "Import a timetable", detail: "Upload a file and review it first" },
   { href: "/notices/new", title: "Post a notice", detail: "To the college, a department or a class" },
   { href: "/manage/reports", title: "Reports", detail: "Sign-ins, coursework, attendance, notices" },
@@ -36,7 +36,7 @@ export function AdminToday() {
     ? [
         { label: "Students", value: data.students, detail: data.invited ? `${data.invited} invited, not signed in yet` : "All signed up" },
         { label: "Teachers", value: data.teachers, detail: `${data.staff} staff` },
-        { label: "Active sections", value: data.sections, detail: `across ${data.departments} ${data.departments === 1 ? "department" : "departments"}` },
+        { label: "Active subjects", value: data.sections, detail: `across ${data.departments} ${data.departments === 1 ? "department" : "departments"}` },
         { label: "Signed in this week", value: data.signed_in_week, detail: `of ${data.active_people} people` },
       ]
     : [];
