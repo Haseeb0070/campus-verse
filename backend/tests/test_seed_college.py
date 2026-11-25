@@ -5,7 +5,7 @@ from datetime import time
 import pytest
 from django.core.management import call_command
 
-from apps.academic.models import Course, Institution, Section
+from apps.academic.models import Cohort, CohortMember, Course, Institution, Section
 from apps.enrollment.models import SectionEnrollment, TeacherAssignment
 from apps.identity.models import User
 from apps.scheduling.models import ClassMeeting
@@ -39,9 +39,12 @@ def test_replaces_the_demo_and_builds_the_bscs_timetable(campus):
 
     assert list(Institution.objects.values_list("slug", flat=True)) == ["gcs-lahore"]
 
-    # One class: every course has a single G1+G2 section.
-    assert set(Section.objects.values_list("code", flat=True)) == {"G1+G2"}
+    # One section, BSCS24, taking all seven subjects.
+    assert set(Section.objects.values_list("code", flat=True)) == {"BSCS24"}
     assert Section.objects.count() == 7
+    section = Cohort.objects.get()
+    assert section.label == "BS Computer Science · 2024–2028 · Morning"
+    assert set(section.subjects.all()) == set(Section.objects.all())
 
     # (1-3) is Monday to Wednesday, (4-6) Thursday to Saturday, rooms as printed.
     assert meetings("CC-310") == [(d, time(10, 45), time(11, 45), "R-127") for d in (MON, TUE, WED)]
@@ -68,6 +71,7 @@ def test_every_student_is_enrolled_in_all_seven_subjects():
     assert students.count() == 66
     assert SectionEnrollment.objects.count() == 66 * 7
     assert all(s.enrollments.count() == 7 for s in students)
+    assert CohortMember.objects.filter(cohort__code="BSCS24", status="active").count() == 66
 
     haseeb = User.objects.get(email="126139@gcslahore.edu.pk")  # college roll 550
     assert (haseeb.first_name, haseeb.last_name) == ("Muhammad", "Haseeb")
@@ -105,3 +109,21 @@ def test_without_a_password_nothing_is_touched(campus, monkeypatch):
     call_command("seed_college")
     assert Institution.objects.filter(slug="test-u").exists()
     assert not Institution.objects.filter(slug="gcs-lahore").exists()
+
+
+def test_a_new_rebuild_starts_over_once(monkeypatch):
+    """A college set up before the current REBUILD is replaced on the next run, once."""
+    from apps.core.management.commands import seed_college
+    from apps.governance.models import AuditLog
+
+    call_command("seed_college", domain="gcslahore.edu.pk")
+    User.objects.filter(email="nabeel@gcslahore.edu.pk").update(first_name="Changed")
+    assert AuditLog.objects.filter(action="seed.rebuilt").count() == 1
+
+    monkeypatch.setattr(seed_college, "REBUILD", "a later fresh start")
+    call_command("seed_college", domain="gcslahore.edu.pk")
+    assert User.objects.get(email="nabeel@gcslahore.edu.pk").first_name == "Nabeel"  # rebuilt
+
+    User.objects.filter(email="nabeel@gcslahore.edu.pk").update(first_name="Changed again")
+    call_command("seed_college", domain="gcslahore.edu.pk")  # remembered: no second wipe
+    assert User.objects.get(email="nabeel@gcslahore.edu.pk").first_name == "Changed again"

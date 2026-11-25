@@ -1,13 +1,16 @@
-"""Set up Govt. Graduate College of Science, Wahdat Road, Lahore: BS CS 5th semester (G1+G2).
+"""Set up Govt. Graduate College of Science, Wahdat Road, Lahore: BS CS 5th semester, the
+section BSCS24 (BS Computer Science · 2024–2028 · Morning).
 
-Source: the college's 5th Semester Morning Shift timetable (Session 2023-2028), w.e.f. 05-10-2026.
-Only the BS CS row is used; G1 and G2 sit together as one class. On the timetable "(1-3)" means the
-first three days of the week (Monday to Wednesday) and "(4-6)" means Thursday to Saturday.
+Source: the college's 5th Semester Morning Shift timetable, w.e.f. 05-10-2026. Only the BS CS row
+is used; G1 and G2 sit together as one section. On the timetable "(1-3)" means the first three
+days of the week (Monday to Wednesday) and "(4-6)" means Thursday to Saturday.
 
 The first run replaces everything in the database (the demo university, test chats, everyone) with
-the college. Every run then makes sure the course titles match and that each student on the class
-list (apps/core/gcs_students.py) has an account and is enrolled in all seven subjects. Nothing else
-is touched on later runs, so it is safe in a start script.
+the college. So does the first run after REBUILD changes: a deliberate fresh start, done once and
+remembered in the audit log, so restarts never wipe anything again. Every run then makes sure the
+course titles match and that each student on the class list (apps/core/gcs_students.py) has an
+account, is in the section and is enrolled in all seven subjects. Nothing else is touched on later
+runs, so it is safe in a start script.
 
 New accounts get the password in SEED_PASSWORD; without it, no account is created.
 """
@@ -34,11 +37,15 @@ from apps.academic.models import (
 )
 from apps.core.gcs_students import STUDENT_EMAIL_DOMAIN, STUDENTS, split_name
 from apps.enrollment.models import SectionEnrollment, TeacherAssignment
+from apps.governance.models import AuditLog
 from apps.identity.models import RoleAssignment, User
 from apps.scheduling.models import ClassMeeting, Room
 
 SLUG = "gcs-lahore"
-SECTION = "G1+G2"
+SECTION = "BSCS24"
+#: Change this to start the college over once more on the next start (everything is replaced).
+REBUILD = "2026-11-25: section BSCS24"
+REBUILT = "seed.rebuilt"
 MON_WED = [0, 1, 2]  # "(1-3)" on the timetable
 THU_SAT = [3, 4, 5]  # "(4-6)"
 
@@ -98,11 +105,16 @@ class Command(BaseCommand):
             return
 
         inst = None if reset else Institution.objects.filter(slug=SLUG).first()
+        if inst is not None and not self.rebuilt():
+            self.stdout.write(self.style.WARNING(f"Starting the college over ({REBUILD})."))
+            inst = None
         if inst is None:
             # Start from an empty database: no demo university, test users or test messages left.
             call_command("flush", interactive=False, verbosity=0)
             with transaction.atomic():
                 accounts = self.seed(domain, password)
+                AuditLog.objects.create(institution=Institution.objects.get(slug=SLUG),
+                                        action=REBUILT, changes={"rebuild": REBUILD})
             self.stdout.write(self.style.SUCCESS("Govt. Graduate College of Science is set up."))
             for email, who in accounts:
                 self.stdout.write(f"  {email}  {who}")
@@ -119,8 +131,12 @@ class Command(BaseCommand):
             f"{enrolled} new enrolments."
         )
 
+    def rebuilt(self) -> bool:
+        """Whether this database has had the current fresh start (see REBUILD)."""
+        return AuditLog.objects.filter(action=REBUILT, changes__rebuild=REBUILD).exists()
+
     def enroll_students(self, inst, password):
-        """Every student on the class list has an account, is in section G1+G2 and sits in all
+        """Every student on the class list has an account, is in the section and sits in all
         seven of its subjects."""
         cohort = Cohort.objects.filter(institution=inst, code=SECTION).first()
         sections = list(
@@ -165,8 +181,7 @@ class Command(BaseCommand):
             return model.objects.create(institution=inst, **kw)
 
         cs = scoped(Department, name="Computer Science", code="CS")
-        bscs = scoped(Program, department=cs, name="BS Computer Science (Session 2023-2028)",
-                      code="BSCS")
+        bscs = scoped(Program, department=cs, name="BS Computer Science", code="BSCS")
         term = scoped(
             AcademicTerm, name="5th Semester, Fall 2026", code="F26-S5",
             starts_on=date(2026, 10, 5), ends_on=date(2027, 2, 27), is_current=True,
@@ -191,7 +206,8 @@ class Command(BaseCommand):
             for key, (local, first, last) in TEACHERS.items()
         }
 
-        cohort = scoped(Cohort, program=bscs, code=SECTION, start_year=2023, end_year=2028)
+        cohort = scoped(Cohort, program=bscs, code=SECTION, start_year=2024, end_year=2028,
+                        shift=Cohort.Shift.MORNING)
         sections = {}
         for code, (title, colour, teacher) in COURSES.items():
             course = scoped(Course, department=cs, code=code, title=title, color=colour)
