@@ -104,3 +104,23 @@ class ScheduleChange(InstitutionScopedModel):
 
     def __str__(self):
         return f"{self.meeting} on {self.date}: {self.get_status_display()}"
+
+
+class LateNotice(InstitutionScopedModel):
+    """The teacher is running late for one occurrence of a class; students are told."""
+
+    meeting = models.ForeignKey(ClassMeeting, on_delete=models.CASCADE, related_name="+")
+    date = models.DateField()
+    minutes = models.PositiveSmallIntegerField()
+    note = models.CharField(max_length=200, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["meeting", "date"], name="one_late_notice_per_class")
+        ]
+
+    def __str__(self):
+        return f"{self.meeting} on {self.date}: {self.minutes} min late"

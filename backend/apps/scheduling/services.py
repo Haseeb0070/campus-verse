@@ -38,6 +38,7 @@ class Occurrence:
     change_id: int | None = None
     can_manage: bool = False
     rep_role: str | None = None  # "cr" / "gr" when the viewer represents this class
+    late_minutes: int = 0  # the teacher said they're running this late
     # Where the class came from (FR-SCH-06): "Timetable import" or a sync source's name, and
     # when that import was applied. None for classes entered by hand.
     source: str | None = None
@@ -173,9 +174,15 @@ def occurrences(user, start: date, days: int) -> list[Occurrence]:
     from apps.classreps.services import rep_sections
 
     reps = rep_sections(user)
+    from .models import LateNotice
+
+    late = {(m, d): n for m, d, n in LateNotice.objects.filter(
+        meeting__section_id__in=sections, date__gte=start, date__lt=start + timedelta(days=days)
+    ).values_list("meeting_id", "date", "minutes")}
     for occ in result:
         occ.can_manage = occ.section_id in manageable
         occ.rep_role = reps.get(occ.section_id)
+        occ.late_minutes = late.get((occ.meeting_id, occ.date), 0)
     return result
 
 
@@ -343,3 +350,51 @@ def undo_change(user, change: ScheduleChange) -> None:
         changes={"meeting": change.meeting_id, "date": change.date.isoformat()},
     )
     change.delete()
+
+
+#: How late a teacher can say they'll be.
+LATE_CHOICES = (5, 10, 15, 20, 30, 45)
+
+
+@transaction.atomic
+def mark_late(user, *, meeting: ClassMeeting, day: date, minutes: int, note: str = ""):
+    """The teacher will start this class `minutes` late; tells the students (minutes 0 takes it
+    back: "starting on time after all")."""
+    from apps.notifications.models import Notification
+    from apps.notifications.services import _students, notify
+
+    from .models import LateNotice
+
+    if not can_target(user, AudienceScope.SECTION, meeting.section_id):
+        raise PermissionDenied("Only the class's teachers can say they're running late.")
+    tz = ZoneInfo(meeting.institution.timezone)
+    start = datetime.combine(day, meeting.starts_at, tzinfo=tz)
+    end = datetime.combine(day, meeting.ends_at, tzinfo=tz)
+    now = datetime.now(tz)
+    if day.weekday() != meeting.weekday or now > end or start - now > timedelta(hours=3):
+        raise ValidationError("You can say you're running late on the day, up to the class's end.")
+    if minutes and minutes not in LATE_CHOICES:
+        raise ValidationError("Choose 5, 10, 15, 20, 30 or 45 minutes.")
+    course = meeting.section.offering.course
+    if not minutes:
+        LateNotice.objects.filter(meeting=meeting, date=day).delete()
+        title = f"{course.title} starts on time"
+        body = f"At {meeting.starts_at:%H:%M} after all."
+    else:
+        LateNotice.objects.update_or_create(
+            meeting=meeting, date=day,
+            defaults={"institution_id": meeting.institution_id, "minutes": minutes,
+                      "note": (note or "").strip()[:200], "created_by": user},
+        )
+        new_start = start + timedelta(minutes=minutes)
+        title = f"{course.title} starts {minutes} min late"
+        body = (f"{user.get_full_name()} is running late: the class starts at {new_start:%H:%M} "
+                f"instead of {meeting.starts_at:%H:%M}.")
+        if note.strip():
+            body += f" {note.strip().rstrip('.')}."
+    audit.record(actor=user, action="schedule.late", target=meeting,
+                 changes={"date": day.isoformat(), "minutes": minutes})
+    notify(_students(meeting.section_id), kind=Notification.Kind.CLASS_CHANGED,
+           institution_id=meeting.institution_id, title=title, body=body[:300],
+           link="/today", actor_id=user.pk,
+           dedupe_key=f"late:{meeting.pk}:{day.isoformat()}:{minutes}")

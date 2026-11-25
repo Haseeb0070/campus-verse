@@ -14,7 +14,7 @@ from apps.enrollment.models import SectionEnrollment
 from apps.notifications.models import Notification
 from apps.notifications.services import notify
 
-from .models import ClassMeeting
+from .models import ClassMeeting, LateNotice
 from .services import expand, load_meetings
 
 #: How long before a lecture each person is reminded.
@@ -29,6 +29,8 @@ def send_lecture_reminders(now: datetime | None = None) -> int:
         tz = ZoneInfo(inst.timezone)
         today = now.astimezone(tz).date()
         meetings = load_meetings(ClassMeeting.objects.filter(institution=inst))
+        late = dict(((m, d), n) for m, d, n in LateNotice.objects.filter(
+            institution=inst, date=today).values_list("meeting_id", "date", "minutes"))
         for occ in expand(meetings, today, today, tz):
             if not occ.is_happening:
                 continue
@@ -41,6 +43,8 @@ def send_lecture_reminders(now: datetime | None = None) -> int:
             body = f"{occ.starts_at.astimezone(tz):%H:%M}" + (f", {where}" if where else "")
             if occ.status == "room_changed":
                 body += ". The room has changed."
+            if late.get((occ.meeting_id, occ.date)):
+                body += f". The teacher is running {late[(occ.meeting_id, occ.date)]} min late."
             key = f"reminder:{occ.meeting_id}:{occ.date.isoformat()}"
             sent += notify(occ.teacher_ids, kind=Notification.Kind.CLASS_REMINDER,
                            institution_id=inst.pk, title=f"Your lecture: {what}", body=body,

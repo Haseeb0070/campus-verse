@@ -72,7 +72,12 @@ export function ClassRow({
                 <CheckIcon className={`size-3 text-success-ink ${justEnded ? "draw" : ""}`} />
               )}
               {chip.label}
+              {!!occ.late_minutes && !off && (
+            <span className="rounded-full bg-warning/18 px-2 py-0.5 text-caption font-semibold text-ink">
+              Starts {occ.late_minutes} min late
             </span>
+          )}
+        </span>
           )}
         </span>
         <span className="block text-footnote text-ink-2">

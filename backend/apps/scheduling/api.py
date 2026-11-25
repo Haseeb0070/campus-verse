@@ -40,6 +40,7 @@ class OccurrenceOut(Schema):
     change_id: int | None
     can_manage: bool
     rep_role: str | None = None
+    late_minutes: int = 0
     source: str | None = None
     synced_at: datetime | None = None
 
@@ -136,6 +137,33 @@ def create_change(request, payload: ChangeIn):
     except ValidationError as err:
         return Status(422, {"detail": err.messages[0]})
     return Status(201, change)
+
+
+class LateIn(Schema):
+    meeting_id: int
+    date: date
+    minutes: int  # 0: on time after all
+    note: str = ""
+
+
+@router.post("/late", response={204: None, 403: ErrorOut, 404: ErrorOut, 422: ErrorOut})
+def running_late(request, payload: LateIn):
+    """A teacher tells the class they'll start late (or, with 0, on time after all)."""
+    from .services import mark_late
+
+    meeting = ClassMeeting.objects.filter(
+        pk=payload.meeting_id, institution_id=request.user.institution_id
+    ).select_related("section__offering__course", "institution").first()
+    if meeting is None:
+        return Status(404, {"detail": "Class not found"})
+    try:
+        mark_late(request.user, meeting=meeting, day=payload.date, minutes=payload.minutes,
+                  note=payload.note)
+    except PermissionDenied as err:
+        return Status(403, {"detail": str(err)})
+    except ValidationError as err:
+        return Status(422, {"detail": err.messages[0]})
+    return Status(204, None)
 
 
 @router.delete("/changes/{change_id}", response={204: None, 403: ErrorOut})

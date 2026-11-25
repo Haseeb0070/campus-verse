@@ -9,15 +9,18 @@ import type { Occurrence } from "@/lib/types";
 import { DatePicker, TimeSelect, todayIso } from "./date-picker";
 import { Select } from "./select";
 import { Switch } from "./switch";
+import { ChipGroup } from "./chip-group";
 import type { RepRequest, RepRole } from "@/lib/reps";
 
-type Action = "cancelled" | "moved" | "room_changed";
+type Action = "cancelled" | "moved" | "room_changed" | "late";
 
 const actions: { value: Action; label: string }[] = [
   { value: "cancelled", label: "Cancel class" },
   { value: "moved", label: "Move" },
   { value: "room_changed", label: "Change room" },
 ];
+
+const LATE_MINUTES = ["5", "10", "15", "20", "30", "45"] as const;
 
 const statusText: Record<string, string> = {
   cancelled: "cancelled",
@@ -56,12 +59,18 @@ export function ChangeClassDialog({
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
+  // Running late: on the day, until the class ends; for teachers only.
+  const today = new Date().toDateString() === new Date(occ.starts_at).toDateString();
+  const canLate = !asRep && today && Date.now() < new Date(occ.ends_at).getTime();
+  const [lateBy, setLateBy] = useState<string>(occ.late_minutes ? String(occ.late_minutes) : "10");
   const choices = asRep
     ? [
         { value: "cancelled" as Action, label: "Cancel lecture" },
         { value: "moved" as Action, label: "Shift" },
       ]
-    : actions;
+    : canLate
+      ? [...actions, { value: "late" as Action, label: "Running late" }]
+      : actions;
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -89,6 +98,19 @@ export function ChangeClassDialog({
     if (action === "room_changed" && !roomId) return setError("Choose the new room.");
     if (action === "moved" && (!newDate || !start || !end)) return setError("Choose the new date and time.");
     setBusy(true);
+    if (action === "late") {
+      try {
+        await apiFetch("/api/timetable/late", {
+          method: "POST",
+          body: JSON.stringify({ meeting_id: occ.meeting_id, date: occ.date, minutes: Number(lateBy), note }),
+        });
+        await done();
+      } catch (err) {
+        setError(apiError(err));
+        setBusy(false);
+      }
+      return;
+    }
     if (asRep) {
       try {
         const req = await apiFetch<RepRequest>("/api/reps/requests", {
@@ -238,6 +260,38 @@ export function ChangeClassDialog({
               </div>
             )}
 
+            {action === "late" && (
+              <div className="flex flex-col gap-2">
+                <span className="text-footnote font-semibold text-ink-2">How late will you be?</span>
+                <ChipGroup<string>
+                  label="Minutes late"
+                  value={lateBy}
+                  onChange={setLateBy}
+                  options={LATE_MINUTES.map((m) => ({ value: m, label: `${m} min` }))}
+                />
+                <p className="text-footnote text-ink-2">
+                  Students get a notification with the new start time.
+                  {occ.late_minutes ? " " : ""}
+                </p>
+                {!!occ.late_minutes && (
+                  <button type="button" disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        await apiFetch("/api/timetable/late", { method: "POST", body: JSON.stringify({ meeting_id: occ.meeting_id, date: occ.date, minutes: 0 }) });
+                        await done();
+                      } catch (err) {
+                        setError(apiError(err));
+                        setBusy(false);
+                      }
+                    }}
+                    className="press self-start rounded-full bg-fill-strong px-3 py-1.5 text-footnote font-semibold">
+                    I&apos;m on time after all
+                  </button>
+                )}
+              </div>
+            )}
+
             {action === "room_changed" && (
               <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
                 New room
@@ -260,7 +314,7 @@ export function ChangeClassDialog({
               />
             </label>
 
-            {!asRep && (
+            {!asRep && action !== "late" && (
               <span className="flex items-center gap-3 text-body">
                 <Switch checked={notify} onChange={setNotify} label={`Post a notice to section ${occ.section_code}`} />
                 Post a notice to section {occ.section_code}
@@ -298,7 +352,7 @@ export function ChangeClassDialog({
                 action === "cancelled" ? "bg-danger" : "bg-accent"
               }`}
             >
-              {busy ? "Saving…" : action === "cancelled" ? "Cancel this class" : asRep ? "Shift it" : "Save change"}
+              {busy ? "Saving…" : action === "cancelled" ? "Cancel this class" : action === "late" ? "Tell the class" : asRep ? "Shift it" : "Save change"}
             </button>
           )}
         </div>
