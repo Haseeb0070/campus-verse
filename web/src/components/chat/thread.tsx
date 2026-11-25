@@ -99,13 +99,25 @@ export function Thread({ conversationId }: { conversationId: number }) {
     if (fileInput.current) fileInput.current.value = "";
   }
 
+  /** Flips the bell at once; puts it back if the server says no. */
   async function toggleMute() {
     if (!conversation) return;
-    await apiFetch(`/api/chat/conversations/${conversationId}/mute`, {
-      method: "POST",
-      body: JSON.stringify({ muted: !conversation.muted }),
-    }).catch(() => {});
-    queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
+    const muted = !conversation.muted;
+    const key = ["chat", "conversations"];
+    type Row = { id: number; muted: boolean };
+    const flip = (to: boolean) =>
+      queryClient.setQueriesData<Row[]>({ queryKey: key }, (list) =>
+        Array.isArray(list) ? list.map((c) => (c.id === conversationId ? { ...c, muted: to } : c)) : list,
+      );
+    flip(muted);
+    try {
+      await apiFetch(`/api/chat/conversations/${conversationId}/mute`, {
+        method: "POST",
+        body: JSON.stringify({ muted }),
+      });
+    } catch {
+      flip(!muted);
+    }
   }
 
   if (notFound) {

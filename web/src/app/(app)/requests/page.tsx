@@ -15,6 +15,15 @@ function TeacherSettings({ mine }: { mine: RepsMine }) {
       "unblock" in body
         ? apiFetch<RepsMine>(`/api/reps/blocks/${body.unblock}`, { method: "DELETE" })
         : apiFetch<RepsMine>("/api/reps/settings", { method: "PUT", body: JSON.stringify(body) }),
+    // The switch moves at once; the server's answer replaces it, or it springs back on failure.
+    onMutate: (body) => {
+      const before = qc.getQueryData<RepsMine>(["reps", "mine"]);
+      if (before && "without_approval" in body) {
+        qc.setQueryData<RepsMine>(["reps", "mine"], { ...before, without_approval: body.without_approval });
+      }
+      return { before };
+    },
+    onError: (_err, _body, ctx) => ctx?.before && qc.setQueryData(["reps", "mine"], ctx.before),
     onSuccess: (data) => qc.setQueryData(["reps", "mine"], data),
   });
   return (

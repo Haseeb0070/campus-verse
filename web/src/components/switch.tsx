@@ -32,7 +32,7 @@ export function Switch({
       trackOnColor="var(--cv-accent)"
       thumbColor="#fffaf2"
       thumbOnColor="#fffaf2"
-      colorDuration={220}
+      colorDuration={140}
       className="shrink-0 [&_[role=switch]>span>span]:shadow-[0_1px_3px_rgb(40_25_10/0.3)]"
     />
   );

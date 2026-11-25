@@ -115,9 +115,10 @@ const SquishSwitch: React.FC<SquishSwitchProps> = ({
     }
     const controls = animate(x, target, {
       type: 'spring',
-      stiffness: 170 - (50 - clamp(speed, 0, 100)) * 1.1,
-      damping: 21.5,
-      mass: 0.9,
+      // Snappy: settles in about 200 ms with a hint of bounce (CampusVerse tuning).
+      stiffness: 420 + (clamp(speed, 0, 100) - 50) * 2,
+      damping: 28,
+      mass: 0.6,
       restDelta: 0.001,
       restSpeed: 0.01
     });
