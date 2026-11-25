@@ -3,12 +3,12 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import FileResponse
 from ninja import File, Form, Router, Schema, Status
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
 from apps.core import realtime
+from apps.core.files import serve
 from apps.identity.models import User
 
 from . import services
@@ -250,12 +250,7 @@ def download(request, file_id: int):
     # Same 404 whether it doesn't exist or isn't yours (SRS 9.2).
     if stored is None:
         raise HttpError(404, "File not found")
-    response = FileResponse(stored.file.open("rb"),
-                            as_attachment=not stored.content_type.startswith("image/"),
-                            filename=stored.original_name, content_type=stored.content_type)
-    response["Cache-Control"] = "private, max-age=3600"
-    response["X-Content-Type-Options"] = "nosniff"
-    return response
+    return serve(stored, cache="private, max-age=3600")
 
 
 @router.post("/conversations/{conversation_id}/read", response={204: None})

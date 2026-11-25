@@ -3,7 +3,6 @@ from decimal import Decimal
 from typing import Literal
 
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import FileResponse
 from django.utils import timezone
 from ninja import File, Form, Router, Schema, Status
 from ninja.errors import HttpError
@@ -11,7 +10,7 @@ from ninja.files import UploadedFile
 
 from apps.academic.models import Section
 from apps.chat.serializers import initials
-from apps.core.files import ACCEPT
+from apps.core.files import ACCEPT, serve
 from apps.core.models import StoredFile
 from apps.identity.models import User
 
@@ -356,14 +355,7 @@ def download(request, file_id: int):
     # Same 404 whether it doesn't exist or isn't yours: no probing for file IDs (SRS 9.2).
     if stored is None or not services.can_download(request.user, stored):
         raise HttpError(404, "File not found")
-    response = FileResponse(
-        stored.file.open("rb"),
-        as_attachment=True,
-        filename=stored.original_name,
-        content_type=stored.content_type,
-    )
-    response["Cache-Control"] = "private, no-store"
-    return response
+    return serve(stored, inline=False)
 
 
 @router.get("/{assignment_id}/grades.csv", response={200: None})

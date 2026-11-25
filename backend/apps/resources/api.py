@@ -3,14 +3,13 @@ from typing import Literal
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import FileResponse
 from ninja import File, Form, Query, Router, Schema, Status
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
 from apps.academic.models import CourseOffering
 from apps.core.audience import parse_target
-from apps.core.files import ACCEPT
+from apps.core.files import ACCEPT, serve
 from apps.core.models import StoredFile
 
 from . import services
@@ -260,13 +259,4 @@ def download(request, file_id: int):
         raise HttpError(404, "File not found")
     ResourceDownload.objects.create(institution_id=version.institution_id,
                                     resource_id=version.resource_id, user=request.user)
-    stored = version.file
-    response = FileResponse(
-        stored.file.open("rb"),
-        as_attachment=not stored.content_type.startswith("image/"),
-        filename=stored.original_name,
-        content_type=stored.content_type,
-    )
-    response["Cache-Control"] = "private, no-store"
-    response["X-Content-Type-Options"] = "nosniff"
-    return response
+    return serve(version.file)

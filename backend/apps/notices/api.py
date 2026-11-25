@@ -2,13 +2,13 @@ from datetime import datetime
 from typing import Literal
 
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import FileResponse
 from django.utils import timezone
 from ninja import File, Query, Router, Schema, Status
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
 from apps.core.audience import audience_options, parse_target, reach, scope_label
+from apps.core.files import serve
 
 from . import services
 from .models import Notice
@@ -282,12 +282,7 @@ def download(request, file_id: int):
     stored = services.downloadable_file(request.user, file_id)
     if stored is None:
         raise HttpError(404, "File not found")  # the same whether missing or not yours
-    response = FileResponse(stored.file.open("rb"),
-                            as_attachment=not stored.content_type.startswith("image/"),
-                            filename=stored.original_name, content_type=stored.content_type)
-    response["Cache-Control"] = "private, max-age=3600"
-    response["X-Content-Type-Options"] = "nosniff"
-    return response
+    return serve(stored, cache="private, max-age=3600")
 
 
 @router.post("/{notice_id}/archive", response={204: None, 403: ErrorOut})

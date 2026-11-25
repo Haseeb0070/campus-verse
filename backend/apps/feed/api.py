@@ -4,13 +4,13 @@ from typing import Literal
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Count
-from django.http import FileResponse
 from ninja import File, Form, Query, Router, Schema, Status
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
 from apps.chat.serializers import initials
 from apps.core.audience import parse_target
+from apps.core.files import serve
 from apps.core.models import StoredFile
 
 from . import services
@@ -278,11 +278,7 @@ def download(request, file_id: int):
         visible = False
     if not visible:
         raise HttpError(404, "File not found")
-    inline = stored.content_type.startswith("image/")
-    response = FileResponse(stored.file.open("rb"), as_attachment=not inline,
-                            filename=stored.original_name, content_type=stored.content_type)
-    response["Cache-Control"] = "private, max-age=3600"
-    return response
+    return serve(stored, cache="private, max-age=3600")
 
 
 # Moderation ----------------------------------------------------------------------------------

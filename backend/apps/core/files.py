@@ -1,5 +1,6 @@
 """Upload checks (SRS 9.3): an allow-list of types, verified by reading the file's own bytes,
-never trusting its name or the browser's MIME type; size limits; random storage names."""
+never trusting its name or the browser's MIME type; size limits; random storage names. And
+handing a file out (serve) once an endpoint has checked the person may have it."""
 
 import hashlib
 import os
@@ -8,6 +9,8 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
+from django.http import FileResponse, HttpResponseRedirect
+from django.utils.http import content_disposition_header
 
 from .models import StoredFile
 
@@ -98,3 +101,44 @@ def store_upload(user, upload: UploadedFile) -> StoredFile:
     stored.file.save(f"{user.institution_id}/{uuid.uuid4().hex}{ext}", upload, save=False)
     stored.save()
     return stored
+
+
+# Downloads ------------------------------------------------------------------------------------
+
+#: How long a download link works: enough to start a download on a slow connection, and a shared
+#: link soon stops working.
+LINK_SECONDS = 300
+
+
+def serve(stored, *, inline: bool | None = None, cache: str = "private, no-store"):
+    """The response for one StoredFile, after the caller checked the person may have it. Images
+    open in the page; other files download.
+
+    With R2 (production) the API doesn't pass the bytes through itself: it redirects to a private
+    link that works for a few minutes, and the browser or app downloads straight from Cloudflare.
+    That's much quicker than streaming through the API (on Render's free plan it would also have
+    to wake up first, and a big file could outlast the 60-second request limit). The bucket stays
+    private: nothing can be read without a fresh link from a permission-checked endpoint. Without
+    R2 (development) the file is streamed from MEDIA_ROOT."""
+    if inline is None:
+        inline = stored.content_type.startswith("image/")
+    storage = stored.file.storage
+    if hasattr(storage, "bucket_name"):  # S3-compatible (R2): a short-lived private link
+        url = storage.url(
+            stored.file.name,
+            parameters={
+                "ResponseContentDisposition": content_disposition_header(
+                    not inline, stored.original_name),
+                "ResponseContentType": stored.content_type,
+                "ResponseCacheControl": "private, max-age=300",
+            },
+            expire=LINK_SECONDS,
+        )
+        response = HttpResponseRedirect(url)
+        response["Cache-Control"] = "private, no-store"  # the link expires; never reuse it
+        return response
+    response = FileResponse(stored.file.open("rb"), as_attachment=not inline,
+                            filename=stored.original_name, content_type=stored.content_type)
+    response["Cache-Control"] = cache
+    response["X-Content-Type-Options"] = "nosniff"
+    return response

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LeaveGuard } from "./leave-guard";
 import { DatePicker, DateTimeField, todayIso } from "./date-picker";
 import { Select } from "./select";
 import { Switch } from "./switch";
@@ -68,6 +69,15 @@ export function EventForm({
   const [targets, setTargets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Saved: the form may navigate away without asking. */
+  const [saved, setSaved] = useState(false);
+  // What the form started with, to tell whether anything has been typed or changed since.
+  const [start] = useState(() =>
+    JSON.stringify([title, description, category, allDay, starts, ends, mode, location, link, registration, capacity, targets]),
+  );
+  const dirty =
+    !saved &&
+    JSON.stringify([title, description, category, allDay, starts, ends, mode, location, link, registration, capacity, targets]) !== start;
 
   async function submit() {
     const startDate = allDay ? new Date(`${starts.slice(0, 10)}T00:00`) : new Date(starts);
@@ -84,6 +94,7 @@ export function EventForm({
     setError(problem);
     if (problem) return;
     setBusy(true);
+    setSaved(true); // the page moves on after a successful save; don't ask then
     const failed = await onSubmit({
       title, description, category, all_day: allDay, mode,
       starts_at: startDate.toISOString(), ends_at: endDate.toISOString(),
@@ -93,6 +104,7 @@ export function EventForm({
     });
     setBusy(false);
     setError(failed);
+    if (failed) setSaved(false);
   }
 
   return (
@@ -104,6 +116,7 @@ export function EventForm({
       }}
       className="glass flex flex-col gap-5 rounded-card p-6"
     >
+      <LeaveGuard when={dirty} what={initial ? "your changes to this event" : "this event"} />
       {error && (
         <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">
           {error}
