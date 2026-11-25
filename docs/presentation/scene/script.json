@@ -1,0 +1,56 @@
+{
+  "fps": 30,
+  "duration": 60,
+  "scenes": [
+    { "id": "hook", "start": 0, "end": 6, "verse": "happy",
+      "line": "Hi, I'm Verse! Five WhatsApp groups, missed notices, and no idea which room your class is in? Let's fix that." },
+    { "id": "today", "start": 6, "end": 14, "verse": "proud", "bg": "navy", "kicker": "For students", "title": "Today, on the first screen",
+      "line": "Meet CampusVerse. Open it and Today shows your next class and room, your latest chats, due work and new notices, all on the first screen." },
+    { "id": "timetable", "start": 14, "end": 22, "verse": "curious", "bg": "blue", "kicker": "For students", "title": "Your whole week",
+      "line": "Your whole week, in order. And when a class moves, your timetable updates instantly, with a notification so you're never in the wrong room." },
+    { "id": "chat", "start": 22, "end": 30, "verse": "happy", "bg": "cream", "kicker": "For students", "title": "A chat for every subject",
+      "line": "Every subject has its own chat, with your teacher right inside it. Ask a question, get an answer. You can also message classmates privately." },
+    { "id": "work", "start": 30, "end": 38, "verse": "approving", "bg": "navy", "kicker": "For students", "title": "Assignments and progress",
+      "line": "Hand in assignments online before the deadline, and check your marks and attendance for every subject, anytime." },
+    { "id": "teachers", "start": 38, "end": 46, "verse": "proud", "bg": "blue", "kicker": "For teachers", "title": "Run the class from a phone",
+      "line": "Teachers can pin important notices, move or cancel a class in one step, and mark attendance right from their phone." },
+    { "id": "office", "start": 46, "end": 52, "verse": "curious", "bg": "cream", "kicker": "For the college office", "title": "Accounts and the timetable",
+      "line": "The college office sets up accounts by roll number and imports the timetable, checking every change before it goes out." },
+    { "id": "close", "start": 52, "end": 56.4, "verse": "excited", "bg": "navy", "kicker": "Get started", "title": "Sign in and go",
+      "line": "No app to install. Just sign in with your roll number email on any browser." },
+    { "id": "end", "start": 56.4, "end": 60, "verse": "happy", "bg": "navy",
+      "line": "See you in R-127!", "wordmark": "CampusVerse", "tagline": "Your college, on one screen.", "url": "campus-verse-flame.vercel.app" }
+  ],
+  "beats": [
+    { "t": 6.0, "shot": "today" },
+    { "t": 7.3, "shot": "today", "target": "next", "zoom": 1.45, "label": "Next class and room" },
+    { "t": 9.7, "shot": "today", "target": "chats", "zoom": 1.4, "label": "Latest chats" },
+    { "t": 11.1, "shot": "today", "target": "due", "zoom": 1.4, "label": "Due work" },
+    { "t": 12.4, "shot": "today", "target": "notices", "zoom": 1.3, "label": "New notices" },
+
+    { "t": 14.0, "shot": "timetable" },
+    { "t": 15.3, "shot": "timetable", "target": "room", "zoom": 1.7, "label": "The room, on every class" },
+    { "t": 17.9, "shot": "timetable", "target": "changed", "grow": [34, 0, 0, 0], "zoom": 1.6, "label": "Room changed" },
+
+    { "t": 22.0, "shot": "chat" },
+    { "t": 23.4, "shot": "chat", "target": "reply", "grow": [26, 30, 0, 44], "zoom": 1.6, "label": "Your teacher replies" },
+    { "t": 27.3, "shot": "chat-list", "target": "fresh", "zoom": 1.5, "label": "Private messages" },
+
+    { "t": 30.0, "shot": "assignments", "target": "open", "zoom": 1.25 },
+    { "t": 31.7, "shot": "assignment", "target": "upload", "zoom": 1.5, "label": "Upload your work" },
+    { "t": 34.3, "shot": "progress", "target": "ai", "zoom": 1.4, "label": "Marks and attendance" },
+    { "t": 36.4, "shot": "progress", "target": "automata", "zoom": 1.4, "label": "Every subject" },
+
+    { "t": 38.0, "shot": "notices" },
+    { "t": 38.9, "shot": "notices", "target": "pinned", "grow": [34, 0, 0, 0], "labelAt": "below", "zoom": 1.6, "label": "Pinned notice" },
+    { "t": 41.0, "shot": "teacher-today", "target": "change", "labelAt": "below", "zoom": 1.6, "label": "Change a class" },
+    { "t": 42.4, "shot": "change-class", "target": "dialog", "zoom": 1.35, "label": "Cancel, move or change room" },
+    { "t": 44.1, "shot": "attendance", "target": "rows", "zoom": 1.25, "label": "Mark attendance" },
+
+    { "t": 46.0, "shot": "people", "target": "row", "zoom": 1.45, "label": "Accounts by roll number" },
+    { "t": 48.7, "shot": "import", "target": "note", "grow": [62, 0, 0, 0], "zoom": 1.45, "label": "Every change checked first" },
+
+    { "t": 52.0, "shot": "sign-in" },
+    { "t": 52.9, "shot": "sign-in", "target": "email", "grow": [26, 0, 0, 0], "zoom": 1.55, "label": "Your roll number email" }
+  ]
+}

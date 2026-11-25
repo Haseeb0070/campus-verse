@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CampusVerse presentation</title>
+<style>
+  @font-face { font-family: "Plus Jakarta Sans Variable"; src: url("/fonts/plus-jakarta-sans.woff2") format("woff2"); font-weight: 200 800; }
+  @font-face { font-family: "Newsreader Variable"; src: url("/fonts/newsreader.woff2") format("woff2"); font-weight: 200 800; }
+
+  :root {
+    --navy: #192840; --blue: #2f6fae; --paper: #eef2f6; --cream: #fffaf2; --gold: #e3a33b; --ink: #241e18;
+    --sans: "Plus Jakarta Sans Variable", "Segoe UI", sans-serif;
+    --serif: "Newsreader Variable", Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--navy); }
+  #stage { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--sans); color: var(--cream); }
+  #stage > * { position: absolute; }
+  .bg { inset: 0; }
+  #landing { inset: 0; overflow: hidden; }
+  #landing img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+
+  /* Flat shapes that drift behind everything. */
+  .shape { border-radius: 50%; }
+  #stage.dark .shape { --tint: rgb(255 250 242 / 0.055); }
+  #stage.light .shape { --tint: rgb(25 40 64 / 0.06); }
+  #ring { width: 760px; height: 760px; border: 90px solid var(--tint); }
+  #dot { width: 220px; height: 220px; background: var(--tint); }
+  #tile { width: 300px; height: 300px; border-radius: 64px; background: var(--tint); }
+
+  /* Where the film is: one bar per scene. */
+  #steps { left: 110px; top: 84px; display: flex; gap: 10px; }
+  #steps i { display: block; width: 58px; height: 6px; border-radius: 3px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden; }
+  #steps i b { display: block; height: 100%; background: currentColor; transform-origin: 0 50%; }
+  #brand { left: 110px; top: 112px; font-weight: 700; font-size: 26px; letter-spacing: -0.01em; opacity: 0.9; }
+
+  #copy { left: 110px; top: 208px; width: 800px; }
+  #kicker { display: inline-flex; align-items: center; gap: 12px; font-weight: 700; font-size: 25px; letter-spacing: 0.12em; text-transform: uppercase; }
+  #kicker::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--gold); }
+  #title { margin-top: 22px; font-family: var(--serif); font-weight: 600; font-size: 104px; line-height: 1; letter-spacing: -0.02em; }
+  #title span { display: inline-block; white-space: pre; }
+
+  /* What Verse says. */
+  #bubble { background: var(--cream); color: var(--navy); border-radius: 30px; padding: 26px 34px 28px; font-weight: 600; font-size: 33px; line-height: 1.36; letter-spacing: -0.005em;
+    box-shadow: 0 22px 44px -14px rgb(8 14 26 / 0.5); transform-origin: 0 100%; }
+  #stage.light #bubble { box-shadow: 0 22px 44px -18px rgb(25 40 64 / 0.4), 0 0 0 2px #d6dee9; }
+  #bubble::after { content: ""; position: absolute; width: 30px; height: 30px; background: inherit; border-radius: 6px; transform: rotate(45deg); }
+  #bubble.left::after { left: -12px; bottom: 54px; }
+  #bubble.up::after { left: calc(50% - 15px); top: -12px; }
+  #bubble.side::after { left: -12px; top: calc(50% - 15px); }
+  #bubble span { display: inline; }
+
+  #verse { width: 200px; height: 200px; left: 0; top: 0; transform-origin: 50% 50%; }
+  #verse svg { width: 100%; height: 100%; overflow: visible; }
+  #shadow { width: 150px; height: 22px; border-radius: 50%; background: rgb(8 14 26 / 0.28); filter: blur(6px); }
+
+  /* The phone. Sizes inside are the app's own CSS pixels (390 x 844). */
+  #phone { left: 0; top: 0; width: 390px; height: 844px; transform-origin: 0 0; }
+  #phone::before { content: ""; position: absolute; inset: -13px; border-radius: 58px; background: #0b1220; box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.16), 0 50px 90px -30px rgb(4 8 16 / 0.7); }
+  #screen { position: absolute; inset: 0; border-radius: 45px; overflow: hidden; background: var(--paper); }
+  #layers { position: absolute; inset: 0; isolation: isolate; }
+  .layer { position: absolute; inset: 0; overflow: hidden; background: var(--paper); display: none; }
+  .layer .page { position: absolute; left: 0; top: 0; width: 390px; }
+  .layer .tabs { position: absolute; left: 0; bottom: 0; width: 390px; }
+  #glow { position: absolute; border: solid var(--gold); display: none; }
+  #pointer { position: absolute; border-radius: 50%; background: var(--cream); border: solid var(--navy); display: none; box-shadow: 0 2px 6px rgb(8 14 26 / 0.45); }
+  #ripple { position: absolute; border-radius: 50%; border: solid var(--gold); display: none; }
+  #label { background: var(--gold); color: var(--navy); font-weight: 800; font-size: 27px; padding: 11px 24px 12px; border-radius: 999px; white-space: nowrap; transform-origin: 0 100%;
+    box-shadow: 0 12px 26px -8px rgb(8 14 26 / 0.55); }
+
+  /* The last card. */
+  #end { inset: 0; text-align: center; }
+  #end > * { position: absolute; left: 0; width: 100%; }
+  #wordmark { top: 470px; font-weight: 800; font-size: 138px; letter-spacing: -0.035em; line-height: 1; }
+  #tagline { top: 640px; font-family: var(--serif); font-weight: 500; font-size: 70px; letter-spacing: -0.01em; }
+  #url span { display: inline-block; margin-top: 800px; padding: 16px 38px 18px; border-radius: 999px; background: var(--blue); font-weight: 700; font-size: 36px; }
+</style>
+</head>
+<body>
+<div id="stage" class="dark">
+  <div class="bg" id="bgA"></div>
+  <div id="landing"><img src="/shots/landing.png" alt=""></div>
+  <div class="bg" id="bgB"></div>
+  <div class="shape" id="ring"></div>
+  <div class="shape" id="dot"></div>
+  <div class="shape" id="tile"></div>
+
+  <div id="steps"></div>
+  <div id="brand">CampusVerse</div>
+  <div id="copy"><div id="kicker"></div><div id="title"></div></div>
+
+  <div id="phone">
+    <div id="screen">
+      <div id="layers"></div>
+      <div id="glow"></div>
+      <div id="ripple"></div>
+      <div id="pointer"></div>
+    </div>
+  </div>
+  <div id="label"></div>
+
+  <div id="end">
+    <div id="wordmark"></div>
+    <div id="tagline"></div>
+    <div id="url"><span></span></div>
+  </div>
+
+  <div id="shadow"></div>
+  <div id="verse"></div>
+  <div id="bubble"></div>
+</div>
+<script type="module" src="/scene.js"></script>
+</body>
+</html>
