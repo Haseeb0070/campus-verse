@@ -76,6 +76,9 @@ class ConversationOut(Schema):
     # One-to-one chats: "pending" until the other person accepts, then "accepted" (or "declined").
     request_status: str = "accepted"
     requested_by_me: bool = False
+    #: One-to-one chats where both people share "Seen": the newest message the other person
+    #: has read. None otherwise.
+    seen_up_to: int | None = None
 
 
 class MessagePage(Schema):
@@ -140,6 +143,7 @@ def _summary_out(s: services.ConversationSummary, user) -> dict:
         "last_message_at": conv.last_message_at,
         "request_status": conv.request_status,
         "requested_by_me": conv.requested_by_id == user.pk,
+        "seen_up_to": services.seen_up_to(user, conv) if other else None,
     }
 
 

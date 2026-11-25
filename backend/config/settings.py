@@ -179,6 +179,9 @@ MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
 EMAIL_CONFIG = env.email_url("EMAIL_URL", default="consolemail://")
 vars().update(EMAIL_CONFIG)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="CampusVerse <no-reply@localhost>")
+# Give up on a mail server that doesn't answer, well before the web worker's own 60-second limit
+# (a blocked port, as on Render's free plan for 25/465/587, otherwise hangs the request).
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=15)
 
 # The mobile app calls the API directly with X-Session-Token; native builds need no CORS. Only
 # its web preview in development does (e.g. MOBILE_WEB_ORIGINS=http://localhost:8081).

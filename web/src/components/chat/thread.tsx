@@ -217,7 +217,7 @@ export function Thread({ conversationId }: { conversationId: number }) {
             </div>
           )}
 
-          {chat.list.map((m, i) => {
+          {chat.list.map((m, i, list) => {
             const prev = chat.list[i - 1];
             const newDay = !prev || dayLabel(prev.created_at) !== dayLabel(m.created_at);
             const grouped =
@@ -225,6 +225,10 @@ export function Thread({ conversationId }: { conversationId: number }) {
               prev?.sender.id === m.sender.id &&
               new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() < GROUP_GAP_MS;
             const mine = m.sender.id === me?.id;
+            const seenUpTo = conversation?.seen_up_to;
+            const seen =
+              mine && m.id > 0 && !m.deleted && seenUpTo != null && seenUpTo >= m.id &&
+              !list.slice(i + 1).some((n) => n.sender.id === me?.id && n.id > 0 && !n.deleted);
             const canDelete = !m.deleted && m.id > 0 && (mine || conversation?.is_moderator);
 
             return (
@@ -239,6 +243,7 @@ export function Thread({ conversationId }: { conversationId: number }) {
                 <MessageRow
                   message={m}
                   mine={mine}
+                  seen={seen}
                   animate={m.pending || new Date(m.created_at).getTime() > openedAt}
                   showSender={!grouped && !mine}
                   canDelete={Boolean(canDelete)}
@@ -378,6 +383,7 @@ export function Thread({ conversationId }: { conversationId: number }) {
 function MessageRow({
   message: m,
   mine,
+  seen = false,
   animate,
   showSender,
   canDelete,
@@ -389,6 +395,8 @@ function MessageRow({
 }: {
   message: ChatMessage;
   mine: boolean;
+  /** The other person has read this, my newest message ("Seen", one-to-one chats only). */
+  seen?: boolean;
   animate: boolean;
   showSender: boolean;
   canDelete: boolean;
@@ -469,6 +477,7 @@ function MessageRow({
           ) : (
             <time dateTime={m.created_at}>{formatTime(m.created_at)}</time>
           )}
+          {seen && <span className="font-semibold text-accent-ink">Seen</span>}
           {canDelete &&
             (confirming ? (
               <span className="flex items-center gap-1.5">

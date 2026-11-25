@@ -164,6 +164,30 @@ def mark_read(user, conversation: Conversation, message_id: int) -> None:
     if message_id > member.last_read_message_id:
         member.last_read_message_id = message_id
         member.save(update_fields=["last_read_message_id", "updated_at"])
+        # "Seen" for the other person in a one-to-one chat, live, when both share it.
+        other = other_member(user, conversation)
+        if other is not None and receipts_shared(user, other, conversation):
+            _publish(conversation.channel, {"type": "message.read", "user_id": user.pk,
+                                            "message_id": message_id})
+
+
+def receipts_shared(a, b, conversation: Conversation | None = None) -> bool:
+    """ "Seen" works only when both people have it on: turning it off hides it both ways. A
+    message request never shows it: the person asked doesn't reveal they've looked until they
+    answer."""
+    if conversation is not None and conversation.request_status != Conversation.Request.ACCEPTED:
+        return False
+    return bool(a.read_receipts and b.read_receipts)
+
+
+def seen_up_to(user, conversation: Conversation) -> int | None:
+    """In a one-to-one chat, the newest message the other person has read (0 for none yet), or
+    None when "Seen" isn't shared: group chats, or either person turned it off."""
+    other = other_member(user, conversation)
+    if other is None or not receipts_shared(user, other, conversation):
+        return None
+    return conversation.members.filter(user=other).values_list(
+        "last_read_message_id", flat=True).first() or 0
 
 
 def _publish(channel: str, data: dict) -> None:

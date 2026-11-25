@@ -247,6 +247,12 @@ function Messages({
 }) {
   const away = useRef(false);
   // Newest first, for an inverted list that starts at the bottom and keeps its place.
+  const seenUpTo = conv?.seen_up_to;
+  const seenId = useMemo(() => {
+    if (seenUpTo == null) return null;
+    const newest = [...list].reverse().find((m) => m.sender.id === meId && m.id > 0 && !m.deleted);
+    return newest && newest.id <= seenUpTo ? newest.id : null;
+  }, [list, meId, seenUpTo]);
   const rows = useMemo(() => {
     const out: Row[] = [];
     const today = todayIn(tz);
@@ -305,6 +311,7 @@ function Messages({
           <Bubble
             m={item.m}
             mine={item.m.sender.id === meId}
+            seen={item.m.id === seenId}
             first={item.first}
             last={item.last}
             tz={tz}
@@ -331,6 +338,7 @@ function DayLabel({ label }: { label: string }) {
 function Bubble({
   m,
   mine,
+  seen = false,
   first,
   last,
   tz,
@@ -340,6 +348,8 @@ function Bubble({
 }: {
   m: ChatMessage;
   mine: boolean;
+  /** The other person has read this, my newest message (one-to-one chats only). */
+  seen?: boolean;
   first: boolean;
   last: boolean;
   tz?: string;
@@ -403,9 +413,10 @@ function Bubble({
         >
           {body}
         </Pressable>
-        {last || m.failed || m.pending ? (
+        {last || seen || m.failed || m.pending ? (
           <T variant="caption" tone={m.failed ? "danger" : "ink3"} style={{ marginTop: 4, fontWeight: "400" }}>
             {m.failed ? "Not sent · tap to try again" : m.pending ? "Sending…" : time}
+            {seen && !m.failed && !m.pending ? <T variant="caption" tone="accentInk" style={{ fontWeight: "600" }}>{"  ·  Seen"}</T> : null}
           </T>
         ) : null}
       </Animated.View>

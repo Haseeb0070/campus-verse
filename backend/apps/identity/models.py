@@ -65,6 +65,10 @@ class User(AbstractUser):
     # Their own name for the guide; only used when the institution lets people rename it.
     guide_name = models.CharField(max_length=24, blank=True)
 
+    # "Seen" in one-to-one chats. Off means the other person isn't told you've read their
+    # messages, and you don't see whether they've read yours (both ways, as in most chat apps).
+    read_receipts = models.BooleanField(default=True)
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 

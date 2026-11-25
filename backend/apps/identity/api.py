@@ -44,6 +44,7 @@ class MeOut(Schema):
     guide_name: str
     guide_rename: bool
     guide_name_default: str
+    read_receipts: bool
     institution: InstitutionOut | None
     roles: list[str]
     sections: list[SectionOut]
@@ -76,6 +77,7 @@ def me(request):
         "guide_name": user.guide_name,
         "guide_rename": theme["guide_rename"],
         "guide_name_default": theme["guide_name"],
+        "read_receipts": user.read_receipts,
         "institution": user.institution,
         "roles": sorted({r.role for r in user.roles.filter(institution_id=user.institution_id)}),
         "sections": [
@@ -145,6 +147,18 @@ def set_appearance(request, payload: AppearanceIn):
         return Status(422, {"detail": "Choose light or dark."})
     request.user.appearance = payload.appearance
     request.user.save(update_fields=["appearance"])
+    return Status(204, None)
+
+
+class ReadReceiptsIn(Schema):
+    read_receipts: bool
+
+
+@router.put("/read-receipts", response={204: None})
+def set_read_receipts(request, payload: ReadReceiptsIn):
+    """Whether one-to-one chats show "Seen", both ways."""
+    request.user.read_receipts = payload.read_receipts
+    request.user.save(update_fields=["read_receipts"])
     return Status(204, None)
 
 

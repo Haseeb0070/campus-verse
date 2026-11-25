@@ -26,9 +26,12 @@ export function useConversations() {
 }
 
 export function useConversation(id: number) {
+  const live = useRealtimeConnected();
   return useQuery({
     queryKey: ["chat", "conversation", id],
     queryFn: () => apiFetch<Conversation>(`/api/chat/conversations/${id}`),
+    // Keeps "Seen" current when live updates are down.
+    refetchInterval: live ? false : 20_000,
   });
 }
 
@@ -137,6 +140,7 @@ export function useChat(conversationId: number, me: Me | undefined) {
         if (ctx.info) return; // only the server publishes chat events
         if (ctx.data?.type === "message.created") upsert(qc, conversationId, ctx.data.message);
         if (ctx.data?.type === "message.deleted") markDeleted(qc, conversationId, ctx.data.id);
+        if (ctx.data?.type === "message.read") qc.invalidateQueries({ queryKey: ["chat", "conversation", conversationId] });
         qc.invalidateQueries({ queryKey: conversationsKey });
       });
       chat.on("subscribed", (ctx) => {

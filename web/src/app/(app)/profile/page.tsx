@@ -309,6 +309,37 @@ function SoundRow() {
   );
 }
 
+/** "Seen" in one-to-one chats. Off hides it both ways, as in most chat apps. */
+function ReadReceiptsCard({ on }: { on: boolean }) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  async function set(value: boolean) {
+    setError(null);
+    try {
+      await apiFetch("/api/me/read-receipts", { method: "PUT", body: JSON.stringify({ read_receipts: value }) });
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      await queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
+    } catch (err) {
+      setError(errorDetail(err, "Couldn't save. Try again."));
+    }
+  }
+  return (
+    <section aria-labelledby="receipts-h" className="glass flex flex-col gap-2 rounded-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="min-w-0 flex-1 basis-56">
+          <h2 id="receipts-h" className="text-headline font-semibold">Show “Seen” in private chats</h2>
+          <span className="block text-footnote text-ink-2">
+            People you message one-to-one see when you&apos;ve read their messages, and you see when they&apos;ve read yours.
+            Turn it off and neither of you sees it. Subject chats never show it.
+          </span>
+        </span>
+        <Switch checked={on} label="Show Seen in private chats" onChange={set} />
+      </div>
+      {error && <p role="alert" className="text-footnote text-danger-ink">{error}</p>}
+    </section>
+  );
+}
+
 const statusChip: Record<Correction["status"], { text: string; cls: string }> = {
   open: { text: "Waiting", cls: "bg-fill-strong text-ink-2" },
   resolved: { text: "Fixed", cls: "bg-success/12 text-success-ink" },
@@ -428,6 +459,7 @@ export default function ProfilePage() {
       <PasswordCard />
       <TwoStepCard on={me.two_step} />
       <NotificationsCard />
+      <ReadReceiptsCard on={me.read_receipts} />
 
       {me.sections.length > 0 && (
         <section aria-labelledby="courses-h" className="glass rounded-card p-3">

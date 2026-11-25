@@ -154,8 +154,14 @@ pricing pages now and then.
      R2 overview page), `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, then save and deploy.
   4. The deploy log says `Uploads: stored in Cloudflare R2 bucket ...` when it works.
   Without these, uploads stay on the server's disk and are lost at the next deploy.
-- **Emails aren't sent.** Invites and password resets appear in Render's **Logs** tab for
-  campusverse-api. To send real email, set `EMAIL_URL` to an SMTP provider.
+- **Emails aren't sent** until `EMAIL_URL` points at a mail service; until then invites and
+  password resets only appear in Render's **Logs** tab for campusverse-api. With Brevo (free,
+  300 emails a day), in campusverse-api → Environment:
+  - `EMAIL_URL` = `smtp+tls://LOGIN:KEY@smtp-relay.brevo.com:2525`, with the SMTP login and key
+    from Brevo → SMTP & API → SMTP. Write the `@` inside the login as `%40`. Use port **2525**:
+    Render's free plan blocks the usual mail ports (25, 465, 587), which makes sending hang.
+  - `DEFAULT_FROM_EMAIL` = `CampusVerse <sender@example.com>`, a sender verified in Brevo, with
+    the angle brackets (without them Brevo answers "451 Invalid from").
 - **Background tasks run inside the request** (there's no Redis on the free setup), so a big
   import makes that one request slower.
 

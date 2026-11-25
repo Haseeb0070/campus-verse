@@ -99,6 +99,10 @@ export default function Profile() {
             <Preferences />
           </Group>
 
+          <Group title="Privacy">
+            <ReadReceipts me={m} />
+          </Group>
+
           <Group title="More">
             <Card padded={false}>
               <Row icon="chart" label="Marks and attendance" onPress={() => router.push("/progress")} />
@@ -172,6 +176,32 @@ function Appearance({ me }: { me: Me }) {
         { key: "dark", label: "Dark" },
       ]}
     />
+  );
+}
+
+/** "Seen" in one-to-one chats. Off hides it both ways, as in most chat apps. */
+function ReadReceipts({ me }: { me: Me }) {
+  const qc = useQueryClient();
+  const on = me.read_receipts !== false;
+  async function set(read_receipts: boolean) {
+    qc.setQueryData<Me>(["me"], (old) => (old ? { ...old, read_receipts } : old));
+    try {
+      await apiFetch("/api/me/read-receipts", { method: "PUT", body: JSON.stringify({ read_receipts }) });
+      qc.invalidateQueries({ queryKey: ["chat"] });
+    } catch {
+      qc.invalidateQueries({ queryKey: ["me"] });
+    }
+  }
+  return (
+    <Card style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}>
+      <View style={{ flex: 1 }}>
+        <T variant="bodyStrong">Show “Seen” in private chats</T>
+        <T variant="callout" tone="ink3">
+          People you message one-to-one see when you’ve read their messages, and you see when they’ve read yours. Off hides it both ways.
+        </T>
+      </View>
+      <Toggle label="Show Seen in private chats" value={on} onChange={set} />
+    </Card>
   );
 }
 

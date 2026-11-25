@@ -22,6 +22,8 @@ export interface Me {
   guide_rename: boolean;
   /** The institution's name for the guide. */
   guide_name_default: string;
+  /** "Seen" in one-to-one chats, both ways. */
+  read_receipts: boolean;
   full_name: string;
   kind: "student" | "teacher" | "staff";
   institution: {
@@ -165,6 +167,8 @@ export interface Conversation {
   /** Private chats start as a request the other person accepts; everything else is "accepted". */
   request_status: "pending" | "accepted" | "declined";
   requested_by_me: boolean;
+  /** One-to-one chats where both share "Seen": the newest message the other person has read. */
+  seen_up_to?: number | null;
 }
 
 export interface ChatPerson {
