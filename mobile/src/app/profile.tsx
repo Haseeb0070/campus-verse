@@ -5,6 +5,7 @@ import { type ReactNode, useState } from "react";
 import { Alert, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
+import { canRenameGuide, Corrections, GuideName } from "@/components/profile-extras";
 import { StackHeader } from "@/components/StackHeader";
 import { Avatar, Button, Card, Divider, Field, Press, Segmented, Skeleton, T, Toggle } from "@/components/ui";
 import { apiFetch, errorDetail } from "@/lib/api";
@@ -13,6 +14,7 @@ import { API_URL } from "@/lib/config";
 import { initials } from "@/lib/format";
 import { type NotificationPreference, useNotificationPreferences } from "@/lib/notifications";
 import { useMe } from "@/lib/queries";
+import { useModerationSummary } from "@/lib/feed";
 import { useRepsMine } from "@/lib/reps";
 import type { Me } from "@/lib/types";
 import { useTheme } from "@/theme";
@@ -26,6 +28,7 @@ export default function Profile() {
   const reps = useRepsMine(!!m && m.kind !== "staff").data;
   // Teachers approve CR/GR changes there; a CR or GR follows what they asked for.
   const showRequests = !!m && (m.sections.some((s) => s.teaching) || Object.keys(reps?.sections ?? {}).length > 0);
+  const moderation = useModerationSummary().data;
 
   function confirmSignOut() {
     if (Platform.OS === "web") {
@@ -103,8 +106,24 @@ export default function Profile() {
             <ReadReceipts me={m} />
           </Group>
 
+          {canRenameGuide(m) ? (
+            <Group title="Your guide">
+              <GuideName me={m} />
+            </Group>
+          ) : null}
+
+          <Group title="Your record">
+            <Corrections />
+          </Group>
+
           <Group title="More">
             <Card padded={false}>
+              {m.sections.some((s) => s.teaching) ? (
+                <>
+                  <Row icon="people" label="Your subjects" onPress={() => router.push("/subjects")} />
+                  <Divider inset={52} />
+                </>
+              ) : null}
               <Row icon="chart" label="Marks and attendance" onPress={() => router.push("/progress")} />
               {showRequests ? (
                 <>
@@ -113,12 +132,22 @@ export default function Profile() {
                 </>
               ) : null}
               <Divider inset={52} />
+              {moderation?.can_moderate ? (
+                <>
+                  <Row
+                    icon="flag"
+                    label={moderation.open ? `Moderation (${moderation.open} open)` : "Moderation"}
+                    onPress={() => router.push("/moderation")}
+                  />
+                  <Divider inset={52} />
+                </>
+              ) : null}
               <Row icon="bell" label="Notifications" onPress={() => router.push("/notifications")} />
               <Divider inset={52} />
               <Row icon="user" label="Account and security" onPress={() => router.push("/security")} />
             </Card>
             <T variant="callout" tone="ink3" style={{ paddingHorizontal: 4, marginTop: 8 }}>
-              Managing sections, subjects, people and CRs lives on the CampusVerse website.
+              Managing sections, people and CRs lives on the CampusVerse website.
             </T>
           </Group>
 

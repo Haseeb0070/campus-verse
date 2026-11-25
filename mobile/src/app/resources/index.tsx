@@ -3,9 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { FlatList, ScrollView, TextInput, View } from "react-native";
 import { Icon } from "@/components/Icon";
 import { StackHeader } from "@/components/StackHeader";
-import { Card, Chip, CourseTag, Empty, Failed, Press, Skeleton, T } from "@/components/ui";
+import { Card, Chip, CourseTag, Empty, Failed, IconButton, Press, Skeleton, T } from "@/components/ui";
 import { relativeTime } from "@/lib/format";
-import { KIND_LABEL, type Resource, type ResourceKind, useResources } from "@/lib/resources";
+import { KIND_LABEL, type Resource, type ResourceKind, useResources, useShareOptions } from "@/lib/resources";
 import { font, radius, useTheme } from "@/theme";
 
 const KINDS = Object.keys(KIND_LABEL) as ResourceKind[];
@@ -33,11 +33,17 @@ export default function Resources() {
   }, [all.data]);
 
   const list = query.data ?? [];
+  // Teachers share material from here: only those with a course to share with get the button.
+  const canShare = (useShareOptions().data?.courses.length ?? 0) > 0;
   const filtered = !!(offering || kind || search.trim());
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <StackHeader title="Course materials" subtitle="Slides, notes, readings and links from your teachers" />
+      <StackHeader
+        title="Course materials"
+        subtitle="Slides, notes, readings and links from your teachers"
+        actions={canShare ? <IconButton icon="plus" label="Share material" variant="plain" onPress={() => router.push("/resources/share")} /> : undefined}
+      />
       <FlatList
         data={list}
         keyExtractor={(r) => String(r.id)}

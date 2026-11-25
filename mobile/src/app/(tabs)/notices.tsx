@@ -2,8 +2,11 @@ import { type ReactNode, useState } from "react";
 import { ScrollView, View } from "react-native";
 import Animated, { LinearTransition, useReducedMotion } from "react-native-reanimated";
 import { HeaderActions, Screen } from "@/components/Screen";
-import { Chip, Empty, Failed, Press, Skeleton, T } from "@/components/ui";
+import { Button, Chip, Empty, Failed, Press, Skeleton, T } from "@/components/ui";
+import { router } from "expo-router";
+import { FileRow } from "@/components/files";
 import { formatDateTime, relativeTime } from "@/lib/format";
+import { noticeFilePath, useMyNotices, useNoticeAudiences } from "@/lib/notices";
 import { useNow } from "@/lib/now";
 import { useMe, useNotices } from "@/lib/queries";
 import type { Notice } from "@/lib/types";
@@ -16,6 +19,9 @@ export default function Notices() {
   const tz = me?.institution?.timezone;
   const query = useNotices(100);
   const [filter, setFilter] = useState<Filter>("all");
+  // Teachers (and anyone else who may post somewhere) write notices from here.
+  const canPost = (useNoticeAudiences().data?.length ?? 0) > 0;
+  const mine = useMyNotices(canPost).data?.filter((n) => n.status !== "archived") ?? [];
 
   const weekAgo = useNow(60_000) - 7 * 24 * 3600_000;
   const list = (query.data ?? []).filter((n) =>
@@ -34,11 +40,21 @@ export default function Notices() {
       verse="reading"
       refreshKeys={[["notices"]]}
       below={
+        <>
+        {canPost ? (
+          <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingBottom: 12 }}>
+            <Button label="New notice" icon="plus" style={{ flex: 1 }} onPress={() => router.push("/notice/edit")} />
+            {mine.length ? (
+              <Button label={`Yours (${mine.length})`} variant="secondary" style={{ flex: 1 }} onPress={() => router.push("/notice/mine")} />
+            ) : null}
+          </View>
+        ) : null}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 16 }}>
           <Chip label="All" on={filter === "all"} onPress={() => setFilter("all")} />
           <Chip label="Important" on={filter === "important"} onPress={() => setFilter("important")} />
           <Chip label="This week" on={filter === "week"} onPress={() => setFilter("week")} />
         </ScrollView>
+        </>
       }
     >
       <Board>
@@ -153,6 +169,17 @@ function NoticeCard({ n, tz, tilt }: { n: Notice; tz?: string; tilt: string }) {
         <T variant="body" tone="ink2" numberOfLines={open ? undefined : 4} selectable={open}>
           {n.body}
         </T>
+        {n.attachments?.length && (open || !long) ? (
+          <View style={{ marginTop: 4 }}>
+            {n.attachments.map((f) => (
+              <FileRow key={f.id} f={f} path={noticeFilePath(f.id)} />
+            ))}
+          </View>
+        ) : n.attachments?.length ? (
+          <T variant="caption" tone="ink3">
+            {n.attachments.length} {n.attachments.length === 1 ? "file" : "files"} attached
+          </T>
+        ) : null}
         {long ? (
           <T variant="calloutStrong" tone="accentInk">
             {open ? "Show less" : "Read more"}

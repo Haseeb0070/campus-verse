@@ -45,6 +45,10 @@ export function appRoute(link: string): Href | null {
       return "/requests";
     case "profile":
       return "/profile";
+    case "sections":
+      return Number.isFinite(id) && id > 0 ? { pathname: "/subjects/[id]", params: { id: String(id) } } : "/subjects";
+    case "moderation":
+      return "/moderation";
     default:
       return null;
   }

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
+import { ResourceManage } from "@/components/resource-manage";
 import { StackHeader } from "@/components/StackHeader";
 import { Button, Card, Divider, Failed, Pill, Skeleton, T } from "@/components/ui";
 import { openFile } from "@/lib/files";
@@ -111,6 +112,7 @@ export default function ResourceScreen() {
                 ))}
             </Card>
           ) : null}
+          {r.can_manage ? <ResourceManage r={r} /> : null}
           {opening ? <ActivityIndicator color={p.accent} /> : null}
         </ScrollView>
       )}

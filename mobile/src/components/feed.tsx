@@ -10,6 +10,7 @@ import {
   deletePost,
   feedFilePath,
   feedKey,
+  moderate,
   type Post,
   report,
   REPORT_REASONS,
@@ -87,6 +88,23 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
         Alert.alert("Couldn't delete it", errorDetail(err, "Try again."));
       }
     };
+    if (post.can_moderate && !post.mine) {
+      const hiding = post.visibility === "visible";
+      const flip = async () => {
+        try {
+          await moderate("post", post.id, hiding ? "hide" : "restore");
+          qc.invalidateQueries({ queryKey: feedKey });
+        } catch (err) {
+          Alert.alert("That didn't work", errorDetail(err, "Try again."));
+        }
+      };
+      Alert.alert(hiding ? "Hide this post?" : "Show this post again?", hiding ? "Students stop seeing it. Its author and moderators still can." : undefined, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Report it instead", onPress: () => setReporting(true) },
+        { text: hiding ? "Hide" : "Show again", style: hiding ? "destructive" : "default", onPress: flip },
+      ]);
+      return;
+    }
     if (post.mine) {
       Alert.alert("Delete this post?", "It's removed for everyone, with its comments.", [
         { text: "Cancel", style: "cancel" },
@@ -121,7 +139,9 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
             {post.audiences.length ? ` · ${post.audiences.join(", ")}` : ""}
           </T>
         </View>
-        <IconButton icon={post.mine ? "trash" : "flag"} label={post.mine ? "Delete this post" : "Report this post"} variant="plain" size={40} onPress={menu} />
+        <IconButton
+          icon={post.mine ? "trash" : "flag"}
+          label={post.mine ? "Delete this post" : post.can_moderate ? "Moderate this post" : "Report this post"} variant="plain" size={40} onPress={menu} />
       </View>
 
       {hidden ? <Pill label="Hidden by a moderator" tone="warn" /> : null}

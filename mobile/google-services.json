@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "572867246045",
+    "project_id": "campus-verse-ed481",
+    "storage_bucket": "campus-verse-ed481.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:572867246045:android:5157396e21ea748c912834",
+        "android_client_info": {
+          "package_name": "pk.campusverse.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiEZjpnU_f1hZv6w27_HZDi31axIuFET4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

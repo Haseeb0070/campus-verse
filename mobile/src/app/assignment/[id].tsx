@@ -1,16 +1,18 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
 import { StackHeader } from "@/components/StackHeader";
-import { Button, Card, Divider, Failed, IconButton, Pill, Skeleton, T } from "@/components/ui";
+import { FileRow } from "@/components/files";
+import { TeacherPanel } from "@/components/marking";
+import { Button, Card, Divider, Failed, Pill, Skeleton, T } from "@/components/ui";
 import { errorDetail, type UploadFile } from "@/lib/api";
-import { openFile, pickFiles } from "@/lib/files";
-import { fileSize, formatDateTime, relativeTime } from "@/lib/format";
+import { pickFiles } from "@/lib/files";
+import { formatDateTime, relativeTime } from "@/lib/format";
 import { useAssignment, useMe, useSubmit, useUploadRules } from "@/lib/queries";
-import type { Assignment, StoredFileInfo } from "@/lib/types";
+import type { Assignment } from "@/lib/types";
 import { font, radius, useTheme } from "@/theme";
 import { Verse } from "@/components/verse/Verse";
 
@@ -48,11 +50,11 @@ export default function AssignmentScreen() {
             <Card style={{ gap: 8 }}>
               <T variant="headline">From your teacher</T>
               {a.attachments.map((f) => (
-                <FileRow key={f.id} f={f} />
+                <FileRow key={f.id} f={f} path={`/api/assignments/files/${f.id}`} />
               ))}
             </Card>
           ) : null}
-          {a.can_manage ? <TeacherSummary a={a} /> : <StudentSide a={a} tz={tz} />}
+          {a.can_manage ? <TeacherPanel a={a} tz={tz} /> : <StudentSide a={a} tz={tz} />}
         </ScrollView>
       )}
     </KeyboardAvoidingView>
@@ -99,49 +101,6 @@ function Stat({ label, value }: { label: string; value: string }) {
       <T variant="calloutStrong" tone="onField" numberOfLines={2}>
         {value}
       </T>
-    </View>
-  );
-}
-
-function FileRow({ f, onRemove }: { f: StoredFileInfo | UploadFile; onRemove?: () => void }) {
-  const p = useTheme();
-  const [busy, setBusy] = useState(false);
-  const stored = "id" in f;
-  const size = "size" in f && f.size ? fileSize(f.size) : "";
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44 }}>
-      <Pressable
-        accessibilityRole={stored ? "button" : undefined}
-        accessibilityLabel={stored ? `Open ${f.name}` : f.name}
-        disabled={!stored || busy}
-        onPress={async () => {
-          if (!stored) return;
-          setBusy(true);
-          try {
-            await openFile(`/api/assignments/files/${f.id}`, f.name, f.content_type);
-          } catch {
-            Alert.alert("Couldn't open the file", "Check your connection and try again.");
-          } finally {
-            setBusy(false);
-          }
-        }}
-        style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }}
-      >
-        <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: p.fill, alignItems: "center", justifyContent: "center" }}>
-          {busy ? <ActivityIndicator size="small" color={p.ink2} /> : <Icon name="file" size={18} color={p.ink2} />}
-        </View>
-        <View style={{ flex: 1 }}>
-          <T variant="calloutStrong" numberOfLines={1} tone={stored ? "accentInk" : "ink"}>
-            {f.name}
-          </T>
-          {size ? (
-            <T variant="caption" tone="ink3" style={{ fontWeight: "400" }}>
-              {size}
-            </T>
-          ) : null}
-        </View>
-      </Pressable>
-      {onRemove ? <IconButton icon="close" label={`Remove ${f.name}`} variant="plain" size={36} onPress={onRemove} /> : null}
     </View>
   );
 }
@@ -245,7 +204,7 @@ function StudentSide({ a, tz }: { a: Assignment; tz?: string }) {
             </T>
           ) : null}
           {latest.files.map((f) => (
-            <FileRow key={f.id} f={f} />
+            <FileRow key={f.id} f={f} path={`/api/assignments/files/${f.id}`} />
           ))}
         </Card>
       ) : null}
@@ -335,32 +294,3 @@ function StudentSide({ a, tz }: { a: Assignment; tz?: string }) {
     </>
   );
 }
-
-function TeacherSummary({ a }: { a: Assignment }) {
-  return (
-    <Card style={{ gap: 10 }}>
-      <T variant="headline">Hand-ins</T>
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        <Count label="Handed in" value={`${a.submitted_count ?? 0} / ${a.student_count ?? 0}`} />
-        <Count label="Marked" value={`${a.graded_count ?? 0}`} />
-        <Count label="Marks" value={a.grades_released ? "Released" : "Not yet"} />
-      </View>
-      <T variant="callout" tone="ink3">
-        Marking and releasing grades happen on the CampusVerse website, where there’s room for the whole roster.
-      </T>
-    </Card>
-  );
-}
-
-function Count({ label, value }: { label: string; value: string }) {
-  const p = useTheme();
-  return (
-    <View style={{ flex: 1, backgroundColor: p.fill, borderRadius: 14, padding: 12, gap: 2 }}>
-      <T variant="caption" tone="ink3">
-        {label}
-      </T>
-      <T variant="bodyStrong">{value}</T>
-    </View>
-  );
-}
-

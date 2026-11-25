@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { View } from "react-native";
 import { Icon } from "@/components/Icon";
 import { HeaderActions, Screen } from "@/components/Screen";
-import { Card, CourseTag, Empty, Failed, Press, Segmented, Skeleton, T } from "@/components/ui";
+import { Button, Card, CourseTag, Empty, Failed, Press, Segmented, Skeleton, T } from "@/components/ui";
 import { formatDateTime, relativeTime } from "@/lib/format";
 import { useNow } from "@/lib/now";
 import { useAssignments, useMe } from "@/lib/queries";
@@ -28,7 +28,8 @@ export default function Work() {
   const tz = me?.institution?.timezone;
   const query = useAssignments();
   const all = useMemo(() => query.data ?? [], [query.data]);
-  const teaches = all.some((a) => a.can_manage);
+  const teachesSubjects = !!me?.sections.some((s) => s.teaching);
+  const teaches = teachesSubjects || all.some((a) => a.can_manage);
   // Someone who only teaches starts on what they teach; everyone else on what's due.
   const [picked, setTab] = useState<Tab | null>(null);
   const tab: Tab = picked ?? (teaches && !all.some((a) => !a.can_manage) ? "teaching" : "due");
@@ -73,6 +74,9 @@ export default function Work() {
       }
     >
       <View style={{ paddingHorizontal: 16, gap: 12 }}>
+        {tab === "teaching" && teachesSubjects ? (
+          <Button label="New assignment" icon="plus" onPress={() => router.push("/assignment/edit")} />
+        ) : null}
         {query.isPending ? (
           <>
             <Skeleton height={104} />
@@ -87,7 +91,7 @@ export default function Work() {
             title={{ teaching: "No assignments yet", due: "You're all caught up", in: "Nothing handed in yet", marked: "No marks yet" }[tab]}
             body={
               {
-                teaching: "Create assignments on the CampusVerse website; they show here to follow.",
+                teaching: "Set work for a subject and it shows here, with who has handed in.",
                 due: "Nothing is waiting for you right now.",
                 in: "Work you hand in waits here until it's marked.",
                 marked: "Marks show here once your teacher releases them.",

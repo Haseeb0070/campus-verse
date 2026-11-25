@@ -2,7 +2,7 @@
   "expo": {
     "name": "CampusVerse",
     "slug": "campusverse",
-    "version": "1.2.0",
+    "version": "1.2.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "campusverse",
@@ -24,7 +24,7 @@
       },
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": true,
-      "versionCode": 4,
+      "versionCode": 6,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -84,6 +84,11 @@
               "scheme": "https",
               "host": "campus-verse-flame.vercel.app",
               "pathPrefix": "/profile"
+            },
+            {
+              "scheme": "https",
+              "host": "campus-verse-flame.vercel.app",
+              "pathPrefix": "/requests"
             }
           ],
           "category": [
@@ -91,7 +96,8 @@
             "DEFAULT"
           ]
         }
-      ]
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "single",
@@ -142,6 +148,20 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "expo-navigation-bar": {
+        "enforceContrast": false
+      },
+      "eas": {
+        "projectId": "30df9309-ffa9-4295-b2f4-242d8b7b5889"
+      }
+    },
+    "owner": "haseeb0078"
   }
 }

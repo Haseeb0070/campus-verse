@@ -175,3 +175,57 @@ export async function report(target: "post" | "comment", id: number, reason: Rep
 export function feedFilePath(fileId: number) {
   return `/api/feed/files/${fileId}`;
 }
+
+/* ---------- Moderation (moderators, and teachers of the sections a post went to) ---------- */
+
+/** Hide something from the feed (its author and moderators still see it), or show it again. */
+export async function moderate(target: "post" | "comment", id: number, action: "hide" | "restore") {
+  await apiFetch("/api/feed/moderation/actions", {
+    method: "POST",
+    body: JSON.stringify({ target_type: target, target_id: id, action }),
+  });
+}
+
+export interface QueuedReport {
+  id: number;
+  reason: string;
+  details: string;
+  reporter: string;
+  created_at: string;
+  target_type: "post" | "comment";
+  target_id: number;
+  post_id: number;
+  body: string;
+  author: string;
+  visibility: string;
+  reports_on_target: number;
+}
+
+/** Whether this person moderates the institution's feed, and how many reports are open. */
+export function useModerationSummary() {
+  return useQuery({
+    queryKey: ["moderation", "summary"],
+    queryFn: () => apiFetch<{ can_moderate: boolean; open: number }>("/api/feed/moderation/summary"),
+    staleTime: 60_000,
+  });
+}
+
+export function useReports(enabled = true) {
+  return useQuery({
+    queryKey: ["moderation", "reports"],
+    queryFn: () => apiFetch<QueuedReport[]>("/api/feed/moderation/reports"),
+    enabled,
+  });
+}
+
+export function useResolveReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, action, note }: { id: number; action: "dismiss" | "hide" | "remove"; note: string }) =>
+      apiFetch(`/api/feed/moderation/reports/${id}/resolve`, { method: "POST", body: JSON.stringify({ action, note }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["moderation"] });
+      qc.invalidateQueries({ queryKey: feedKey });
+    },
+  });
+}

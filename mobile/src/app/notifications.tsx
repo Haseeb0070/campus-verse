@@ -1,11 +1,13 @@
 import { router } from "expo-router";
-import { FlatList, Pressable, View } from "react-native";
+import { Alert, FlatList, Pressable, View } from "react-native";
 import { Icon, type IconName } from "@/components/Icon";
 import { StackHeader } from "@/components/StackHeader";
-import { Divider, Empty, Failed, Press, Skeleton, T } from "@/components/ui";
+import { Button, Divider, Empty, Failed, Press, Skeleton, T } from "@/components/ui";
+import { errorDetail } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 import { appRoute } from "@/lib/links";
 import { useMarkRead, useNotifications } from "@/lib/notifications";
+import { type RepRequest, useRepAnswer, useRepRequests } from "@/lib/reps";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import { useTheme } from "@/theme";
 
@@ -28,6 +30,8 @@ export default function Notifications() {
   const markRead = useMarkRead();
   const items = query.data?.items ?? [];
   const unread = query.data?.unread ?? 0;
+  const anyRep = items.some((n) => (n.kind as string) === "class.rep");
+  const repRequests = useRepRequests(anyRep).data ?? [];
 
   function open(n: AppNotification) {
     if (!n.read) markRead([n.id]).catch(() => {});
@@ -92,6 +96,7 @@ export default function Notifications() {
                       {n.body}
                     </T>
                   ) : null}
+                  {(n.kind as string) === "class.rep" ? <RepButtons link={n.link} requests={repRequests} /> : null}
                   {!linked && n.link ? (
                     <T variant="caption" tone="ink3" style={{ fontWeight: "400", marginTop: 2 }}>
                       Open on the CampusVerse website
@@ -103,6 +108,31 @@ export default function Notifications() {
             );
           }}
         />
+      )}
+    </View>
+  );
+}
+
+/** A CR/GR request's Approve / Decline (or "Did you know?") buttons, right on its notification. */
+function RepButtons({ link, requests }: { link: string; requests: RepRequest[] }) {
+  const id = Number(/request-(\d+)/.exec(link)?.[1]);
+  const r = requests.find((x) => x.id === id);
+  const answer = useRepAnswer();
+  if (!r || !(r.can_decide || r.can_reply)) return null;
+  const go = (kind: "decide" | "reply", yes: boolean) =>
+    answer.mutate({ id: r.id, kind, yes }, { onError: (err) => Alert.alert("That didn't work", errorDetail(err, "Try again.")) });
+  return (
+    <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+      {r.can_decide ? (
+        <>
+          <Button label="Approve" style={{ flex: 1, minHeight: 40 }} disabled={answer.isPending} onPress={() => go("decide", true)} />
+          <Button label="Decline" variant="secondary" style={{ flex: 1, minHeight: 40 }} disabled={answer.isPending} onPress={() => go("decide", false)} />
+        </>
+      ) : (
+        <>
+          <Button label="Yes, I knew" style={{ flex: 1, minHeight: 40 }} disabled={answer.isPending} onPress={() => go("reply", true)} />
+          <Button label="No, undo it" variant="danger" style={{ flex: 1, minHeight: 40 }} disabled={answer.isPending} onPress={() => go("reply", false)} />
+        </>
       )}
     </View>
   );

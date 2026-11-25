@@ -39,10 +39,11 @@ export function useAssignments() {
   });
 }
 
-export function useAssignment(id: number) {
+export function useAssignment(id: number, enabled = true) {
   return useQuery({
     queryKey: ["assignments", id],
     queryFn: () => apiFetch<Assignment>(`/api/assignments/${id}`),
+    enabled,
   });
 }
 

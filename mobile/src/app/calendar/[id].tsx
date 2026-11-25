@@ -3,6 +3,7 @@ import { Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryTone, whenText, whereText } from "@/components/events";
 import { Icon, type IconName } from "@/components/Icon";
+import { EventManage } from "@/components/event-manage";
 import { StackHeader } from "@/components/StackHeader";
 import { Button, Card, Failed, Skeleton, T } from "@/components/ui";
 import { errorDetail } from "@/lib/api";
@@ -113,6 +114,7 @@ export default function EventScreen() {
               </T>
             </Card>
           ) : null}
+          {e.can_manage ? <EventManage e={e} /> : null}
         </ScrollView>
       )}
     </View>

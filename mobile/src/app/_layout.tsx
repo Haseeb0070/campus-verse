@@ -123,19 +123,27 @@ function Navigator() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="chat/[id]" />
           <Stack.Screen name="assignment/[id]" />
+          <Stack.Screen name="assignment/edit" />
+          <Stack.Screen name="notice/edit" />
+          <Stack.Screen name="notice/mine" />
+          <Stack.Screen name="subjects/index" />
+          <Stack.Screen name="subjects/[id]" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="profile" />
           <Stack.Screen name="progress" />
           <Stack.Screen name="resources/index" />
           <Stack.Screen name="resources/[id]" />
+          <Stack.Screen name="resources/share" />
           <Stack.Screen name="calendar/index" />
           <Stack.Screen name="calendar/[id]" />
+          <Stack.Screen name="calendar/edit" />
           <Stack.Screen name="feed/index" />
           <Stack.Screen name="feed/[id]" />
           <Stack.Screen name="class" />
           <Stack.Screen name="attendance" />
           <Stack.Screen name="requests" />
           <Stack.Screen name="security" />
+          <Stack.Screen name="moderation" />
           <Stack.Screen name="search" options={{ animation: "fade" }} />
           <Stack.Screen name="new-chat" options={{ presentation: "modal" }} />
         </Stack.Protected>

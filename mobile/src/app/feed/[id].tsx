@@ -7,7 +7,7 @@ import { PostCard, ReportSheet } from "@/components/feed";
 import { StackHeader } from "@/components/StackHeader";
 import { Avatar, Empty, Failed, IconButton, Pill, Skeleton, T } from "@/components/ui";
 import { errorDetail } from "@/lib/api";
-import { type Comment, deleteComment, useAddComment, useComments, usePost } from "@/lib/feed";
+import { type Comment, deleteComment, moderate, useAddComment, useComments, usePost } from "@/lib/feed";
 import { relativeTime } from "@/lib/format";
 import { font, radius, useTheme } from "@/theme";
 
@@ -44,6 +44,15 @@ export default function PostScreen() {
         onError: (err) => Alert.alert("Couldn't add your comment", errorDetail(err, "Try again.")),
       },
     );
+  }
+
+  async function flip(c: Comment) {
+    try {
+      await moderate("comment", c.id, c.visibility === "visible" ? "hide" : "restore");
+      qc.invalidateQueries({ queryKey: ["feed", "comments", postId] });
+    } catch (err) {
+      Alert.alert("That didn't work", errorDetail(err, "Try again."));
+    }
   }
 
   function remove(c: Comment) {
@@ -96,6 +105,7 @@ export default function PostScreen() {
               onReply={() => setReplyTo(item.parent_id === null ? item : all.find((x) => x.id === item.parent_id) ?? item)}
               onDelete={() => remove(item)}
               onReport={() => setReporting(item.id)}
+              onModerate={post.data?.can_moderate && !item.mine ? () => flip(item) : undefined}
             />
           )}
         />
@@ -150,7 +160,20 @@ export default function PostScreen() {
   );
 }
 
-function CommentRow({ c, onReply, onDelete, onReport }: { c: Comment; onReply: () => void; onDelete: () => void; onReport: () => void }) {
+function CommentRow({
+  c,
+  onReply,
+  onDelete,
+  onReport,
+  onModerate,
+}: {
+  c: Comment;
+  onReply: () => void;
+  onDelete: () => void;
+  onReport: () => void;
+  /** Moderators: hide the comment, or show it again. */
+  onModerate?: () => void;
+}) {
   const p = useTheme();
   const reply = c.parent_id !== null;
   return (
@@ -185,6 +208,18 @@ function CommentRow({ c, onReply, onDelete, onReport }: { c: Comment; onReply: (
               {c.mine ? "Delete" : "Report"}
             </T>
           </Pressable>
+          {onModerate ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={c.visibility === "visible" ? `Hide ${c.author.name}'s comment` : `Show ${c.author.name}'s comment again`}
+              onPress={onModerate}
+              hitSlop={10}
+            >
+              <T variant="caption" tone="ink2">
+                {c.visibility === "visible" ? "Hide" : "Show again"}
+              </T>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </View>

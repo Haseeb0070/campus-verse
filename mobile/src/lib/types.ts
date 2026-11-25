@@ -262,4 +262,6 @@ export interface Notice {
   priority: "normal" | "important";
   published_at: string | null;
   author_name: string;
+  /** Files pinned with the notice (older cached copies may not have the list). */
+  attachments?: StoredFileInfo[];
 }
