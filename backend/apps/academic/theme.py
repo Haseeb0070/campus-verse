@@ -41,7 +41,7 @@ DEFAULT_THEME = {
     "guide_tassel": "",
     # The guide inside the app, which answers questions once someone has signed in.
     "helper_enabled": True,
-    # The look of cards across the site: a hairline border, a soft shadow, and how round corners are.
+    # The look of cards across the site: a hairline border, a soft shadow, how round corners are.
     "card_borders": True,
     "card_shadows": True,
     "corners": "round",

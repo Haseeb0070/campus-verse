@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, timedelta
 
 import pytest
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -205,9 +205,8 @@ def test_move_api(client, campus):
 
 def test_notifications_give_times_in_the_colleges_time_zone(campus):
     from datetime import datetime
-    from datetime import timezone as dt_tz
 
-    start = datetime(2030, 3, 4, 4, 0, tzinfo=dt_tz.utc)  # 09:00 in Lahore
+    start = datetime(2030, 3, 4, 4, 0, tzinfo=UTC)  # 09:00 in Lahore
     exam = make(campus, category="exam", title="Finals", starts_at=start,
                 ends_at=start + timedelta(hours=2))
     services.move_event(campus.teacher, exam, starts_at=start + timedelta(days=1))
