@@ -102,12 +102,14 @@ git push -u origin main
 Scheduled notices then go out within 30 minutes of their time. A shorter schedule keeps the API
 awake around the clock and uses up Render's free hours (see below).
 
-A second job sends the lecture reminders (the teacher 15 minutes before, students 10) and lets
-CR/GR requests lapse when nobody approved them 15 minutes before the lecture. Calling the API
-every 5 minutes also keeps it awake through the day, so no separate keep-awake job is needed:
-**URL** `https://<api address>/api/cron/frequent`, method `POST`, the same `Authorization` header
-as above, **Custom** schedule `*/5 7-22 * * *` in the Asia/Karachi timezone (every 5 minutes from
-7:00 am to 10:55 pm). That is 16 hours a day, inside Render's free 750 hours a month.
+Lecture reminders (the teacher 15 minutes before, students 10), CR/GR requests lapsing 15 minutes
+before a lecture, and scheduled notices run inside the API itself, every minute while it is awake
+(`backend/apps/core/ticker.py`). So a second job only has to keep the API awake through the day:
+**URL** `https://<api address>/api/health`, method `GET`, no header, **Custom** schedule
+`*/5 7-22 * * *` in the Asia/Karachi timezone (every 5 minutes from 7:00 am to 10:55 pm). That is
+16 hours a day, inside Render's free 750 hours a month. On the free plan Render sometimes refuses
+these calls while the API is asleep, so the first person to open the site in the morning may be
+what wakes it; the paid Starter plan never sleeps and needs no keep-awake job at all.
 
 ## 6. Sign in
 
