@@ -102,10 +102,12 @@ git push -u origin main
 Scheduled notices then go out within 30 minutes of their time. A shorter schedule keeps the API
 awake around the clock and uses up Render's free hours (see below).
 
-A second job keeps the API awake during the day, so the first person in the morning doesn't wait
-for it to wake: **URL** `https://<api address>/api/health`, method `GET`, **Custom** schedule
-`*/12 7-22 * * *` in the Asia/Karachi timezone (every 12 minutes from 7:00 am to 10:48 pm). That
-is 16 hours a day, which stays inside Render's free 750 hours a month.
+A second job sends the lecture reminders (the teacher 15 minutes before, students 10) and lets
+CR/GR requests lapse when nobody approved them 15 minutes before the lecture. Calling the API
+every 5 minutes also keeps it awake through the day, so no separate keep-awake job is needed:
+**URL** `https://<api address>/api/cron/frequent`, method `POST`, the same `Authorization` header
+as above, **Custom** schedule `*/5 7-22 * * *` in the Asia/Karachi timezone (every 5 minutes from
+7:00 am to 10:55 pm). That is 16 hours a day, inside Render's free 750 hours a month.
 
 ## 6. Sign in
 
