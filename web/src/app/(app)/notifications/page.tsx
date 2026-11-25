@@ -15,10 +15,11 @@ import {
 } from "@/components/icons";
 import { relativeTime } from "@/lib/format";
 import { useMarkRead, useNotifications } from "@/lib/notifications";
+import { type RepRequest, useRepAnswer, useRepRequestsIf } from "@/lib/reps";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import { PageTitle } from "@/components/page-title";
 
-const icons: Record<NotificationKind, typeof BellIcon> = {
+const icons: Partial<Record<NotificationKind, typeof BellIcon>> = {
   "notice.published": NoticesIcon,
   "class.changed": TimetableIcon,
   "assignment.opened": AssignmentsIcon,
@@ -29,7 +30,34 @@ const icons: Record<NotificationKind, typeof BellIcon> = {
   "resource.shared": ResourcesIcon,
   "account.correction": PersonIcon,
   "event.update": CalendarIcon,
+  "class.rep": TimetableIcon,
+  "class.reminder": TimetableIcon,
 };
+
+/** A CR/GR notification's request, so its Approve / "Did you know?" buttons sit right on it. */
+function RepButtons({ link, requests }: { link: string; requests: RepRequest[] }) {
+  const id = Number(/request-(\d+)/.exec(link)?.[1]);
+  const r = requests.find((x) => x.id === id);
+  const answer = useRepAnswer();
+  if (!r || !(r.can_decide || r.can_reply)) return null;
+  const button = "press h-8 rounded-full px-3 text-footnote font-semibold disabled:opacity-60";
+  const go = (kind: "decide" | "reply", yes: boolean) => answer.mutate({ id: r.id, kind, yes });
+  return (
+    <span className="mt-2 flex flex-wrap gap-2">
+      {r.can_decide ? (
+        <>
+          <button disabled={answer.isPending} onClick={() => go("decide", true)} className={`${button} bg-accent text-on-accent`}>Approve</button>
+          <button disabled={answer.isPending} onClick={() => go("decide", false)} className={`${button} bg-fill-strong`}>Decline</button>
+        </>
+      ) : (
+        <>
+          <button disabled={answer.isPending} onClick={() => go("reply", true)} className={`${button} bg-accent text-on-accent`}>Yes, I knew</button>
+          <button disabled={answer.isPending} onClick={() => go("reply", false)} className={`${button} text-danger-ink hover:bg-danger/10`}>No, undo it</button>
+        </>
+      )}
+    </span>
+  );
+}
 
 function isToday(iso: string) {
   return new Date(iso).toDateString() === new Date().toDateString();
@@ -41,6 +69,8 @@ export default function NotificationsPage() {
   const markRead = useMarkRead();
   const items = notifications.data?.items ?? [];
   const unread = notifications.data?.unread ?? 0;
+  const hasRep = items.some((n) => n.kind === "class.rep");
+  const repRequests = useRepRequestsIf(hasRep);
 
   async function open(n: AppNotification) {
     if (!n.read) markRead([n.id]);
@@ -98,7 +128,7 @@ export default function NotificationsPage() {
               {list.map((n) => {
                 const Icon = icons[n.kind] ?? BellIcon;
                 return (
-                  <li key={n.id}>
+                  <li key={n.id} className="flex flex-col">
                     <button
                       onClick={() => open(n)}
                       className="press flex w-full items-start gap-3 rounded-row p-3 text-left hover:bg-fill"
@@ -123,6 +153,11 @@ export default function NotificationsPage() {
                         </span>
                       )}
                     </button>
+                    {n.kind === "class.rep" && (
+                      <span className="pb-2 pl-15">
+                        <RepButtons link={n.link} requests={repRequests.data ?? []} />
+                      </span>
+                    )}
                   </li>
                 );
               })}

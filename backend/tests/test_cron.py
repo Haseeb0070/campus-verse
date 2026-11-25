@@ -53,6 +53,7 @@ def test_the_right_secret_runs_every_job_and_publishes_due_notices(settings, cam
     assert body["notices_published"] == 1
     assert set(body) == {
         "notices_published", "notifications", "sources_synced", "emails_sent", "files_removed",
+        "reminders", "requests_lapsed",
     }
     notice.refresh_from_db()
     assert notice.status == "published"
@@ -68,3 +69,10 @@ def test_one_failing_job_does_not_stop_the_others(settings, campus, monkeypatch)
     body = call(SECRET).json()
     assert body["sources_synced"] == "failed"
     assert body["notices_published"] == 0
+
+
+def test_the_frequent_timer_runs_reminders_and_lapses(client, settings, campus):
+    settings.CAMPUSVERSE_CRON_SECRET = SECRET
+    assert client.post("/api/cron/frequent").status_code == 404
+    r = client.post("/api/cron/frequent", HTTP_AUTHORIZATION=f"Bearer {SECRET}")
+    assert r.status_code == 200 and set(r.json()) == {"reminders", "requests_lapsed"}

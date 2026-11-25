@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "apps.resources",
     "apps.events",
     "apps.attendance",
+    "apps.classreps",
     "apps.search",
     "apps.governance",
     "corsheaders",

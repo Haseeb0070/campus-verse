@@ -33,6 +33,8 @@ DEFAULTS = {g["key"]: g for g in GROUPS}
 KIND_GROUP = {
     Kind.NOTICE: "notices",
     Kind.CLASS_CHANGED: "classes",
+    Kind.CLASS_REMINDER: "classes",
+    Kind.CLASS_REP: "classes",
     Kind.ASSIGNMENT_OPENED: "assignments",
     Kind.ASSIGNMENT_DUE_SOON: "assignments",
     Kind.GRADES_RELEASED: "assignments",

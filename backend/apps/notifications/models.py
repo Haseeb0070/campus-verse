@@ -21,6 +21,8 @@ class Notification(InstitutionScopedModel):
         EVENT = "event.update"
         DIRECT_MESSAGE = "message.direct"
         SYNC = "sync.update"
+        CLASS_REP = "class.rep"
+        CLASS_REMINDER = "class.reminder"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"

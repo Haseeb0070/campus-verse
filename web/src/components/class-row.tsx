@@ -102,7 +102,7 @@ export function ClassRow({
           Join
         </a>
       )}
-      {attendance && occ.can_manage && !off && new Date(occ.starts_at).getTime() <= Date.now() && (
+      {attendance && (occ.can_manage || occ.rep_role) && !off && new Date(occ.starts_at).getTime() <= Date.now() && (
         <Link
           href={`/attendance?section=${occ.section_id}&date=${occ.date}&meeting=${occ.meeting_id}`}
           className="press self-center rounded-full bg-fill-strong px-3 py-1.5 text-footnote font-semibold"
@@ -110,13 +110,13 @@ export function ClassRow({
           Attendance
         </Link>
       )}
-      {onManage && occ.can_manage && (
+      {onManage && (occ.can_manage || occ.rep_role) && (
         <button
           onClick={() => onManage(occ)}
           aria-label={`Change ${occ.course_title} ${occ.section_code} on ${occ.date}`}
           className="press self-center rounded-full bg-fill-strong px-3 py-1.5 text-footnote font-semibold"
         >
-          Change
+          {occ.can_manage ? "Change" : "Cancel or shift"}
         </button>
       )}
     </li>

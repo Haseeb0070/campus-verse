@@ -46,6 +46,8 @@ const affects: Record<NotificationKind, string[][]> = {
   "resource.shared": [["resources"]],
   "account.correction": [["corrections"]],
   "event.update": [["events"]],
+  "class.rep": [["reps"], ["timetable"]],
+  "class.reminder": [],
 };
 
 export interface Toast {

@@ -39,6 +39,7 @@ class OccurrenceOut(Schema):
     moved_from: date | None
     change_id: int | None
     can_manage: bool
+    rep_role: str | None = None
     source: str | None = None
     synced_at: datetime | None = None
 

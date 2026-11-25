@@ -37,6 +37,7 @@ class Occurrence:
     moved_from: date | None = None  # on a "rescheduled" occurrence: its original day
     change_id: int | None = None
     can_manage: bool = False
+    rep_role: str | None = None  # "cr" / "gr" when the viewer represents this class
     # Where the class came from (FR-SCH-06): "Timetable import" or a sync source's name, and
     # when that import was applied. None for classes entered by hand.
     source: str | None = None
@@ -169,8 +170,12 @@ def occurrences(user, start: date, days: int) -> list[Occurrence]:
         tz,
     )
     manageable = {sid for sid in sections if can_target(user, AudienceScope.SECTION, sid)}
+    from apps.classreps.services import rep_sections
+
+    reps = rep_sections(user)
     for occ in result:
         occ.can_manage = occ.section_id in manageable
+        occ.rep_role = reps.get(occ.section_id)
     return result
 
 
@@ -250,10 +255,12 @@ def change_class(
     new_room: Room | None = None,
     note: str = "",
     notify: bool = False,
+    check: bool = True,
 ) -> ScheduleChange:
     """Cancel, move or re-room one occurrence of a class. Replaces any earlier change to the
-    same occurrence. Raises ScheduleConflict if the new slot clashes."""
-    if not can_target(user, AudienceScope.SECTION, meeting.section_id):
+    same occurrence. Raises ScheduleConflict if the new slot clashes. check=False: the caller has
+    already decided the person may (a CR/GR's request, apps.classreps)."""
+    if check and not can_target(user, AudienceScope.SECTION, meeting.section_id):
         raise PermissionDenied("You can only change classes you teach.")
     term = meeting.section.offering.term
     if day.weekday() != meeting.weekday or not term.starts_on <= day <= term.ends_on:

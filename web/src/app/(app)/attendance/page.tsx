@@ -10,6 +10,7 @@ import { markLabels, useReport, useSheet } from "@/lib/attendance";
 import type { Mark, Sheet } from "@/lib/attendance";
 import { formatDay, formatTime, relativeTime } from "@/lib/format";
 import { useMe, useTeaching, useTimetable } from "@/lib/queries";
+import { useRepsMine } from "@/lib/reps";
 import { PageTitle } from "@/components/page-title";
 
 const MARKS: Mark[] = ["present", "late", "absent", "excused"];
@@ -149,7 +150,11 @@ function AttendanceInner() {
   const me = useMe().data;
   const tz = me?.institution?.timezone;
   const teaching = useTeaching();
-  const sectionId = Number(params.get("section")) || teaching.data?.[0]?.id || null;
+  // A CR or GR takes attendance for their own class's subjects (the teacher is told).
+  const reps = useRepsMine(me?.kind === "student").data;
+  const repSections = (me?.sections ?? []).filter((s) => reps?.sections[String(s.id)]);
+  const sections = me?.kind === "student" ? repSections : (teaching.data ?? []);
+  const sectionId = Number(params.get("section")) || sections[0]?.id || null;
   const day = params.get("date") || todayIso();
   const meetingParam = params.get("meeting");
   const classes = useTimetable(day, 1);
@@ -183,10 +188,10 @@ function AttendanceInner() {
           <p className="text-body font-semibold text-ink-2">{formatDay(day, { weekday: "long", day: "numeric", month: "long" })}</p>
           <PageTitle className="mt-1 text-large-title font-bold" text="Attendance" />
         </div>
-        <button onClick={() => setShowReport((r) => !r)} aria-expanded={showReport}
+        {me?.kind !== "student" && <button onClick={() => setShowReport((r) => !r)} aria-expanded={showReport}
           className="press h-10 rounded-full bg-fill-strong px-4 text-footnote font-semibold">
           {showReport ? "Hide term summary" : "Term summary"}
-        </button>
+        </button>}
       </header>
 
       <div className="glass grid gap-3 rounded-card p-4 sm:grid-cols-3">
@@ -194,7 +199,7 @@ function AttendanceInner() {
           Section
           <Select value={sectionId ? String(sectionId) : ""} label="Section" className={field}
             onChange={(v) => go({ section: Number(v), meeting: undefined })}
-            options={(teaching.data ?? []).map((s) => ({ value: String(s.id), label: `${s.course_code} · ${s.code}`, detail: s.course_title }))} />
+            options={sections.map((s) => ({ value: String(s.id), label: `${s.course_code} · ${s.code}`, detail: s.course_title }))} />
         </label>
         <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
           Day

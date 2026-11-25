@@ -44,8 +44,15 @@ def can_correct(user, section: Section) -> bool:
     )
 
 
+def is_rep(user, section: Section) -> bool:
+    """The class's CR or GR, who may take attendance too (apps.classreps decides the rest)."""
+    from apps.classreps.services import rep_role
+
+    return rep_role(user, section) is not None
+
+
 def can_take(user, section: Section) -> bool:
-    return is_teacher(user, section) or can_correct(user, section)
+    return is_teacher(user, section) or can_correct(user, section) or is_rep(user, section)
 
 
 def _campus_today(institution) -> date:
@@ -139,6 +146,11 @@ def save(user, section: Section, day: date, meeting_id: int | None,
     elif changes:
         audit.record(actor=user, action="attendance.corrected", target=session,
                      changes={str(k): v for k, v in changes.items()})
+    if not (is_teacher(user, section) or can_correct(user, section)):
+        # A CR or GR took it: the teacher is told, and may need to approve it first.
+        from apps.classreps.services import rep_took_attendance
+
+        rep_took_attendance(user, section, session)
     return session
 
 
@@ -159,12 +171,13 @@ def section_report(user, section: Section) -> dict:
     require_enabled(user.institution)
     if not can_take(user, section):
         raise PermissionDenied("Only this section's teachers can see its attendance.")
-    records = list(AttendanceRecord.objects.filter(session__section=section)
+    records = list(AttendanceRecord.objects.filter(session__section=section,
+                                                   session__confirmed=True)
                    .select_related("session"))
     by_student: dict[int, list] = {}
     for r in records:
         by_student.setdefault(r.student_id, []).append(r)
-    sessions = list(AttendanceSession.objects.filter(section=section)
+    sessions = list(AttendanceSession.objects.filter(section=section, confirmed=True)
                     .select_related("taken_by", "meeting")[:60])
     return {
         "students": [(s, _summary(by_student.get(s.pk, []))) for s in roster(section)],
@@ -179,7 +192,7 @@ def my_summary(user) -> list[tuple[Section, dict]]:
         return []
     if not institution.attendance_visible_to_students:
         raise PermissionDenied("Your institution doesn't show attendance to students.")
-    records = AttendanceRecord.objects.filter(student=user).select_related(
+    records = AttendanceRecord.objects.filter(student=user, session__confirmed=True).select_related(
         "session__section__offering__course")
     by_section: dict[int, list] = {}
     sections = {}

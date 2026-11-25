@@ -1,14 +1,44 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ChipGroup } from "@/components/chip-group";
 import { ChevronLeftIcon } from "@/components/icons";
-import { ApiError } from "@/lib/api";
+import { ApiError, apiFetch, errorDetail } from "@/lib/api";
 import { courseBg } from "@/lib/format";
 import { useRoster } from "@/lib/queries";
 import type { Person } from "@/lib/types";
 
-function PersonRow({ person, badge }: { person: Person; badge?: string }) {
+type RepChoice = "" | "cr" | "gr";
+const REP_OPTIONS: { value: RepChoice; label: string }[] = [
+  { value: "", label: "Student" },
+  { value: "cr", label: "CR" },
+  { value: "gr", label: "GR" },
+];
+
+/** CR and GR of this section's class, for its teachers and admins to choose. */
+function useReps(sectionId: number) {
+  const qc = useQueryClient();
+  const key = ["reps", "section", sectionId];
+  const list = useQuery({
+    queryKey: key,
+    queryFn: () => apiFetch<{ student_id: number; role: "cr" | "gr" }[]>(`/api/reps/sections/${sectionId}`),
+    retry: false,
+  });
+  const set = useMutation({
+    mutationFn: ({ studentId, role }: { studentId: number; role: RepChoice }) =>
+      apiFetch<{ student_id: number; role: "cr" | "gr" }[]>(`/api/reps/sections/${sectionId}`, {
+        method: "PUT",
+        body: JSON.stringify({ student_id: studentId, role: role || null }),
+      }),
+    onSuccess: (data) => qc.setQueryData(key, data),
+  });
+  const roleOf = (id: number): RepChoice => list.data?.find((r) => r.student_id === id)?.role ?? "";
+  return { list, set, roleOf, allowed: list.isSuccess };
+}
+
+function PersonRow({ person, badge, children }: { person: Person; badge?: string; children?: React.ReactNode }) {
   return (
     <li className="flex items-center gap-3 rounded-row p-2.5 hover:bg-fill">
       <span className="grid size-9 shrink-0 place-items-center rounded-full bg-fill-strong text-caption font-semibold">
@@ -25,6 +55,7 @@ function PersonRow({ person, badge }: { person: Person; badge?: string }) {
           {person.email}
         </a>
       </span>
+      {children}
     </li>
   );
 }
@@ -32,6 +63,7 @@ function PersonRow({ person, badge }: { person: Person; badge?: string }) {
 export default function RosterPage() {
   const { id } = useParams<{ id: string }>();
   const roster = useRoster(Number(id));
+  const reps = useReps(Number(id));
   const notFound = roster.error instanceof ApiError && roster.error.status === 404;
 
   return (
@@ -90,9 +122,28 @@ export default function RosterPage() {
             ) : (
               <ul>
                 {roster.data.students.map((p) => (
-                  <PersonRow key={p.id} person={p} />
+                  <PersonRow key={p.id} person={p} badge={reps.roleOf(p.id).toUpperCase() || undefined}>
+                    {reps.allowed && (
+                      <ChipGroup<RepChoice>
+                        label={`Role of ${p.name}`}
+                        value={reps.roleOf(p.id)}
+                        onChange={(role) => reps.set.mutate({ studentId: p.id, role })}
+                        options={REP_OPTIONS}
+                      />
+                    )}
+                  </PersonRow>
                 ))}
               </ul>
+            )}
+            {reps.allowed && (
+              <p className="mt-3 px-2.5 text-footnote text-ink-2">
+                The CR and GR act for the whole class {roster.data.section.code}, in every subject: they can
+                cancel or shift lectures and take attendance. Each subject&apos;s teacher is told, or approves
+                first (their setting in Class requests). A GR&apos;s cancellation also needs the CR.
+              </p>
+            )}
+            {reps.set.isError && (
+              <p role="alert" className="mt-2 px-2.5 text-footnote text-danger-ink">{errorDetail(reps.set.error, "Couldn't change the role.")}</p>
             )}
             <p className="mt-2 px-2.5 text-caption text-ink-3">
               Enrollment comes from your institution&apos;s records. Ask your admin to fix anything

@@ -8,6 +8,8 @@ import { useRooms } from "@/lib/queries";
 import type { Occurrence } from "@/lib/types";
 import { DatePicker, TimeSelect, todayIso } from "./date-picker";
 import { Select } from "./select";
+import { Switch } from "./switch";
+import type { RepRequest, RepRole } from "@/lib/reps";
 
 type Action = "cancelled" | "moved" | "room_changed";
 
@@ -24,14 +26,20 @@ const statusText: Record<string, string> = {
   rescheduled: "moved here from another day",
 };
 
+/**
+ * Change one lecture. A teacher changes it directly; a CR/GR (asRep) asks: cancel or shift only,
+ * and the teacher is told or has to approve first (apps.classreps).
+ */
 export function ChangeClassDialog({
   occ,
   timeZone,
   onClose,
+  asRep,
 }: {
   occ: Occurrence;
   timeZone?: string;
   onClose: () => void;
+  asRep?: RepRole | null;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const queryClient = useQueryClient();
@@ -47,6 +55,13 @@ export function ChangeClassDialog({
   const [error, setError] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
+  const choices = asRep
+    ? [
+        { value: "cancelled" as Action, label: "Cancel lecture" },
+        { value: "moved" as Action, label: "Shift" },
+      ]
+    : actions;
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -74,6 +89,34 @@ export function ChangeClassDialog({
     if (action === "room_changed" && !roomId) return setError("Choose the new room.");
     if (action === "moved" && (!newDate || !start || !end)) return setError("Choose the new date and time.");
     setBusy(true);
+    if (asRep) {
+      try {
+        const req = await apiFetch<RepRequest>("/api/reps/requests", {
+          method: "POST",
+          body: JSON.stringify({
+            meeting_id: occ.meeting_id,
+            date: occ.date,
+            action: action === "cancelled" ? "cancel" : "shift",
+            note,
+            ...(action === "moved" && { new_date: newDate, new_starts_at: start, new_ends_at: end }),
+          }),
+        });
+        await queryClient.invalidateQueries({ queryKey: ["timetable"] });
+        await queryClient.invalidateQueries({ queryKey: ["reps"] });
+        setSent(
+          req.stage === "applied"
+            ? "Done. The class has been told, and the teacher has been asked whether they knew."
+            : req.stage === "cr_approval"
+              ? "Sent to your class's CR. Once they agree, it goes to the teacher."
+              : "Sent to the teacher. It happens once they approve, at least 15 minutes before the lecture.",
+        );
+      } catch (err) {
+        setError(apiError(err));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     try {
       await apiFetch("/api/timetable/changes", {
         method: "POST",
@@ -129,7 +172,11 @@ export function ChangeClassDialog({
           </p>
         </header>
 
-        {occ.change_id && (
+        {sent && (
+          <p role="status" className="rounded-row bg-success/12 px-4 py-3 text-footnote font-medium text-success-ink">{sent}</p>
+        )}
+
+        {!asRep && occ.change_id && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-row bg-warning/15 px-4 py-3">
             <span className="text-footnote font-medium">
               This class is {statusText[occ.status] ?? "changed"}.
@@ -145,10 +192,16 @@ export function ChangeClassDialog({
           </div>
         )}
 
-        {!isRescheduled && (
+        {!isRescheduled && !sent && (
           <>
+            {asRep && (
+              <p className="text-footnote text-ink-2">
+                As {asRep.toUpperCase()}, you can cancel or shift this lecture. The teacher is told each time
+                {asRep === "gr" ? "; cancelling also needs a CR to agree" : ""}.
+              </p>
+            )}
             <div role="radiogroup" aria-label="What changes" className="flex rounded-control bg-fill p-1">
-              {actions.map((a) => (
+              {choices.map((a) => (
                 <button
                   key={a.value}
                   type="button"
@@ -207,15 +260,12 @@ export function ChangeClassDialog({
               />
             </label>
 
-            <label className="flex items-center gap-3 text-body">
-              <input
-                type="checkbox"
-                checked={notify}
-                onChange={(e) => setNotify(e.target.checked)}
-                className="size-5 accent-[var(--cv-accent)]"
-              />
-              Post a notice to section {occ.section_code}
-            </label>
+            {!asRep && (
+              <span className="flex items-center gap-3 text-body">
+                <Switch checked={notify} onChange={setNotify} label={`Post a notice to section ${occ.section_code}`} />
+                Post a notice to section {occ.section_code}
+              </span>
+            )}
           </>
         )}
 
@@ -240,7 +290,7 @@ export function ChangeClassDialog({
           >
             Close
           </button>
-          {!isRescheduled && (
+          {!isRescheduled && !sent && (
             <button
               type="submit"
               disabled={busy}
@@ -248,7 +298,7 @@ export function ChangeClassDialog({
                 action === "cancelled" ? "bg-danger" : "bg-accent"
               }`}
             >
-              {busy ? "Saving…" : action === "cancelled" ? "Cancel this class" : "Save change"}
+              {busy ? "Saving…" : action === "cancelled" ? "Cancel this class" : asRep ? "Shift it" : "Save change"}
             </button>
           )}
         </div>

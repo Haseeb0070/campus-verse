@@ -122,6 +122,8 @@ export interface Occurrence {
   moved_from: string | null;
   change_id: number | null;
   can_manage: boolean;
+  /** "cr" / "gr" when the viewer is their class's CR or GR: they may cancel, shift and take attendance. */
+  rep_role?: "cr" | "gr" | null;
   /** Where the class came from (an import or sync source) and when it was last synchronized. */
   source: string | null;
   synced_at: string | null;
@@ -243,7 +245,9 @@ export type NotificationKind =
   | "moderation.action"
   | "resource.shared"
   | "account.correction"
-  | "event.update";
+  | "event.update"
+  | "class.rep"
+  | "class.reminder";
 
 export interface AppNotification {
   id: number;

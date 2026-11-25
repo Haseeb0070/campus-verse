@@ -16,6 +16,7 @@ import { courseBg } from "@/lib/format";
 import { useMe } from "@/lib/queries";
 import { disconnectRealtime } from "@/lib/realtime";
 import { useModerationSummary } from "@/lib/feed";
+import { useRepRequestsIf, useRepsMine } from "@/lib/reps";
 import { useLiveNotifications, useNotifications } from "@/lib/notifications";
 import { PageEnter } from "@/components/page-enter";
 import {
@@ -94,6 +95,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const unread = useUnreadTotal();
   const notificationsUnread = useNotifications().data?.unread ?? 0;
   const moderation = useModerationSummary().data;
+  const repsMine = useRepsMine(me.data?.kind === "student").data;
+  const isRep = Object.keys(repsMine?.sections ?? {}).length > 0;
+  const teachesAny = me.data?.sections.some((s) => s.teaching) ?? false;
+  const repWaiting = (useRepRequestsIf(isRep || teachesAny).data ?? []).filter((r) => r.can_decide || r.can_reply).length;
   const { toasts, dismiss } = useLiveNotifications(me.data?.id);
   const badgeFor = (href: string) =>
     href === "/chat"
@@ -102,8 +107,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ? notificationsUnread
         : href === "/moderation"
           ? (moderation?.open ?? 0)
-          : 0;
-  const badgeLabel = (href: string) => (href === "/moderation" ? "open reports" : "unread");
+          : href === "/requests"
+            ? repWaiting
+            : 0;
+  const badgeLabel = (href: string) =>
+    href === "/moderation" ? "open reports" : href === "/requests" ? "waiting for you" : "unread";
   const [moreOpen, setMoreOpen] = useState(false);
   // The page a nav link was just clicked for. Highlights move there at once instead of after the
   // next page arrives (a server round trip, plus a compile on first visit in development). Once
@@ -223,6 +231,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : []),
     ...(teaches && user.institution?.attendance_enabled
       ? [{ href: "/attendance", label: "Attendance", Icon: ChecklistIcon, group: "Academics" as const }]
+      : []),
+    ...(teaches || isRep
+      ? [{ href: "/requests", label: "Class requests", Icon: ChecklistIcon, group: "Academics" as const }]
       : []),
     ...(user.kind === "student"
       ? [{ href: "/progress", label: "Progress", Icon: ProgressIcon, group: "Academics" as const }]

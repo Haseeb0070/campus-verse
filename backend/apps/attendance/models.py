@@ -19,6 +19,9 @@ class AttendanceSession(InstitutionScopedModel):
     taken_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
+    confirmed = models.BooleanField(
+        default=True, help_text="False while a CR/GR's attendance waits for the teacher",
+    )
     history = HistoricalRecords()
 
     class Meta:

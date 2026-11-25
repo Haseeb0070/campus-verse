@@ -123,6 +123,7 @@ export default function TimetablePage() {
           occ={managing}
           timeZone={tz}
           onClose={() => setManaging(null)}
+          asRep={managing.can_manage ? null : managing.rep_role}
         />
       )}
     </div>

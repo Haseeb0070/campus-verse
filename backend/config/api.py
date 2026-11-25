@@ -16,6 +16,7 @@ from apps.assignments.api import router as assignments_router
 from apps.attendance.api import progress_router
 from apps.attendance.api import router as attendance_router
 from apps.chat.api import router as chat_router
+from apps.classreps.api import router as classreps_router
 from apps.events.api import router as events_router
 from apps.feed.api import router as feed_router
 from apps.identity.api import router as me_router
@@ -75,6 +76,40 @@ def _purge_files():
     return purge_unused_files()
 
 
+def _check_cron_secret(request) -> None:
+    secret = settings.CAMPUSVERSE_CRON_SECRET
+    sent = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if not secret or not hmac.compare_digest(sent.encode(), secret.encode()):
+        raise HttpError(404, "Not found")
+
+
+def _lecture_reminders():
+    from apps.scheduling.reminders import send_lecture_reminders
+
+    return send_lecture_reminders()
+
+
+def _lapse_rep_requests():
+    from apps.classreps.services import expire_overdue
+
+    return expire_overdue()
+
+
+@api.post("/cron/frequent", auth=None, tags=["system"])
+def cron_frequent(request):
+    """The jobs that need a timer every few minutes: lecture reminders and CR/GR requests that
+    lapse 15 minutes before their lecture. Same CRON_SECRET as /cron."""
+    _check_cron_secret(request)
+    results: dict[str, object] = {}
+    for name, job in (("reminders", _lecture_reminders), ("requests_lapsed", _lapse_rep_requests)):
+        try:
+            results[name] = job()
+        except Exception:
+            logger.exception("Frequent job %s failed", name)
+            results[name] = "failed"
+    return results
+
+
 @api.post("/cron", auth=None, tags=["system"])
 def cron(request):
     """Runs the scheduled jobs, for hosts with no Celery beat (an outside timer calls this).
@@ -83,10 +118,7 @@ def cron(request):
     the endpoint doesn't exist. Each job is idempotent, so a missed or doubled call is harmless:
     the next one catches up.
     """
-    secret = settings.CAMPUSVERSE_CRON_SECRET
-    sent = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-    if not secret or not hmac.compare_digest(sent.encode(), secret.encode()):
-        raise HttpError(404, "Not found")
+    _check_cron_secret(request)
 
     from apps.administration.tasks import run_due_sources
     from apps.notices.tasks import publish_due
@@ -100,6 +132,9 @@ def cron(request):
         ("sources_synced", run_due_sources),
         ("emails_sent", _send_leftover_emails),
         ("files_removed", _purge_files),
+        # Also here, so a college without the frequent timer still gets them, if later.
+        ("reminders", _lecture_reminders),
+        ("requests_lapsed", _lapse_rep_requests),
     ):
         try:
             results[name] = job()
@@ -139,6 +174,7 @@ api.add_router("/manage", manage_router)
 api.add_router("/feed", feed_router)
 api.add_router("/resources", resources_router)
 api.add_router("/events", events_router)
+api.add_router("/reps", classreps_router)
 api.add_router("/attendance", attendance_router)
 api.add_router("/progress", progress_router)
 api.add_router("/search", search_router)
