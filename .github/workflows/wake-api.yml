@@ -1,0 +1,29 @@
+# Wakes the API on Render before classes start, from GitHub's machines instead of cron-job.org
+# (Render often refuses cron-job.org while the API sleeps). It waits up to 3 minutes for the API
+# to answer, which is longer than a cold start. Times are UTC: 01:30–02:30 UTC is 6:30–7:30 am in
+# Lahore. GitHub may start a scheduled run a few minutes late, so it tries several times.
+name: Wake the API
+
+on:
+  schedule:
+    - cron: "30,45 1 * * *"
+    - cron: "0,15,30 2 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Call the health check until it answers
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 180 \
+              https://campusverse-api-gm4t.onrender.com/api/health || true)
+            echo "Attempt $attempt: HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 20
+          done
+          echo "The API didn't answer; it will wake when someone opens the site."
