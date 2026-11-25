@@ -72,9 +72,28 @@ def roster(section: Section) -> list:
     ).select_related("student").order_by("student__first_name", "student__last_name")]
 
 
+class AlreadyTaken(ValidationError):
+    """Attendance for this class (or this day) is already in; changing it has to be asked for."""
+
+
 def find_session(section: Section, day: date, meeting_id: int | None):
     return AttendanceSession.objects.filter(section=section, date=day,
                                             meeting_id=meeting_id).first()
+
+
+def same_day_session(section: Section, day: date, meeting_id: int | None):
+    """Another register for this subject on this day that stops a new one being started.
+
+    A subject with two timetabled classes in a day takes each separately; an extra class
+    (not on the timetable) can't be added on a day that already has a register, and a day
+    with an extra-class register can't get another.
+    """
+    others = AttendanceSession.objects.filter(section=section, date=day).exclude(
+        meeting_id=meeting_id) if meeting_id is not None else AttendanceSession.objects.filter(
+        section=section, date=day, meeting__isnull=False)
+    if meeting_id is not None:
+        others = others.filter(meeting__isnull=True)
+    return others.select_related("meeting", "taken_by").first()
 
 
 def sheet(user, section: Section, day: date, meeting_id: int | None) -> dict:
@@ -83,6 +102,7 @@ def sheet(user, section: Section, day: date, meeting_id: int | None) -> dict:
     if not can_take(user, section):
         raise PermissionDenied("Only this section's teachers can take its attendance.")
     session = find_session(section, day, meeting_id)
+    other = None if session else same_day_session(section, day, meeting_id)
     saved = {}
     if session:
         saved = {r.student_id: r for r in session.records.all()}
@@ -90,14 +110,19 @@ def sheet(user, section: Section, day: date, meeting_id: int | None) -> dict:
     locked = _closed(day, user.institution) and not can_correct(user, section)
     return {
         "session": session, "students": students, "saved": saved, "locked": locked,
-        "can_correct": can_correct(user, section),
+        "can_correct": can_correct(user, section), "other": other,
     }
 
 
 @transaction.atomic
 def save(user, section: Section, day: date, meeting_id: int | None,
-         marks: dict[int, tuple[str, str]]) -> AttendanceSession:
-    """marks: student id -> (status, note). Students not marked keep what they had."""
+         marks: dict[int, tuple[str, str]], change: bool = False) -> AttendanceSession:
+    """marks: student id -> (status, note). Students not marked keep what they had.
+
+    Attendance is taken once per class. Saving over a register that's already in only
+    happens when the caller says it's a change (`change=True`), so a second take (a CR
+    and the teacher both doing it, or an old screen) never quietly overwrites the first.
+    """
     require_enabled(user.institution)
     if not can_take(user, section):
         raise PermissionDenied("Only this section's teachers can take its attendance.")
@@ -118,8 +143,15 @@ def save(user, section: Section, day: date, meeting_id: int | None,
         if len(note or "") > 200:
             raise ValidationError("Notes can be up to 200 characters.")
 
-    session = find_session(section, day, meeting_id)
+    session = AttendanceSession.objects.select_for_update().filter(
+        section=section, date=day, meeting_id=meeting_id).first()
     first_time = session is None
+    if not first_time and not change:
+        raise AlreadyTaken(f"Attendance for this class was already taken by {session.taken_by}. "
+                           "Use Change to edit it.")
+    if first_time and same_day_session(section, day, meeting_id):
+        raise AlreadyTaken("Attendance for this subject is already taken today. "
+                           "Open that class and use Change to edit it.")
     if first_time:
         session = AttendanceSession.objects.create(
             institution_id=section.institution_id, section=section, date=day,

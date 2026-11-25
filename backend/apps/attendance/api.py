@@ -36,6 +36,12 @@ class MarkOut(Schema):
     note: str
 
 
+class OtherOut(Schema):
+    meeting_id: int | None
+    time: str | None
+    taken_by: str
+
+
 class SheetOut(Schema):
     section_id: int
     title: str
@@ -46,6 +52,7 @@ class SheetOut(Schema):
     saved_at: datetime | None
     locked: bool
     can_correct: bool
+    taken_elsewhere: OtherOut | None
     marks: list[MarkOut]
 
 
@@ -58,6 +65,7 @@ class MarkIn(Schema):
 class SaveIn(Schema):
     date: date
     meeting_id: int | None = None
+    change: bool = False  # editing a register that's already taken
     marks: list[MarkIn]
 
 
@@ -126,13 +134,15 @@ def _call(fn):
         return fn()
     except PermissionDenied as err:
         return Status(403, {"detail": str(err)})
+    except services.AlreadyTaken as err:
+        return Status(409, {"detail": err.messages[0]})
     except ValidationError as err:
         return Status(422, {"detail": err.messages[0]})
 
 
 def _sheet_out(request, section, day, meeting_id) -> dict:
     data = services.sheet(request.user, section, day, meeting_id)
-    session = data["session"]
+    session, other = data["session"], data["other"]
     return {
         "section_id": section.pk,
         "title": f"{section.offering.course.code} · {section.code}",
@@ -140,6 +150,11 @@ def _sheet_out(request, section, day, meeting_id) -> dict:
         "taken_by": str(session.taken_by) if session else None,
         "saved_at": session.updated_at if session else None,
         "locked": data["locked"], "can_correct": data["can_correct"],
+        "taken_elsewhere": {
+            "meeting_id": other.meeting_id,
+            "time": f"{other.meeting.starts_at:%H:%M}" if other.meeting else None,
+            "taken_by": str(other.taken_by),
+        } if other else None,
         "marks": [
             {"student_id": s.pk, "name": s.get_full_name() or s.email, "initials": initials(s),
              "status": data["saved"][s.pk].status if s.pk in data["saved"] else None,
@@ -155,13 +170,15 @@ def get_sheet(request, section_id: int, day: date, meeting_id: int | None = None
     return _call(lambda: Status(200, _sheet_out(request, section, day, meeting_id)))
 
 
-@router.put("/sections/{section_id}/sheet", response={200: SheetOut, 403: ErrorOut, 422: ErrorOut})
+@router.put("/sections/{section_id}/sheet",
+            response={200: SheetOut, 403: ErrorOut, 409: ErrorOut, 422: ErrorOut})
 def save_sheet(request, section_id: int, payload: SaveIn):
     section = _section(request, section_id)
 
     def go():
         services.save(request.user, section, payload.date, payload.meeting_id,
-                      {m.student_id: (m.status, m.note) for m in payload.marks})
+                      {m.student_id: (m.status, m.note) for m in payload.marks},
+                      change=payload.change)
         return Status(200, _sheet_out(request, section, payload.date, payload.meeting_id))
     return _call(go)
 
