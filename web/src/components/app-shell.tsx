@@ -297,7 +297,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen md:flex">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-control focus:bg-accent focus:px-4 focus:py-2.5 focus:text-footnote focus:font-semibold focus:text-on-accent"
+        // Only for keyboard users (Tab): a mouse click or a page change never shows it.
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-3 focus-visible:left-3 focus-visible:z-50 focus-visible:rounded-control focus-visible:bg-accent focus-visible:px-4 focus-visible:py-2.5 focus-visible:text-footnote focus-visible:font-semibold focus-visible:text-on-accent focus-visible:shadow-lg"
       >
         Skip to content
       </a>

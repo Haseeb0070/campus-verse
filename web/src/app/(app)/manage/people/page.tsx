@@ -311,27 +311,43 @@ function PersonRow({ person: p }: { person: ManagedPerson }) {
               body: JSON.stringify({ role, department_id: dept ? Number(dept) : null }),
             });
           }}
-          className="mt-3 flex flex-wrap items-end gap-3 rounded-row bg-fill p-3"
+          className="mt-3 flex flex-col gap-3 rounded-row border border-divider p-3"
         >
-          <label className="flex flex-col gap-1 text-footnote font-semibold text-ink-2">
-            Role
-            <Select value={role} onChange={setRole} label="Role" className={`${field} w-56 bg-[var(--cv-bg)]`} options={[
-              { value: "department_coordinator", label: "Department coordinator" },
-              { value: "moderator", label: "Moderator" },
-              { value: "institution_admin", label: "Institution admin" },
-            ]} />
-          </label>
-          {role === "department_coordinator" && (
-            <label className="flex flex-col gap-1 text-footnote font-semibold text-ink-2">
-              Department
-              <Select value={dept} onChange={setDept} label="Department" placeholder="Choose a department"
-                className={`${field} w-56 bg-[var(--cv-bg)]`}
-                options={(departments.data ?? []).map((d) => ({ value: String(d.id), label: d.name }))} />
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
+              Role
+              <Select value={role} onChange={setRole} label="Role" className={`${field} w-60 border-rim`} options={[
+                { value: "department_coordinator", label: "Department coordinator" },
+                { value: "moderator", label: "Moderator" },
+                { value: "institution_admin", label: "Institution admin" },
+              ]} />
             </label>
-          )}
-          <button type="submit" className="press h-11 rounded-full bg-accent px-5 text-body font-semibold text-on-accent">
-            Grant
-          </button>
+            {role === "department_coordinator" && (
+              <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
+                Department
+                <Select value={dept} onChange={setDept} label="Department" placeholder="Choose a department"
+                  className={`${field} w-60 border-rim`}
+                  options={(departments.data ?? []).map((d) => ({ value: String(d.id), label: d.name }))} />
+              </label>
+            )}
+            <span className="flex gap-2">
+              <button type="submit" disabled={role === "department_coordinator" && !dept}
+                className="press h-11 rounded-full bg-accent px-5 text-footnote font-semibold text-on-accent disabled:opacity-50">
+                Grant role
+              </button>
+              <button type="button" onClick={() => setMode("idle")}
+                className="press h-11 rounded-full px-4 text-footnote font-semibold text-ink-2 hover:bg-fill">
+                Cancel
+              </button>
+            </span>
+          </div>
+          <p className="text-footnote text-ink-2">
+            {role === "moderator"
+              ? "Moderators review reported feed posts and comments, and can hide them."
+              : role === "department_coordinator"
+                ? "Coordinators manage their department's courses and sections, and see its people and report."
+                : "Institution admins can manage everything: people, courses, imports, reports and the theme."}
+          </p>
         </form>
       )}
 
