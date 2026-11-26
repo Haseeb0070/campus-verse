@@ -1,0 +1,47 @@
+{
+ "hook": {
+  "file": "hook.wav",
+  "lead": 0.95,
+  "seconds": 7.37
+ },
+ "today": {
+  "file": "today.wav",
+  "lead": 0.4,
+  "seconds": 7.34
+ },
+ "timetable": {
+  "file": "timetable.wav",
+  "lead": 0.4,
+  "seconds": 7.26
+ },
+ "chat": {
+  "file": "chat.wav",
+  "lead": 0.4,
+  "seconds": 7.98
+ },
+ "work": {
+  "file": "work.wav",
+  "lead": 0.4,
+  "seconds": 5.38
+ },
+ "teachers": {
+  "file": "teachers.wav",
+  "lead": 0.4,
+  "seconds": 5.93
+ },
+ "office": {
+  "file": "office.wav",
+  "lead": 0.4,
+  "seconds": 5.99
+ },
+ "close": {
+  "file": "close.wav",
+  "lead": 0.4,
+  "seconds": 4.41
+ },
+ "end": {
+  "file": "end.wav",
+  "lead": 0.4,
+  "seconds": 4.91
+ }
+}

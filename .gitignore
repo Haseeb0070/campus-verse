@@ -35,3 +35,6 @@ Thumbs.db
 .superduper/
 .taste-skill/
 skills-lock.json
+
+# Rendered films stay on this computer (large; re-render with docs/presentation/render.mjs)
+docs/presentation/*.mp4

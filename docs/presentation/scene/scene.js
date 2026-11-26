@@ -4,6 +4,8 @@
 
 const script = await (await fetch("/script.json")).json();
 const shots = await (await fetch("/shots/shots.json")).json();
+// When each line is spoken (made by fit.mjs). Without it the film is silent and words keep their own pace.
+const voice = await fetch("/audio/voice.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
 
 const $ = (id) => document.getElementById(id);
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -266,13 +268,19 @@ function drawBubble(t, at) {
   const pop = back(seg(t, s.start + (s === HOOK ? 0.9 : 0.3), 0.4));
   const gone = s === END ? 0 : seg(t, s.end - 0.2, 0.2);
   // Each word lights up as Verse gets to it, and the line is finished before the scene is.
-  const n = bubble.children.length;
-  const from = s.start + (s === HOOK ? 1.1 : 0.5);
-  const span = Math.max(0.6, length - (s === HOOK ? 2.2 : 2.3)) * (s === END ? 0.3 : 1);
+  const said = voice[s.id];
+  const from = s.start + (said ? said.lead : s === HOOK ? 1.1 : 0.5);
+  // The end card's bubble holds only the last words of what is said there.
+  const span = said ? said.seconds * (s === END ? 0.35 : 0.97) : Math.max(0.6, length - 2.3);
+  const begin = said && s === END ? from + said.seconds * 0.6 : from;
+  const letters = [...bubble.children].map((w) => w.textContent.length);
+  const all = letters.reduce((a, b) => a + b, 0);
+  let before = 0;
   [...bubble.children].forEach((w, i) => {
-    w.style.opacity = lerp(0.4, 1, seg(t, from + (i / n) * span, 0.16));
+    w.style.opacity = lerp(0.4, 1, seg(t, begin + (before / all) * span - 0.05, 0.14));
+    before += letters[i];
   });
-  const base = { opacity: (pop > 0 ? 1 : 0) * (1 - gone), transform: `scale(${0.7 + 0.3 * pop})` };
+  const base = { opacity: (pop > 0.001 ? 1 : 0) * (1 - gone), transform: `scale(${0.7 + 0.3 * pop})` };
   if (s === HOOK) {
     bubble.className = "up";
     Object.assign(bubble.style, base, { left: "430px", top: "", bottom: "70px", width: "1060px", fontSize: "38px", transformOrigin: "50% 0" });
@@ -401,7 +409,7 @@ function drawVerse(t, frame) {
   const pop = back(seg(t, 0.45, 0.5));
   const verse = $("verse");
   Object.assign(verse.style, {
-    width: `${at.size}px`, height: `${at.size}px`, opacity: pop > 0 ? 1 : 0,
+    width: `${at.size}px`, height: `${at.size}px`, opacity: pop > 0.001 ? 1 : 0,
     transform: `translate(${at.x - at.size / 2}px, ${at.y - at.size / 2}px) scale(${pop})`,
   });
   const grounded = seg(t, HOOK.end + 0.4, 0.3) * (1 - seg(t, END.start - 0.1, 0.2)) + seg(t, END.start + 0.7, 0.3);
