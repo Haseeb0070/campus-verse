@@ -151,3 +151,20 @@ def test_attendance_api(client, enabled):
                      content_type="application/json").json()
     assert off == {"attendance_enabled": False, "attendance_visible_to_students": False}
     assert client.get("/api/me").json()["institution"]["attendance_enabled"] is False
+
+
+def test_one_register_per_day_and_changing_it(client, enabled):
+    take(enabled, ayesha="present", hamza="present")
+    # Taking the same class again is refused unless it's a change.
+    with pytest.raises(services.AlreadyTaken, match="already taken by"):
+        services.save(enabled.teacher, enabled.s3b, today(), None,
+                      {enabled.ayesha.pk: ("absent", "")})
+
+    client.force_login(enabled.teacher)
+    url = f"/api/attendance/sections/{enabled.s3b.pk}/sheet"
+    body = {"date": str(today()), "marks": [{"student_id": enabled.hamza.pk, "status": "absent"}]}
+    again = client.put(url, body, content_type="application/json")
+    assert again.status_code == 409 and "Change" in again.json()["detail"]
+    changed = client.put(url, {**body, "change": True}, content_type="application/json").json()
+    assert {m["student_id"]: m["status"] for m in changed["marks"]}[enabled.hamza.pk] == "absent"
+    assert changed["taken_elsewhere"] is None

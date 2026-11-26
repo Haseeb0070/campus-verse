@@ -67,9 +67,12 @@ export default function Attendance() {
   // Your taps, over what's saved (or everyone present on a new sheet).
   const [edits, setEdits] = useState<Record<number, Mark>>({});
   const [saved, setSaved] = useState(false);
+  // A register that's already taken opens read-only; Change unlocks it.
+  const [changing, setChanging] = useState(false);
   useEffect(() => {
     setEdits({});
     setSaved(false);
+    setChanging(false);
   }, [sectionId, day, meetingId]);
 
   const s = sheet.data;
@@ -77,6 +80,8 @@ export default function Attendance() {
     (s?.marks ?? []).map((m) => [m.student_id, edits[m.student_id] ?? m.status ?? "present"]),
   );
   const readOnly = !!s && s.locked && !s.can_correct;
+  const blocked = !!s && !s.saved && !!s.taken_elsewhere;
+  const frozen = readOnly || blocked || (!!s && s.saved && !changing);
   const counts = MARKS.map((m) => ({ ...m, n: Object.values(marks).filter((v) => v === m.key).length }));
 
   function set(id: number, mark: Mark) {
@@ -96,11 +101,14 @@ export default function Attendance() {
       {
         date: s.date,
         meeting_id: s.meeting_id,
+        change: s.saved,
         marks: s.marks.map((m) => ({ student_id: m.student_id, status: marks[m.student_id] ?? "present", note: m.note })),
       },
       {
         onSuccess: () => {
           setSaved(true);
+          setChanging(false);
+          setEdits({});
           qc.invalidateQueries({ queryKey: ["attendance", "report"] });
         },
       },
@@ -167,15 +175,20 @@ export default function Attendance() {
         <>
           <T variant="callout" tone="ink2">
             {s.saved && s.saved_at
-              ? `Saved by ${s.taken_by ?? "a teacher"}, ${formatDateTime(s.saved_at, tz)}. Changes are kept in the record's history.`
-              : "Not taken yet. Everyone starts as present: tap anyone who isn't."}
+              ? `Already taken by ${s.taken_by ?? "a teacher"}, ${formatDateTime(s.saved_at, tz)}. ${
+                  changing ? "Changes are kept in the record's history." : "Tap Change to edit it."}`
+              : s.taken_elsewhere
+                ? `Attendance for this subject is already taken today${
+                    s.taken_elsewhere.time ? ` (${s.taken_elsewhere.time} class)` : " (extra class)"
+                  } by ${s.taken_elsewhere.taken_by}. Open that class to change it.`
+                : "Not taken yet. Everyone starts as present: tap anyone who isn't."}
             {readOnly ? " It's been more than 48 hours, so only a coordinator can change it now." : ""}
           </T>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <T variant="calloutStrong" accessibilityLiveRegion="polite" style={{ flex: 1 }}>
               {counts.filter((c) => c.n).map((c) => `${c.n} ${c.label.toLowerCase()}`).join(" · ") || "No students"}
             </T>
-            {!readOnly && s.marks.length ? (
+            {!frozen && s.marks.length ? (
               <Button label="Everyone present" variant="secondary" style={{ minHeight: 36 }} onPress={everyonePresent} />
             ) : null}
           </View>
@@ -237,9 +250,9 @@ export default function Attendance() {
                       <Pressable
                         key={m.key}
                         accessibilityRole="radio"
-                        accessibilityState={{ checked: on, disabled: readOnly }}
+                        accessibilityState={{ checked: on, disabled: frozen }}
                         accessibilityLabel={`${m.label}, ${item.name}`}
-                        disabled={readOnly}
+                        disabled={frozen}
                         onPress={() => set(item.student_id, m.key)}
                         style={{
                           width: 36,
@@ -270,8 +283,30 @@ export default function Attendance() {
                   <Button label="Saved" icon="check" variant="secondary" style={{ flex: 1 }} disabled />
                   <Button label="Done" style={{ flex: 1 }} onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
                 </View>
+              ) : blocked ? (
+                <Button
+                  label="Open that class"
+                  variant="secondary"
+                  onPress={() => setMeetingPick(s.taken_elsewhere?.meeting_id ?? EXTRA)}
+                />
+              ) : s.saved && !changing ? (
+                <Button label="Change attendance" icon="pencil" variant="secondary" onPress={() => setChanging(true)} />
+              ) : s.saved ? (
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <Button
+                    label="Cancel"
+                    variant="secondary"
+                    style={{ flex: 1 }}
+                    onPress={() => {
+                      setEdits({});
+                      setChanging(false);
+                      save.reset();
+                    }}
+                  />
+                  <Button label="Save changes" style={{ flex: 1 }} busy={save.isPending} onPress={submit} />
+                </View>
               ) : (
-                <Button label={s.saved ? "Save changes" : "Save attendance"} busy={save.isPending} onPress={submit} />
+                <Button label="Save attendance" busy={save.isPending} onPress={submit} />
               )}
             </View>
           ) : null}

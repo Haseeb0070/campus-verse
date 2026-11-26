@@ -32,6 +32,8 @@ export interface Sheet {
   saved_at: string | null;
   locked: boolean;
   can_correct: boolean;
+  /** Not taken for this class, but another register for the subject that day blocks a new one. */
+  taken_elsewhere: { meeting_id: number | null; time: string | null; taken_by: string } | null;
   marks: { student_id: number; name: string; initials: string; status: Mark | null; note: string }[];
 }
 

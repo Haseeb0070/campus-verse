@@ -22,6 +22,8 @@ export interface Sheet {
   /** Past the 48-hour window for the teacher; a coordinator can still correct it. */
   locked: boolean;
   can_correct: boolean;
+  /** Not taken for this class, but another register for the subject that day blocks a new one. */
+  taken_elsewhere: { meeting_id: number | null; time: string | null; taken_by: string } | null;
   marks: SheetRow[];
 }
 
@@ -45,7 +47,7 @@ export function useSheet(sectionId: number, day: string, meetingId?: number, ena
 export function useSaveSheet(sectionId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { date: string; meeting_id: number | null; marks: { student_id: number; status: Mark; note: string }[] }) =>
+    mutationFn: (payload: { date: string; meeting_id: number | null; change?: boolean; marks: { student_id: number; status: Mark; note: string }[] }) =>
       apiFetch<Sheet>(`/api/attendance/sections/${sectionId}/sheet`, { method: "PUT", body: JSON.stringify(payload) }),
     onSuccess: (sheet) => {
       qc.setQueryData(["attendance", sectionId, sheet.date, sheet.meeting_id], sheet);

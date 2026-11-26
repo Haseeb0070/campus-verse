@@ -23,11 +23,16 @@ const markOn: Record<Mark, string> = {
 const field =
   "h-11 w-full rounded-control border border-transparent bg-fill px-3 text-body outline-none focus:border-accent";
 
-function Roster({ sheet, onSaved }: { sheet: Sheet; onSaved: (s: Sheet) => void }) {
+function Roster({ sheet, onSaved, onOpenOther }: {
+  sheet: Sheet; onSaved: (s: Sheet) => void; onOpenOther: (meetingId: number | null) => void;
+}) {
   // Everyone starts present; the teacher only taps the exceptions.
-  const [marks, setMarks] = useState<Record<number, Mark>>(() =>
-    Object.fromEntries(sheet.marks.map((m) => [m.student_id, m.status ?? "present"])),
-  );
+  const initial = () => Object.fromEntries(sheet.marks.map((m) => [m.student_id, m.status ?? "present"])) as Record<number, Mark>;
+  const [marks, setMarks] = useState<Record<number, Mark>>(initial);
+  // Attendance is taken once per class: a saved register opens read-only until you choose Change.
+  const [changing, setChanging] = useState(false);
+  const blocked = !sheet.saved && sheet.taken_elsewhere !== null;
+  const frozen = sheet.locked || blocked || (sheet.saved && !changing);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const counts = MARKS.map((m) => [m, Object.values(marks).filter((x) => x === m).length] as const);
@@ -39,10 +44,11 @@ function Roster({ sheet, onSaved }: { sheet: Sheet; onSaved: (s: Sheet) => void 
       const saved = await apiFetch<Sheet>(`/api/attendance/sections/${sheet.section_id}/sheet`, {
         method: "PUT",
         body: JSON.stringify({
-          date: sheet.date, meeting_id: sheet.meeting_id,
+          date: sheet.date, meeting_id: sheet.meeting_id, change: sheet.saved,
           marks: sheet.marks.map((m) => ({ student_id: m.student_id, status: marks[m.student_id] })),
         }),
       });
+      setChanging(false);
       onSaved(saved);
     } catch (err) {
       setError(errorDetail(err, "Couldn't save. Try again."));
@@ -61,7 +67,7 @@ function Roster({ sheet, onSaved }: { sheet: Sheet; onSaved: (s: Sheet) => void 
         <p className="text-footnote text-ink-2">
           {counts.filter(([, n]) => n).map(([m, n]) => `${n} ${markLabels[m].toLowerCase()}`).join(" · ")}
         </p>
-        {!sheet.locked && (
+        {!frozen && (
           <button onClick={() => setMarks(Object.fromEntries(sheet.marks.map((m) => [m.student_id, "present"])))}
             className="press h-9 rounded-full bg-fill-strong px-3.5 text-footnote font-semibold">
             Mark everyone present
@@ -77,7 +83,7 @@ function Roster({ sheet, onSaved }: { sheet: Sheet; onSaved: (s: Sheet) => void 
               {MARKS.map((mark) => {
                 const on = marks[m.student_id] === mark;
                 return (
-                  <button key={mark} role="radio" aria-checked={on} disabled={sheet.locked}
+                  <button key={mark} role="radio" aria-checked={on} disabled={frozen}
                     onClick={() => setMarks((x) => ({ ...x, [m.student_id]: mark }))}
                     className={`h-8 rounded-full px-3 text-footnote font-semibold disabled:cursor-default ${
                       on ? markOn[mark] : "text-ink-2"}`}>
@@ -93,16 +99,39 @@ function Roster({ sheet, onSaved }: { sheet: Sheet; onSaved: (s: Sheet) => void 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-divider px-1 pt-3">
         <p className="text-footnote text-ink-2">
           {sheet.saved && sheet.saved_at
-            ? `Saved by ${sheet.taken_by} ${relativeTime(sheet.saved_at)}. Changes are kept in the record's history.`
-            : "Not saved yet."}
+            ? `Already taken by ${sheet.taken_by} ${relativeTime(sheet.saved_at)}. ${
+                changing ? "Changes are kept in the record's history." : "Use Change to edit it."}`
+            : sheet.taken_elsewhere
+              ? `Attendance for this subject is already taken today${
+                  sheet.taken_elsewhere.time ? ` (${sheet.taken_elsewhere.time} class)` : " (extra class)"
+                } by ${sheet.taken_elsewhere.taken_by}.`
+              : "Not saved yet."}
           {sheet.locked && " It's more than 48 hours old: a coordinator can correct it."}
         </p>
-        {!sheet.locked && (
-          <button onClick={save} disabled={busy}
-            className="press h-11 rounded-full bg-accent px-6 text-body font-semibold text-on-accent disabled:opacity-60">
-            {busy ? "Saving…" : sheet.saved ? "Save changes" : "Save attendance"}
+        {!sheet.locked && (blocked ? (
+          <button onClick={() => onOpenOther(sheet.taken_elsewhere?.meeting_id ?? null)}
+            className="press h-11 rounded-full bg-fill-strong px-6 text-body font-semibold">
+            Open that class
           </button>
-        )}
+        ) : sheet.saved && !changing ? (
+          <button onClick={() => setChanging(true)}
+            className="press h-11 rounded-full bg-fill-strong px-6 text-body font-semibold">
+            Change attendance
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            {changing && (
+              <button onClick={() => { setMarks(initial()); setChanging(false); setError(null); }}
+                className="press h-11 rounded-full bg-fill-strong px-5 text-body font-semibold">
+                Cancel
+              </button>
+            )}
+            <button onClick={save} disabled={busy}
+              className="press h-11 rounded-full bg-accent px-6 text-body font-semibold text-on-accent disabled:opacity-60">
+              {busy ? "Saving…" : sheet.saved ? "Save changes" : "Save attendance"}
+            </button>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -222,6 +251,7 @@ function AttendanceInner() {
       {sheet.data && (
         <Roster key={`${sheet.data.section_id}-${sheet.data.date}-${sheet.data.meeting_id}-${sheet.data.saved_at}`}
           sheet={sheet.data}
+          onOpenOther={(m) => go({ meeting: m })}
           onSaved={(saved) => {
             queryClient.setQueryData(["attendance", "sheet", sectionId, day, meetingId], saved);
             queryClient.invalidateQueries({ queryKey: ["attendance", "report"] });
