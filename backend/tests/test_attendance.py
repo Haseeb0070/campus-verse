@@ -31,10 +31,10 @@ def today():
     return timezone.now().astimezone(ZoneInfo("Asia/Karachi")).date()
 
 
-def take(campus, user=None, day=None, **marks):
+def take(campus, user=None, day=None, change=False, **marks):
     people = {"ayesha": campus.ayesha.pk, "hamza": campus.hamza.pk}
     return services.save(user or campus.teacher, campus.s3b, day or today(), None,
-                         {people[k]: (v, "") for k, v in marks.items()})
+                         {people[k]: (v, "") for k, v in marks.items()}, change=change)
 
 
 def test_nothing_happens_until_the_institution_switches_it_on(campus):
@@ -52,7 +52,9 @@ def test_teachers_take_attendance_and_corrections_are_audited(enabled):
     assert {s.email: sheet["saved"][s.pk].status for s in sheet["students"]} == {
         "ayesha@test.edu": "present", "hamza@test.edu": "absent"}
 
-    take(enabled, hamza="late")  # he turned up after all
+    with pytest.raises(services.AlreadyTaken):  # a second take never overwrites the first
+        take(enabled, hamza="late")
+    take(enabled, change=True, hamza="late")  # he turned up after all
     corrected = AuditLog.objects.get(action="attendance.corrected")
     assert corrected.changes == {str(enabled.hamza.pk): ["absent", "late"]}
     record = AttendanceRecord.objects.get(student=enabled.hamza)
