@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
+import { celebrate } from "@/components/Celebrate";
 import { KeyboardAvoidingView, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -149,6 +150,7 @@ function StudentSide({ a, tz }: { a: Assignment; tz?: string }) {
           setText("");
           setFiles([]);
           setDone(true);
+          celebrate(a.window === "late" ? "Handed in (late)" : "Handed in!");
         },
         onError: (err) => setError(errorDetail(err, "Couldn't hand it in. Try again.")),
       },

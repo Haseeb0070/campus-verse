@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
+import { Stagger } from "@/components/Stagger";
 import { View } from "react-native";
 import { Icon } from "@/components/Icon";
 import { HeaderActions, Screen } from "@/components/Screen";
@@ -104,7 +105,11 @@ export default function Work() {
             }
           />
         ) : (
-          list.map((a) => <WorkCard key={a.id} a={a} tz={tz} />)
+          list.map((a, i) => (
+            <Stagger key={a.id} index={i}>
+              <WorkCard a={a} tz={tz} />
+            </Stagger>
+          ))
         )}
 
         {tab === "due" && missed.length ? (

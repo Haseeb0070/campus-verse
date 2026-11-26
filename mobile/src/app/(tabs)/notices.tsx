@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { ScrollView, View } from "react-native";
+import { Stagger } from "@/components/Stagger";
 import Animated, { LinearTransition, useReducedMotion } from "react-native-reanimated";
 import { HeaderActions, Screen } from "@/components/Screen";
 import { Button, Chip, Empty, Failed, Press, Skeleton, T } from "@/components/ui";
@@ -72,7 +73,11 @@ export default function Notices() {
             body={filter === "all" ? "Notices from your college, department and teachers appear here." : "Try another filter."}
           />
         ) : (
-          list.map((n, i) => <NoticeCard key={n.id} n={n} tz={tz} tilt={TILTS[i % TILTS.length]} />)
+          list.map((n, i) => (
+            <Stagger key={n.id} index={i}>
+              <NoticeCard n={n} tz={tz} tilt={TILTS[i % TILTS.length]} />
+            </Stagger>
+          ))
         )}
       </Board>
     </Screen>

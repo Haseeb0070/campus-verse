@@ -1,4 +1,5 @@
 import { API_URL } from "./config";
+import { messageForStatus, reportError } from "./errors";
 import { tokenStore } from "./token";
 
 export class ApiError extends Error {
@@ -34,6 +35,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   try {
     res = await fetch(`${API_URL}${path}`, { ...init, method, headers, credentials: "omit" });
   } catch {
+    reportError("Couldn't reach CampusVerse. Check your internet connection and try again.", 30_000);
     throw new ApiError(0, null); // offline, or the server is unreachable
   }
   if (res.status === 204) return undefined as T;
@@ -42,6 +44,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     // The API (not allauth's own flow endpoints) refusing our token means it expired or was
     // revoked: drop it and go back to sign-in.
     if (res.status === 401 && token && path.startsWith("/api/")) onSignedOut?.();
+    // Sign-in explains its own refusals; anything else the screen can't fix gets the pop-up.
+    const detail = body && typeof body === "object" && "detail" in body ? String((body as { detail: unknown }).detail) : null;
+    const message = path.startsWith("/_allauth") && res.status < 500 ? null : messageForStatus(res.status, detail);
+    if (message) reportError(message);
     throw new ApiError(res.status, body);
   }
   return body as T;

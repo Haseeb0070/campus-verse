@@ -16,6 +16,8 @@ import { AppState, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Intro } from "@/components/Intro";
+import { CelebrateHost } from "@/components/Celebrate";
+import { ErrorPopup } from "@/components/ErrorPopup";
 import { LiveBanner } from "@/components/LiveBanner";
 import { ApiError } from "@/lib/api";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -164,6 +166,8 @@ function Navigator() {
         </Stack.Protected>
       </Stack>
       {signedIn && <LiveBanner />}
+      <CelebrateHost />
+      <ErrorPopup />
       {/* Opening the app signed out: Verse bounces out of the splash and into the sign-in tile. */}
       {!signedIn && <Intro />}
     </>

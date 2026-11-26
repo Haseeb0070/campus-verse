@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { Alert, FlatList, Pressable, View } from "react-native";
+import { Stagger } from "@/components/Stagger";
 import { Icon, type IconName } from "@/components/Icon";
 import { StackHeader } from "@/components/StackHeader";
 import { Button, Divider, Empty, Failed, Press, Skeleton, T } from "@/components/ui";
@@ -69,9 +70,10 @@ export default function Notifications() {
           onRefresh={() => query.refetch()}
           refreshing={query.isRefetching}
           ListEmptyComponent={<Empty icon="bell" title="Nothing yet" body="Room changes, new notices, coursework and marks show up here." />}
-          renderItem={({ item: n }) => {
+          renderItem={({ item: n, index }) => {
             const linked = appRoute(n.link) !== null;
             return (
+              <Stagger index={index}>
               <Press
                 scaleTo={0.99}
                 accessibilityRole={linked ? "button" : undefined}
@@ -105,6 +107,7 @@ export default function Notifications() {
                 </View>
                 {!n.read ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: p.accent, marginTop: 8 }} /> : null}
               </Press>
+              </Stagger>
             );
           }}
         />

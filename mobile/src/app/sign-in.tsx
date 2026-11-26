@@ -1,6 +1,15 @@
-import { type ComponentRef, useRef, useState } from "react";
+import { type ComponentRef, useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Pressable, ScrollView, TextInput, View } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LogoGlyph } from "@/components/Logo";
 import { Button, Field, T } from "@/components/ui";
@@ -27,6 +36,17 @@ export default function SignIn() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Exaggeration: each new error shakes, a firm "no" that can't be missed (and a buzz).
+  const shake = useSharedValue(0);
+  const reduce = useReducedMotion();
+  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
+  useEffect(() => {
+    if (!error) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    if (reduce) return;
+    const t = (v: number) => withTiming(v, { duration: 70 });
+    shake.set(withSequence(t(-9), t(8), t(-5), t(3), t(0)));
+  }, [error, reduce, shake]);
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
   // Which field has focus, for Verse: it reads along the email and looks away from the password.
   const [focus, setFocus] = useState<"email" | "password" | "other" | null>(null);
@@ -225,11 +245,11 @@ export default function SignIn() {
           )}
 
           {error ? (
-            <View accessibilityLiveRegion="assertive" style={{ backgroundColor: paper.dangerSoft, borderRadius: radius.md, padding: 12 }}>
+            <Animated.View accessibilityLiveRegion="assertive" style={[{ backgroundColor: paper.dangerSoft, borderRadius: radius.md, padding: 12 }, shakeStyle]}>
               <T variant="callout" style={{ color: paper.danger }}>
                 {error}
               </T>
-            </View>
+            </Animated.View>
           ) : null}
 
           {step !== "resetSent" ? (
