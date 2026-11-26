@@ -208,9 +208,12 @@ function useWalk(
     let tipSide: "left" | "right" | null = null;
     let isMoving = false;
     let faces: 1 | -1 = -1;
+    // Arcs: a walk rises a little in the middle and lands at the end, instead of a straight slide.
+    let walkLen = 0;
+    let lift = 0;
 
     const place = () => {
-      el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      el.style.transform = `translate3d(${x.toFixed(1)}px, ${(y + lift).toFixed(1)}px, 0)`;
     };
     const show = (v: boolean) => v !== isShown && setShown((isShown = v));
     const tip = (v: "left" | "right" | null) => v !== tipSide && setSide((tipSide = v));
@@ -240,6 +243,7 @@ function useWalk(
       if (Math.hypot(dx, dy) < 0.6) {
         x = tx;
         y = ty;
+        lift = 0;
         place();
         frame = 0;
         clearTimeout(settle);
@@ -250,6 +254,8 @@ function useWalk(
       const k = Math.min(0.2, 14 / Math.hypot(dx, dy));
       x += dx * k;
       y += dy * k;
+      const done = walkLen > 30 ? 1 - Math.hypot(tx - x, ty - y) / walkLen : 1;
+      lift = -Math.sin(Math.max(0, Math.min(1, done)) * Math.PI) * Math.min(36, walkLen * 0.12);
       place();
       frame = requestAnimationFrame(step);
     };
@@ -278,6 +284,7 @@ function useWalk(
       }
       tx = spot.x;
       ty = spot.y;
+      walkLen = Math.hypot(tx - x, ty - y);
       tip(null); // the tip waits until Verse arrives
       const dx = tx - x;
       if (Math.abs(dx) > 6) {

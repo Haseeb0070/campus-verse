@@ -83,14 +83,14 @@ export default function RequestsPage() {
         ) : waiting.length === 0 ? (
           <p className="py-3 text-body text-ink-2">Nothing right now.</p>
         ) : (
-          <ul>{waiting.map((r) => <RequestCard key={r.id} r={r} />)}</ul>
+          <ul className="stagger">{waiting.map((r) => <RequestCard key={r.id} r={r} />)}</ul>
         )}
       </section>
 
       {rest.length > 0 && (
         <section aria-labelledby="recent-h" className="glass rounded-card px-5 py-3">
           <h2 id="recent-h" className="pt-2 text-headline font-semibold">Recent</h2>
-          <ul>{rest.map((r) => <RequestCard key={r.id} r={r} />)}</ul>
+          <ul className="stagger">{rest.map((r) => <RequestCard key={r.id} r={r} />)}</ul>
         </section>
       )}
     </div>

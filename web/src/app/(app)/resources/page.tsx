@@ -68,7 +68,7 @@ function CourseGroup({ items }: { items: Resource[] }) {
           {first.course_code} · {first.term}
         </span>
       </h2>
-      <ul>
+      <ul className="stagger">
         {items.map((r) => (
           <ResourceRow key={r.id} r={r} />
         ))}

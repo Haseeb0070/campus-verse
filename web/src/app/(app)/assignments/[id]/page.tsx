@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { Celebrate } from "@/components/celebrate";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -130,6 +131,7 @@ function StudentPanel({ a, tz }: { a: Assignment; tz?: string }) {
   const [fileKey, setFileKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
 
   const used = a.my_attempts ?? 0;
   const left = a.max_attempts - used;
@@ -155,6 +157,7 @@ function StudentPanel({ a, tz }: { a: Assignment; tz?: string }) {
       setText("");
       setFiles([]);
       setFileKey((k) => k + 1);
+      setCelebrating(true);
       await queryClient.invalidateQueries({ queryKey: ["assignments"] });
     } catch (err) {
       setError(errorDetail(err, "Couldn't submit. Check your connection and try again."));
@@ -165,6 +168,9 @@ function StudentPanel({ a, tz }: { a: Assignment; tz?: string }) {
 
   return (
     <>
+      {celebrating && (
+        <Celebrate message={a.window === "late" ? "Handed in (late)" : "Handed in!"} onDone={() => setCelebrating(false)} />
+      )}
       {a.my_grade && (
         <section aria-labelledby="grade-h" className="glass rounded-card p-6">
           <h2 id="grade-h" className="text-headline font-semibold">Your grade</h2>

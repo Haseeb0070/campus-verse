@@ -231,7 +231,7 @@ export default function CalendarPage() {
             {(byDay.get(selected) ?? []).length === 0 ? (
               <p className="px-3 pb-3 text-body text-ink-2">{loading ? "Loading…" : "Nothing on this day."}</p>
             ) : (
-              <ul>{(byDay.get(selected) ?? []).map((it) => <ItemRow key={it.key} item={it} tz={tz} />)}</ul>
+              <ul className="stagger">{(byDay.get(selected) ?? []).map((it) => <ItemRow key={it.key} item={it} tz={tz} />)}</ul>
             )}
           </section>
         </>
@@ -249,7 +249,7 @@ export default function CalendarPage() {
               <h2 className="px-3 pt-2 pb-1 text-headline font-semibold">
                 {d === today ? "Today" : formatDay(d, { weekday: "long", day: "numeric", month: "long" })}
               </h2>
-              <ul>{byDay.get(d)!.map((it) => <ItemRow key={it.key} item={it} tz={tz} />)}</ul>
+              <ul className="stagger">{byDay.get(d)!.map((it) => <ItemRow key={it.key} item={it} tz={tz} />)}</ul>
             </section>
           ))}
         </>

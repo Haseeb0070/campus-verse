@@ -84,7 +84,7 @@ export default function AssignmentsPage() {
         .map(([title, items]) => (
           <section key={title} aria-label={title} className="glass rounded-card p-4">
             <h2 className="mb-1 px-3 pt-1 text-headline font-semibold">{title}</h2>
-            <ul className="flex flex-col">
+            <ul className="stagger flex flex-col">
               {items.map((a) => (
                 <Row key={a.id} a={a} tz={tz} />
               ))}

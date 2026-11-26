@@ -256,7 +256,9 @@ export function Thread({ conversationId }: { conversationId: number }) {
                   message={m}
                   mine={mine}
                   seen={seen}
-                  animate={m.pending || new Date(m.created_at).getTime() > openedAt}
+                  // Frequency: your own messages (sent many times a day) appear at once; only new
+                  // messages from others arrive with a settle, so they get noticed.
+                  animate={!mine && new Date(m.created_at).getTime() > openedAt}
                   showSender={!grouped && !mine}
                   canDelete={Boolean(canDelete)}
                   confirming={confirmingDelete === m.id}

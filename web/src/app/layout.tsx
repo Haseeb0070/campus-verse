@@ -5,6 +5,7 @@ import "@fontsource-variable/newsreader";
 import "./globals.css";
 import { BOOT_SCRIPT, DEFAULT_THEME_KEY, themeCss } from "@/lib/theme";
 import { Providers } from "./providers";
+import { ErrorPopup } from "@/components/error-popup";
 import { ServerWake } from "@/components/server-wake";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <Providers>{children}</Providers>
         <ServerWake />
+        <ErrorPopup />
       </body>
     </html>
   );

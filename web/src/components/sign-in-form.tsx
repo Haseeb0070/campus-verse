@@ -22,7 +22,13 @@ export function SignInForm({ initialEmail = "", next }: { initialEmail?: string;
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormErrorRaw] = useState<string | null>(null);
+  // Each new error replays the shake (exaggeration: a firm "no" that can't be missed).
+  const [shakes, setShakes] = useState(0);
+  const setFormError = (message: string | null) => {
+    setFormErrorRaw(message);
+    if (message) setShakes((n) => n + 1);
+  };
   const [pending, setPending] = useState(false);
   const [step, setStep] = useState<"password" | "code" | "forgot" | "sent">("password");
   const [code, setCode] = useState("");
@@ -85,7 +91,7 @@ export function SignInForm({ initialEmail = "", next }: { initialEmail?: string;
   const inputClass =
     "h-11 w-full rounded-control border bg-fill px-4 text-body outline-none transition-colors focus:border-accent";
   const errorBox = formError && (
-    <p role="alert" className="rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">
+    <p key={shakes} role="alert" className="shake rounded-row bg-danger/10 px-4 py-3 text-footnote font-medium text-danger-ink">
       {formError}
     </p>
   );

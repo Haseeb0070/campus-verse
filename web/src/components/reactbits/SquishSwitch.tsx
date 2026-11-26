@@ -157,8 +157,12 @@ const SquishSwitch: React.FC<SquishSwitchProps> = ({
     }
     if (!g.moved && Math.abs(e.clientX - g.startX) > g.slop) g.moved = true;
     if (!g.moved) return;
-    const nx = clamp(lx - g.grab, min, max);
-    x.set(nx);
+    const raw = lx - g.grab;
+    const nx = clamp(raw, min, max);
+    // Rubber band: past an end the thumb follows with growing resistance (at most 6 px), then
+    // springs back on release (CampusVerse).
+    const over = raw - nx;
+    x.set(nx + Math.sign(over) * Math.min(6, Math.abs(over) * 0.3));
     commit(nx > mid);
   };
   const up = (e: { pointerId: number; currentTarget: HTMLButtonElement }, cancelled: boolean) => {

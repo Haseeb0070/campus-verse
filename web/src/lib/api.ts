@@ -1,3 +1,4 @@
+import { messageForStatus, reportError } from "./errors";
 import { isSleepingReply, wakeServer } from "./wake";
 
 export class ApiError extends Error {
@@ -25,7 +26,13 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
   if (method !== "GET" && method !== "HEAD") headers.set("X-CSRFToken", csrfToken());
 
-  let res = await fetch(path, { ...init, method, headers, credentials: "same-origin" });
+  let res: Response;
+  try {
+    res = await fetch(path, { ...init, method, headers, credentials: "same-origin" });
+  } catch (err) {
+    reportError("Couldn't reach CampusVerse. Check your internet connection and try again.", 30_000);
+    throw err;
+  }
   // A sleeping API: the request never reached Django, so it's safe to send again once it's up.
   if (isSleepingReply(res)) {
     const giveUp = Date.now() + 120_000;
@@ -37,7 +44,14 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
   if (res.status === 204) return undefined as T;
   const body = res.headers.get("content-type")?.includes("json") ? await res.json() : null;
-  if (!res.ok) throw new ApiError(res.status, body);
+  if (!res.ok) {
+    // Sign-in screens explain their own refusals; everything else that the page can't fix
+    // (a refusal, too many tries, a server error) also gets the error pop-up.
+    const detail = body && typeof body === "object" && "detail" in body ? String((body as { detail: unknown }).detail) : null;
+    const message = path.startsWith("/_allauth") && res.status < 500 ? null : messageForStatus(res.status, detail);
+    if (message) reportError(message);
+    throw new ApiError(res.status, body);
+  }
   return body as T;
 }
 

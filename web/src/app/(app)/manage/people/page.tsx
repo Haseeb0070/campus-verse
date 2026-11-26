@@ -71,7 +71,7 @@ export default function PeoplePage() {
       <section aria-label="People" className="glass rounded-card p-3">
         {people.isPending && <p className="p-3 text-body text-ink-2">Loading…</p>}
         {people.data?.length === 0 && <p className="p-3 text-body text-ink-2">No one matches.</p>}
-        <ul className="flex flex-col">
+        <ul className="stagger flex flex-col">
           {people.data?.map((p) => (
             <PersonRow key={p.id} person={p} />
           ))}

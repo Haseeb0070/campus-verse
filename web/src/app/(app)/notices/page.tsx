@@ -57,7 +57,7 @@ export default function NoticesPage() {
           <h2 id="mine-h" className="mb-2 px-1 text-headline font-semibold">
             Your notices
           </h2>
-          <ul className="flex flex-col gap-1">
+          <ul className="stagger flex flex-col gap-1">
             {mine.data?.map((n) => <MyNoticeRow key={n.id} notice={n} />)}
           </ul>
         </section>

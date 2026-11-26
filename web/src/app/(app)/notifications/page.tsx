@@ -124,7 +124,7 @@ export default function NotificationsPage() {
         .map(([title, list]) => (
           <section key={title} aria-label={title} className="glass rounded-card p-3">
             <h2 className="px-3 pt-2 pb-1 text-headline font-semibold">{title}</h2>
-            <ul>
+            <ul className="stagger">
               {list.map((n) => {
                 const Icon = icons[n.kind] ?? BellIcon;
                 return (

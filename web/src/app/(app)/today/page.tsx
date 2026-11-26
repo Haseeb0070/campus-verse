@@ -260,7 +260,7 @@ function ClassToday() {
                 Your next one is shown above.
               </EmptyNote>
             )}
-            <ul className="flex flex-col gap-1 p-2">
+            <ul className="stagger flex flex-col gap-1 p-2">
               {todays.map((occ) => (
                 <ClassRow
                   key={`${occ.meeting_id}-${occ.date}-${occ.status}`}
@@ -299,7 +299,7 @@ function ClassToday() {
                 {teaching ? "New hand-ins show up here." : "Nothing to hand in right now. Enjoy the breathing room."}
               </EmptyNote>
             )}
-            <ul className="divide-y divide-divider">
+            <ul className="stagger divide-y divide-divider">
               {work.slice(0, 4).map((a) => (
                 <li key={a.id}>
                   <Link href={`/assignments/${a.id}`} className="flex flex-col gap-1 px-5 py-3.5 hover:bg-fill">
@@ -437,7 +437,7 @@ function RecentChats({ myId }: { myId?: number }) {
           .
         </EmptyNote>
       )}
-      <ul className="flex flex-col gap-0.5 p-2">
+      <ul className="stagger flex flex-col gap-0.5 p-2">
         {list.map((c) => (
           <li key={c.id}>
             <ConversationRow conversation={c} myId={myId} arriving={arrived(c.last_message?.id)} />
@@ -453,7 +453,7 @@ function NoticesCard() {
   return (
     <Card title="Notices" query={notices} link={{ href: "/notices", label: "All notices" }}>
       {notices.data?.length === 0 && <p className="px-5 py-4 text-body text-ink-2">No notices for you yet.</p>}
-      <ul className="divide-y divide-divider">
+      <ul className="stagger divide-y divide-divider">
         {notices.data?.map((n) => (
           <li key={n.id}>
             <Link href={`/notices#notice-${n.id}`} className="flex items-start gap-3 px-5 py-3.5 hover:bg-fill">
