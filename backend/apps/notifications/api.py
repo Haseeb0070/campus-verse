@@ -89,6 +89,7 @@ def mark_read(request, payload: ReadIn):
 class DeviceIn(Schema):
     token: str
     platform: str = ""
+    sound: bool | None = None  # the app's "Play a sound" switch for this phone
 
 
 @router.post("/devices", response={204: None, 422: ErrorOut})
@@ -98,7 +99,7 @@ def register_device(request, payload: DeviceIn):
 
     if not push.valid_token(payload.token):
         return Status(422, {"detail": "That isn't an Expo push token."})
-    push.register(request.user, payload.token, payload.platform)
+    push.register(request.user, payload.token, payload.platform, payload.sound)
     return Status(204, None)
 
 

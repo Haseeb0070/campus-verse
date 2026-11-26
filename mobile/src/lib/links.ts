@@ -49,6 +49,22 @@ export function appRoute(link: string): Href | null {
       return Number.isFinite(id) && id > 0 ? { pathname: "/subjects/[id]", params: { id: String(id) } } : "/subjects";
     case "moderation":
       return "/moderation";
+    case "attendance":
+      return "/attendance";
+    case "manage": {
+      // "/manage/people?q=…", "/manage/academic/sections/4", "/manage/department/reports"…
+      const rest = parts.slice(1);
+      const tail = Number(rest[2]);
+      if (rest[0] === "academic" && (rest[1] === "sections" || rest[1] === "cohorts") && tail > 0) {
+        return rest[1] === "sections"
+          ? { pathname: "/manage/academic/sections/[id]", params: { id: String(tail) } }
+          : { pathname: "/manage/academic/cohorts/[id]", params: { id: String(tail) } };
+      }
+      const known = ["people", "requests", "audit", "import", "reports", "theme", "academic", "department/people", "department/reports"];
+      const sub = rest.slice(0, 2).join("/");
+      const hit = known.find((k) => sub === k || rest[0] === k);
+      return (hit ? `/manage/${hit}` : "/manage") as Href;
+    }
     default:
       return null;
   }

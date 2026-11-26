@@ -144,6 +144,18 @@ function Navigator() {
           <Stack.Screen name="requests" />
           <Stack.Screen name="security" />
           <Stack.Screen name="moderation" />
+          <Stack.Screen name="manage/index" />
+          <Stack.Screen name="manage/people" />
+          <Stack.Screen name="manage/requests" />
+          <Stack.Screen name="manage/audit" />
+          <Stack.Screen name="manage/import" />
+          <Stack.Screen name="manage/reports" />
+          <Stack.Screen name="manage/theme" />
+          <Stack.Screen name="manage/department/people" />
+          <Stack.Screen name="manage/department/reports" />
+          <Stack.Screen name="manage/academic/index" />
+          <Stack.Screen name="manage/academic/cohorts/[id]" />
+          <Stack.Screen name="manage/academic/sections/[id]" />
           <Stack.Screen name="search" options={{ animation: "fade" }} />
           <Stack.Screen name="new-chat" options={{ presentation: "modal" }} />
         </Stack.Protected>

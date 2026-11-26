@@ -31,8 +31,9 @@ export interface Room {
   building: string;
 }
 
-export function useSheet(sectionId: number, day: string, meetingId?: number) {
+export function useSheet(sectionId: number, day: string, meetingId?: number, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: ["attendance", sectionId, day, meetingId ?? null],
     queryFn: () =>
       apiFetch<Sheet>(

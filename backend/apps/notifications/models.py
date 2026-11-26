@@ -81,6 +81,8 @@ class PushDevice(models.Model):
     )
     token = models.CharField(max_length=200, unique=True)
     platform = models.CharField(max_length=16, blank=True)  # "android" or "ios"
+    # The person's "Play a sound" switch in the app, for this phone. Off: pushes arrive silently.
+    sound = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_seen_at = models.DateTimeField(auto_now=True)
 

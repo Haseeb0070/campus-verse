@@ -254,6 +254,7 @@ export function DateTimeField({
   error,
   withTime = true,
   minDate,
+  maxDate,
 }: {
   label: string;
   value: Date;
@@ -261,6 +262,8 @@ export function DateTimeField({
   error?: string | null;
   withTime?: boolean;
   minDate?: Date;
+  /** The last day that can be picked (e.g. today, for a register). */
+  maxDate?: Date;
 }) {
   const p = useTheme();
   const [open, setOpen] = useState(false);
@@ -283,6 +286,7 @@ export function DateTimeField({
     ];
   }, [month]);
   const floor = minDate ? new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate()) : null;
+  const ceiling = maxDate ? new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate()) : null;
 
   const setDay = (d: Date) => {
     const next = new Date(draft);
@@ -362,7 +366,7 @@ export function DateTimeField({
               if (!d) return <View key={`e${i}`} style={{ width: `${100 / 7}%`, height: 42 }} />;
               const on = sameDay(d, draft);
               const today = sameDay(d, new Date());
-              const off = !!floor && d < floor;
+              const off = (!!floor && d < floor) || (!!ceiling && d > ceiling);
               return (
                 <View key={d.getDate()} style={{ width: `${100 / 7}%`, height: 42, alignItems: "center", justifyContent: "center" }}>
                   <Pressable

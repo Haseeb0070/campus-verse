@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { useTheme } from "@/theme";
+import { AskVerse } from "./AskVerse";
 import { type Gesture, Verse, type VerseHandle } from "./Verse";
 
 /*
@@ -13,7 +14,8 @@ import { type Gesture, Verse, type VerseHandle } from "./Verse";
  *   - every few seconds a little something: a look at the title, a look at you, a hop, a nod, a
  *     head tilt, now and then a twirl;
  *   - a new notification: a jump, then it keeps glancing over at the bell until they're read;
- *   - tapped: a happy reaction (a different one each time) and a buzz.
+ *   - tapped: a happy reaction (a different one each time) and a buzz, and, when the admins have
+ *     the guide on in the app (Manage → Theme), it asks what you want to know (AskVerse).
  */
 
 export const HEADER_VERSE = 48;
@@ -48,6 +50,7 @@ export function HeaderVerse({ mood = "calm", unread }: { mood?: string; unread: 
   const [trick, setTrick] = useState<Trick | null>(null);
   const until = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const taps = useRef(0);
+  const [asking, setAsking] = useState(false);
 
   const play = (t: Trick) => {
     clearTimeout(until.current);
@@ -96,19 +99,29 @@ export function HeaderVerse({ mood = "calm", unread }: { mood?: string; unread: 
   const lookAt: [number, number] = trick?.look ?? [-0.7, -0.2]; // otherwise it reads the title
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${p.guide.name}, your guide`}
-      accessibilityHint="Says hello"
-      hitSlop={8}
-      onPress={() => {
-        play(TAPS[taps.current++ % TAPS.length]);
-        Haptics.selectionAsync().catch(() => {});
-      }}
-      // Standing on the title's baseline rather than below its descenders.
-      style={{ width: HEADER_VERSE, height: HEADER_VERSE, marginBottom: 4 }}
-    >
-      <Verse ref={verse} size={HEADER_VERSE} state={state} lookAt={lookAt} />
-    </Pressable>
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${p.guide.name}, your guide`}
+        accessibilityHint={p.guide.inApp ? "Asks what you want to know" : "Says hello"}
+        hitSlop={8}
+        onPress={() => {
+          play(TAPS[taps.current++ % TAPS.length]);
+          Haptics.selectionAsync().catch(() => {});
+          if (p.guide.inApp) setAsking(true);
+        }}
+        // Standing on the title's baseline rather than below its descenders.
+        style={{ width: HEADER_VERSE, height: HEADER_VERSE, marginBottom: 4 }}
+      >
+        <Verse ref={verse} size={HEADER_VERSE} state={state} lookAt={lookAt} />
+      </Pressable>
+      {p.guide.inApp ? (
+        <AskVerse
+          visible={asking}
+          onClose={() => setAsking(false)}
+          onAnswer={(a) => play({ gesture: "bounce", state: a.mood ?? "happy", look: [0, 0], ms: 2000 })}
+        />
+      ) : null}
+    </>
   );
 }

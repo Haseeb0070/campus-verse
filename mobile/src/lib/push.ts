@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import { AppState, Platform } from "react-native";
 import { apiFetch } from "./api";
 import { appRoute } from "./links";
+import { soundOn, soundReady } from "./sound";
 
 /**
  * Phone push notifications. After sign-in the app asks once for permission, gets this phone's
@@ -18,14 +19,18 @@ import { appRoute } from "./links";
  * the in-app notifications still work.
  */
 
-// While the app is open, the in-app banner (LiveBanner) already shows new notifications.
+// While the app is open, the in-app banner (LiveBanner) already shows new notifications; the
+// phone's notification sound still plays, unless "Play a sound" is off in Profile.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: AppState.currentState !== "active",
-    shouldShowList: true,
-    shouldPlaySound: AppState.currentState !== "active",
-    shouldSetBadge: false,
-  }),
+  handleNotification: async () => {
+    await soundReady;
+    return {
+      shouldShowBanner: AppState.currentState !== "active",
+      shouldShowList: true,
+      shouldPlaySound: soundOn(),
+      shouldSetBadge: false,
+    };
+  },
 });
 
 let registered: string | null = null;
@@ -48,17 +53,26 @@ export async function registerForPush(): Promise<void> {
         name: "CampusVerse",
         importance: AndroidImportance.HIGH,
       });
+      // Where the server sends pushes when "Play a sound" is off.
+      await Notifications.setNotificationChannelAsync("quiet", {
+        name: "CampusVerse (silent)",
+        importance: AndroidImportance.HIGH,
+        sound: null,
+        enableVibrate: false,
+      });
     }
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== "granted") ({ status } = await Notifications.requestPermissionsAsync());
     if (status !== "granted") return;
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: id });
-    if (token === registered) return;
+    await soundReady;
+    const key = `${token}|${soundOn()}`;
+    if (key === registered) return;
     await apiFetch("/api/notifications/devices", {
       method: "POST",
-      body: JSON.stringify({ token, platform: Platform.OS }),
+      body: JSON.stringify({ token, platform: Platform.OS, sound: soundOn() }),
     });
-    registered = token;
+    registered = key;
   } catch {
     // No network, no Firebase setup, or permission trouble: try again next start.
   }
@@ -67,7 +81,7 @@ export async function registerForPush(): Promise<void> {
 /** Signing out: this phone stops getting the person's notifications. Call before the token goes. */
 export async function unregisterForPush(): Promise<void> {
   if (!registered) return;
-  const token = registered;
+  const token = registered.split("|")[0];
   registered = null;
   await apiFetch("/api/notifications/devices/remove", {
     method: "POST",

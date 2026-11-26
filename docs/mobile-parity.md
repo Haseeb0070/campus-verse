@@ -7,7 +7,7 @@ session and is left alone here.
 Status: **Have** = mobile already does it · **Gap** = missing · **Built** = added in this pass ·
 **Skip** = left out on purpose (reason given).
 
-**Status (26 Nov 2026): every gap below is built.** `npx tsc --noEmit` passes in `mobile/`, the full web bundle builds, and the forms were tried in Expo web against a local demo API (create + mark an assignment end to end; the other screens rendered with data). Not yet tried on a phone build.
+**Status (26 Nov 2026): every gap below is built, including the second pass (batch 7) for admin, attendance, the guide and sound.** `npx tsc --noEmit` passes in `mobile/`, the full web bundle builds, and the forms were tried in Expo web against a local demo API (create + mark an assignment end to end; the other screens rendered with data). Not yet tried on a phone build.
 
 ## Already on mobile
 
@@ -73,14 +73,31 @@ Status: **Have** = mobile already does it · **Gap** = missing · **Built** = ad
 | Ask an admin to fix your record | all | `profile/page.tsx` `CorrectionsCard` | Built: Profile → Your record |
 | Name your guide (Verse) | all | `profile/page.tsx` `GuideNameCard` | Built: Profile → Your guide (when the college allows it) |
 
+### Batch 7: what was skipped before (second pass, 26 Nov 2026)
+| Feature | Role | Web | Mobile status |
+|---|---|---|---|
+| Manage hub: overview, needs attention, recent changes | admin, coordinator | `manage/page.tsx`, `manage/layout.tsx` | Built: `manage/index.tsx` (Profile → Manage / Department) |
+| People: search, invite, roles, reset password / two-step, deactivate, CSV | admin | `manage/people` | Built: `manage/people.tsx` |
+| Sections & subjects: terms, sections, subjects, courses, departments, programs, CR/GR, enrolment | admin, coordinator | `manage/academic/**` | Built: `manage/academic/index.tsx`, `cohorts/[id].tsx`, `sections/[id].tsx` |
+| Department people and report | coordinator | `manage/department/*` | Built: `manage/department/people.tsx`, `reports.tsx` |
+| Imports & sync (upload, review, apply, sources) | admin | `manage/import` | Built: `manage/import.tsx` |
+| Reports | admin | `manage/reports` | Built: `manage/reports.tsx` |
+| Record correction requests | admin | `manage/requests` | Built: `manage/requests.tsx` |
+| Audit log | admin | `manage/audit` | Built: `manage/audit.tsx` |
+| Theme (presets, own colours, cards, corners, guide) | admin | `manage/theme` | Built: `manage/theme.tsx`, with a light/dark preview instead of recolouring the app while editing |
+| Attendance: pick subject, day, class or extra class; everyone present; term summary + Excel; CR/GR | teacher, CR/GR | `attendance/page.tsx` | Built: `attendance.tsx` works on its own now (Work → Teaching → Attendance, Profile → Take attendance), still opens from a class |
+| Ask the guide (questions by role, answers from your data) | all | `helper/helper.tsx`, `answers.tsx` | Built: tap Verse in a tab's title → `components/verse/AskVerse.tsx`; follows "Guide in the app" |
+| Notification sound on/off | all | `profile` `SoundRow` | Built: Profile → Notifications → Play a sound. Kept on the phone and sent with its push registration; the server sends silent pushes (Android "quiet" channel) when off |
+
+Also in this pass:
+- **Card border, light and dark apart.** `card_borders` (light) and a new `card_borders_dark` (dark; follows the light one for themes saved before). Two switches in Manage → Theme on the website and the app; the website's CSS and the app's palette read each for its own mode.
+- **Website sidebar shrinks to icons.** A button beside the logo (or Ctrl/⌘ + \) narrows it to icons with tooltips and badges; remembered on the device.
+
 ## Deliberately skipped
 | Feature | Why |
 |---|---|
-| `manage/*` (people, academic structure, import, audit, reports, theme, requests) | Admin-only, out of scope. |
-| Attendance sheet | Another session is changing attendance now. |
-| Helper Q&A panel in the corner | Web desktop widget; on mobile Verse already reacts in the header. |
-| Message sound toggle | Web only; phones use the system's notification sound. |
-| Appearance toggle details beyond light/dark | Mobile already follows its own setting. |
+| The guide's animated pointer-following and tickling | Desktop-pointer play; on the phone Verse already reacts in the header. |
+| A test chime button | The app has no audio library; it plays the phone's own notification sound. |
 
 ## Shared pieces added
 - `mobile/src/components/form.tsx`: themed `Sheet`, `DateTimeField` (month grid + hour/minute chips, no native picker), `ChoiceField` (chips in place of a select), `Stepper`, `SwitchRow`, `TextArea`, `FormError`.

@@ -213,10 +213,25 @@ export default function ThemeSettings() {
         </div>
         <span className="flex flex-wrap items-center justify-between gap-3 text-body font-medium">
           <span>
-            Border around cards
-            <span className="block text-footnote font-normal text-ink-2">A thin line around each card</span>
+            Border around cards in light mode
+            <span className="block text-footnote font-normal text-ink-2">A thin line around each card on light pages</span>
           </span>
-          <Switch checked={draft.card_borders !== false} onChange={(v) => set({ card_borders: v })} label="Border around cards" />
+          <Switch
+            checked={draft.card_borders !== false}
+            onChange={(v) => set({ card_borders: v })}
+            label="Border around cards in light mode"
+          />
+        </span>
+        <span className="flex flex-wrap items-center justify-between gap-3 text-body font-medium">
+          <span>
+            Border around cards in dark mode
+            <span className="block text-footnote font-normal text-ink-2">Set on its own: a line that suits light pages can be loud on dark</span>
+          </span>
+          <Switch
+            checked={(draft.card_borders_dark ?? draft.card_borders) !== false}
+            onChange={(v) => set({ card_borders_dark: v })}
+            label="Border around cards in dark mode"
+          />
         </span>
         <span className="flex flex-wrap items-center justify-between gap-3 text-body font-medium">
           <span>

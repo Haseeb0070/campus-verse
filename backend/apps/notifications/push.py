@@ -21,12 +21,13 @@ def valid_token(token: str) -> bool:
     return bool(TOKEN.match(token or ""))
 
 
-def register(user, token: str, platform: str = "") -> PushDevice:
+def register(user, token: str, platform: str = "", sound: bool | None = None) -> PushDevice:
     """Remember this phone for this person. A token already known (someone else signed in on
-    the phone before) moves to them."""
-    device, _ = PushDevice.objects.update_or_create(
-        token=token, defaults={"user": user, "platform": platform[:16]}
-    )
+    the phone before) moves to them. `sound` is the app's "Play a sound" switch; None keeps it."""
+    defaults = {"user": user, "platform": platform[:16]}
+    if sound is not None:
+        defaults["sound"] = sound
+    device, _ = PushDevice.objects.update_or_create(token=token, defaults=defaults)
     return device
 
 
@@ -42,7 +43,8 @@ def send(user_ids: list[int], *, title: str, body: str, link: str, kind: str) ->
     """Push one notification to every phone of these people. Returns how many were accepted."""
     if not getattr(settings, "CAMPUSVERSE_PUSH_ENABLED", True):
         return 0
-    tokens = list(PushDevice.objects.filter(user_id__in=user_ids).values_list("token", flat=True))
+    devices = dict(PushDevice.objects.filter(user_id__in=user_ids).values_list("token", "sound"))
+    tokens = list(devices)
     if not tokens:
         return 0
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -58,8 +60,8 @@ def send(user_ids: list[int], *, title: str, body: str, link: str, kind: str) ->
                 "title": title[:200],
                 "body": body[:300],
                 "data": {"link": link, "kind": kind},
-                "sound": "default",
-                "channelId": "default",
+                # A phone with sound turned off gets it silently (Android: the app's quiet channel).
+                **({"sound": "default", "channelId": "default"} if devices[t] else {"channelId": "quiet"}),
             }
             for t in batch
         ]

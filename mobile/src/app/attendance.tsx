@@ -1,12 +1,18 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { DownloadRow } from "@/components/files";
+import { ChoiceField, DateTimeField } from "@/components/form";
 import { StackHeader } from "@/components/StackHeader";
-import { Avatar, Button, Failed, Skeleton, T } from "@/components/ui";
+import { Avatar, Button, Card, Empty, Failed, Skeleton, T } from "@/components/ui";
 import { errorDetail } from "@/lib/api";
-import { formatDateTime, formatDay } from "@/lib/format";
-import { useMe } from "@/lib/queries";
+import { dayToDate, isoDay, useReport } from "@/lib/attendance";
+import { useTeaching } from "@/lib/coursework";
+import { formatDateTime, formatDay, formatTime, todayIn } from "@/lib/format";
+import { useMe, useTimetable } from "@/lib/queries";
+import { useRepsMine } from "@/lib/reps";
 import { type Mark, useSaveSheet, useSheet } from "@/lib/teaching";
 import { font, radius, useTheme } from "@/theme";
 
@@ -17,19 +23,54 @@ const MARKS: { key: Mark; short: string; label: string }[] = [
   { key: "excused", short: "E", label: "Excused" },
 ];
 
-/** Take a class's attendance: everyone starts present, tap anyone who isn't, then save. */
+/** "Extra class": a register for a class that isn't on the timetable. */
+const EXTRA = 0;
+
+/**
+ * Take a class's attendance: pick the subject, day and class (or arrive from a class with them
+ * set), everyone starts present, tap anyone who isn't, then save. Teachers also see the term
+ * summary for the subject. A CR or GR takes attendance for their own class's subjects.
+ */
 export default function Attendance() {
-  const { section, date, meeting } = useLocalSearchParams<{ section: string; date: string; meeting?: string }>();
-  const sectionId = Number(section);
-  const meetingId = meeting ? Number(meeting) : undefined;
+  const params = useLocalSearchParams<{ section?: string; date?: string; meeting?: string }>();
   const p = useTheme();
   const insets = useSafeAreaInsets();
-  const tz = useMe().data?.institution?.timezone;
-  const sheet = useSheet(sectionId, date, meetingId);
-  const save = useSaveSheet(sectionId);
+  const qc = useQueryClient();
+  const me = useMe().data;
+  const tz = me?.institution?.timezone;
+  const today = todayIn(tz);
+  const student = me?.kind === "student";
+  const teaching = useTeaching(!!me && !student);
+  const reps = useRepsMine(student).data;
+  const sections = student
+    ? (me?.sections ?? [])
+        .filter((s) => reps?.sections[String(s.id)])
+        .map((s) => ({ id: s.id, course_code: s.course_code, code: s.code }))
+    : (teaching.data ?? []).map((s) => ({ id: s.id, course_code: s.course_code, code: s.code }));
+
+  const [picked, setPicked] = useState<number | null>(params.section ? Number(params.section) : null);
+  const sectionId = picked ?? sections[0]?.id ?? null;
+  const [day, setDay] = useState(params.date || today);
+  // undefined: the subject's first class that day; EXTRA: a class not on the timetable.
+  const [meetingPick, setMeetingPick] = useState<number | undefined>(params.meeting ? Number(params.meeting) : undefined);
+  const classes = useTimetable(day, 1);
+  const sectionClasses = (classes.data ?? []).filter(
+    (o) => o.section_id === sectionId && o.date === day && o.status !== "cancelled" && o.status !== "moved",
+  );
+  const meetingId = meetingPick !== undefined ? meetingPick : (sectionClasses[0]?.meeting_id ?? EXTRA);
+  const [showReport, setShowReport] = useState(false);
+  useEffect(() => setShowReport(false), [sectionId]);
+
+  const ready = sectionId !== null && (meetingPick !== undefined || !classes.isPending);
+  const sheet = useSheet(sectionId ?? 0, day, meetingId || undefined, ready);
+  const save = useSaveSheet(sectionId ?? 0);
   // Your taps, over what's saved (or everyone present on a new sheet).
   const [edits, setEdits] = useState<Record<number, Mark>>({});
   const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    setEdits({});
+    setSaved(false);
+  }, [sectionId, day, meetingId]);
 
   const s = sheet.data;
   const marks: Record<number, Mark> = Object.fromEntries(
@@ -43,6 +84,12 @@ export default function Attendance() {
     setEdits((all) => ({ ...all, [id]: mark }));
   }
 
+  function everyonePresent() {
+    if (!s) return;
+    setSaved(false);
+    setEdits(Object.fromEntries(s.marks.map((m) => [m.student_id, "present" as Mark])));
+  }
+
   function submit() {
     if (!s) return;
     save.mutate(
@@ -51,16 +98,103 @@ export default function Attendance() {
         meeting_id: s.meeting_id,
         marks: s.marks.map((m) => ({ student_id: m.student_id, status: marks[m.student_id] ?? "present", note: m.note })),
       },
-      { onSuccess: () => setSaved(true) },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          qc.invalidateQueries({ queryKey: ["attendance", "report"] });
+        },
+      },
     );
   }
 
+  if (me && !me.institution?.attendance_enabled) {
+    return (
+      <View style={{ flex: 1, backgroundColor: p.bg }}>
+        <StackHeader title="Attendance" />
+        <Empty icon="check" title="Attendance is off" body="Attendance isn't switched on for your institution." />
+      </View>
+    );
+  }
+
+  const picker = (
+    <View style={{ gap: 12, marginBottom: 8 }}>
+      <Card style={{ gap: 14 }}>
+        {sections.length > 1 ? (
+          <ChoiceField
+            label="Subject"
+            value={sectionId}
+            onChange={(id) => {
+              setPicked(id);
+              setMeetingPick(undefined);
+            }}
+            options={sections.map((x) => ({ key: x.id, label: `${x.course_code} · ${x.code}` }))}
+          />
+        ) : null}
+        <DateTimeField
+          label="Day"
+          withTime={false}
+          maxDate={dayToDate(today)}
+          value={dayToDate(day)}
+          onChange={(d) => {
+            setDay(isoDay(d));
+            setMeetingPick(undefined);
+          }}
+        />
+        <ChoiceField
+          label="Class"
+          value={meetingId}
+          onChange={setMeetingPick}
+          options={[
+            ...sectionClasses.map((o) => ({
+              key: o.meeting_id,
+              label: `${formatTime(o.starts_at, tz)}–${formatTime(o.ends_at, tz)} · ${o.room || "Online"}`,
+            })),
+            { key: EXTRA, label: "Extra class" },
+          ]}
+          hint={meetingId === EXTRA ? "A class that isn't on the timetable." : undefined}
+        />
+      </Card>
+      {!student && sectionId !== null ? (
+        <Button
+          label={showReport ? "Hide term summary" : "Term summary"}
+          icon="chart"
+          variant="secondary"
+          onPress={() => setShowReport((r) => !r)}
+        />
+      ) : null}
+      {showReport && sectionId !== null ? <TermSummary sectionId={sectionId} /> : null}
+      {s ? (
+        <>
+          <T variant="callout" tone="ink2">
+            {s.saved && s.saved_at
+              ? `Saved by ${s.taken_by ?? "a teacher"}, ${formatDateTime(s.saved_at, tz)}. Changes are kept in the record's history.`
+              : "Not taken yet. Everyone starts as present: tap anyone who isn't."}
+            {readOnly ? " It's been more than 48 hours, so only a coordinator can change it now." : ""}
+          </T>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <T variant="calloutStrong" accessibilityLiveRegion="polite" style={{ flex: 1 }}>
+              {counts.filter((c) => c.n).map((c) => `${c.n} ${c.label.toLowerCase()}`).join(" · ") || "No students"}
+            </T>
+            {!readOnly && s.marks.length ? (
+              <Button label="Everyone present" variant="secondary" style={{ minHeight: 36 }} onPress={everyonePresent} />
+            ) : null}
+          </View>
+        </>
+      ) : null}
+    </View>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <StackHeader title="Attendance" subtitle={s ? `${s.title} · ${formatDay(s.date, { month: "short" })}` : undefined} />
-      {sheet.isPending ? (
+      <StackHeader
+        title="Attendance"
+        subtitle={s ? `${s.title} · ${formatDay(s.date, { month: "short" })}` : formatDay(day, { month: "short" })}
+      />
+      {me && sections.length === 0 && !teaching.isPending ? (
+        <Empty icon="people" title="No subjects" body="You can take attendance for the subjects you teach, or as a class rep." />
+      ) : !ready || sheet.isPending ? (
         <View style={{ padding: 16, gap: 10 }}>
-          <Skeleton height={64} />
+          <Skeleton height={180} />
           <Skeleton height={64} />
           <Skeleton height={64} />
         </View>
@@ -72,18 +206,11 @@ export default function Attendance() {
             data={s.marks}
             keyExtractor={(m) => String(m.student_id)}
             contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: 16 }}
-            ListHeaderComponent={
-              <View style={{ gap: 8, marginBottom: 8 }}>
-                <T variant="callout" tone="ink2">
-                  {s.saved && s.saved_at
-                    ? `Saved by ${s.taken_by ?? "a teacher"}, ${formatDateTime(s.saved_at, tz)}.`
-                    : "Not taken yet. Everyone starts as present: tap anyone who isn't."}
-                  {readOnly ? " It's been more than 48 hours, so only a coordinator can change it now." : ""}
-                </T>
-                <T variant="calloutStrong" accessibilityLiveRegion="polite">
-                  {counts.filter((c) => c.n).map((c) => `${c.n} ${c.label.toLowerCase()}`).join(" · ") || "No students"}
-                </T>
-              </View>
+            ListHeaderComponent={picker}
+            ListEmptyComponent={
+              <T variant="body" tone="ink2">
+                Nobody is enrolled in this subject yet.
+              </T>
             }
             renderItem={({ item }) => (
               <View
@@ -93,7 +220,7 @@ export default function Attendance() {
                   gap: 10,
                   backgroundColor: p.surface,
                   borderRadius: radius.lg,
-                  borderWidth: 1,
+                  borderWidth: p.cards.border ? 1 : 0,
                   borderColor: p.line,
                   padding: 10,
                 }}
@@ -131,7 +258,7 @@ export default function Attendance() {
               </View>
             )}
           />
-          {!readOnly ? (
+          {!readOnly && s.marks.length ? (
             <View style={{ backgroundColor: p.surface, borderTopWidth: 1, borderTopColor: p.line, padding: 12, paddingBottom: Math.max(insets.bottom, 10) + 4, gap: 8 }}>
               {save.isError ? (
                 <T variant="callout" tone="danger" accessibilityLiveRegion="polite">
@@ -141,7 +268,7 @@ export default function Attendance() {
               {saved ? (
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <Button label="Saved" icon="check" variant="secondary" style={{ flex: 1 }} disabled />
-                  <Button label="Done" style={{ flex: 1 }} onPress={() => router.back()} />
+                  <Button label="Done" style={{ flex: 1 }} onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
                 </View>
               ) : (
                 <Button label={s.saved ? "Save changes" : "Save attendance"} busy={save.isPending} onPress={submit} />
@@ -151,5 +278,43 @@ export default function Attendance() {
         </>
       )}
     </View>
+  );
+}
+
+/** Each student's attendance this term in one subject, and the Excel download. */
+function TermSummary({ sectionId }: { sectionId: number }) {
+  const p = useTheme();
+  const report = useReport(sectionId, true);
+  if (report.isPending) return <Skeleton height={160} />;
+  if (!report.data) return <Failed onRetry={() => report.refetch()} />;
+  const n = report.data.sessions.length;
+  return (
+    <Card style={{ gap: 10 }}>
+      <T variant="headline">
+        This term <T variant="headline" tone="ink3">{`${n} ${n === 1 ? "class" : "classes"} recorded`}</T>
+      </T>
+      {report.data.students.map((st) => {
+        const low = st.summary.rate !== null && st.summary.rate < 75;
+        return (
+          <View key={st.student_id} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <T variant="bodyStrong" numberOfLines={1}>
+                {st.name}
+              </T>
+              <T variant="callout" tone="ink3">
+                {st.summary.absent} absent · {st.summary.late} late{st.summary.excused ? ` · ${st.summary.excused} excused` : ""}
+              </T>
+            </View>
+            <T variant="bodyStrong" style={{ color: low ? p.danger : p.ink, fontVariant: ["tabular-nums"] }}>
+              {st.summary.rate === null ? "–" : `${st.summary.rate}%`}
+            </T>
+          </View>
+        );
+      })}
+      <DownloadRow label="Download (Excel)" path={`/api/attendance/sections/${sectionId}/report.csv`} name={`attendance-${sectionId}.csv`} />
+      <T variant="caption" tone="ink3" style={{ fontWeight: "400" }}>
+        Late counts as attended; excused classes don't count either way.
+      </T>
+    </Card>
   );
 }

@@ -116,6 +116,8 @@ export interface SiteTheme {
   helper_enabled: boolean;
   /** The look of cards: a hairline border, a soft shadow, and how round corners are. */
   card_borders?: boolean;
+  /** The border in dark mode; set apart from light. Missing: follows card_borders. */
+  card_borders_dark?: boolean;
   card_shadows?: boolean;
   corners?: Corners;
   /** The admin's own colours; read when preset is "custom". */
@@ -254,6 +256,7 @@ export const DEFAULT_SITE_THEME: SiteTheme = {
   guide_tassel: "",
   helper_enabled: true,
   card_borders: true,
+  card_borders_dark: true,
   card_shadows: true,
   corners: "round",
   custom: {},
@@ -282,13 +285,19 @@ export const CORNERS: Record<Corners, { label: string; card: number; row: number
 };
 
 /** The card look (border, shadow, corners) as CSS. Empty when everything is left as it was. */
-export function lookCss(site: Pick<SiteTheme, "card_borders" | "card_shadows" | "corners">): string {
+export function lookCss(
+  site: Pick<SiteTheme, "card_borders" | "card_borders_dark" | "card_shadows" | "corners">,
+): string {
   const rules: string[] = [];
-  if (site.card_borders === false) rules.push("--cv-card-border:transparent");
+  const light = site.card_borders !== false;
+  const dark = site.card_borders_dark ?? light;
+  if (!light) rules.push("--cv-card-border:transparent");
   if (site.card_shadows === false) rules.push("--cv-card-shadow:none");
   const c = CORNERS[site.corners ?? "round"] ?? CORNERS.round;
   if (c !== CORNERS.round) rules.push(`--cv-radius-card:${c.card}px`, `--cv-radius-row:${c.row}px`, `--cv-radius-control:${c.control}px`);
-  return rules.length ? `html:root{${rules.join(";")}}` : "";
+  // Light and dark each have their own border switch.
+  const darkRule = dark === light ? "" : `html:root[data-theme="dark"]{--cv-card-border:${dark ? "var(--cv-rim)" : "transparent"}}`;
+  return (rules.length ? `html:root{${rules.join(";")}}` : "") + darkRule;
 }
 
 /** The CSS that puts a theme on the page, over the app's own tokens (globals.css). */

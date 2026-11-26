@@ -75,7 +75,12 @@ export default function Work() {
     >
       <View style={{ paddingHorizontal: 16, gap: 12 }}>
         {tab === "teaching" && teachesSubjects ? (
-          <Button label="New assignment" icon="plus" onPress={() => router.push("/assignment/edit")} />
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Button label="New assignment" icon="plus" style={{ flex: 1 }} onPress={() => router.push("/assignment/edit")} />
+            {me?.institution?.attendance_enabled ? (
+              <Button label="Attendance" icon="check" variant="secondary" style={{ flex: 1 }} onPress={() => router.push("/attendance")} />
+            ) : null}
+          </View>
         ) : null}
         {query.isPending ? (
           <>

@@ -154,6 +154,14 @@ export const SignOutIcon = (p: IconProps) => (
   </Icon>
 );
 
+/** A window with its side panel: the button that shrinks the sidebar to icons, or opens it again. */
+export const SidebarIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3.5" y="4.5" width="17" height="15" rx="3" />
+    <path d="M9.5 4.5v15" />
+  </Icon>
+);
+
 export const ChevronLeftIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M15 6l-6 6 6 6" />

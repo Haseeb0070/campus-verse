@@ -43,6 +43,8 @@ DEFAULT_THEME = {
     "helper_enabled": True,
     # The look of cards across the site: a hairline border, a soft shadow, how round corners are.
     "card_borders": True,
+    # The border in dark mode, set on its own: a line that suits light paper can be too loud on dark.
+    "card_borders_dark": True,
     "card_shadows": True,
     "corners": "round",
     # Only read when preset is "custom": {"light": {key: "#hex"}, "dark": {...}}.
@@ -57,6 +59,9 @@ def theme_of(institution) -> dict:
     """The institution's theme, with every key present."""
     saved = getattr(institution, "theme", None) or {}
     out = {**DEFAULT_THEME, **{k: v for k, v in saved.items() if k in DEFAULT_THEME}}
+    if "card_borders_dark" not in saved:
+        # Saved before light and dark had their own switch: dark follows the one setting there was.
+        out["card_borders_dark"] = out["card_borders"]
     if out["preset"] not in PRESETS:
         out["preset"] = DEFAULT_THEME["preset"]
     return out
@@ -73,6 +78,7 @@ def clean_theme(data: dict) -> dict:
     out["guide_enabled"] = bool(data.get("guide_enabled", True))
     out["helper_enabled"] = bool(data.get("helper_enabled", True))
     out["card_borders"] = bool(data.get("card_borders", True))
+    out["card_borders_dark"] = bool(data.get("card_borders_dark", out["card_borders"]))
     out["card_shadows"] = bool(data.get("card_shadows", True))
     corners = data.get("corners", "round")
     if corners not in CORNERS:

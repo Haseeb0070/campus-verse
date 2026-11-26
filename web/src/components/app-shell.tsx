@@ -36,6 +36,7 @@ import {
   ResourcesIcon,
   SearchIcon,
   SectionsIcon,
+  SidebarIcon,
   SignOutIcon,
   TimetableIcon,
   TodayIcon,
@@ -86,6 +87,29 @@ function useNavPill(deps: unknown[]) {
   return { ref, pill };
 }
 
+const MINI_KEY = "cv-nav-mini";
+
+/** The sidebar shrunk to its icons, or full width. Kept on this device. */
+function useMiniNav(): [boolean, () => void] {
+  const [mini, setMini] = useState(() => {
+    try {
+      return typeof window !== "undefined" && localStorage.getItem(MINI_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggle = () =>
+    setMini((m) => {
+      try {
+        localStorage.setItem(MINI_KEY, m ? "0" : "1");
+      } catch {
+        // Storage blocked: the choice lasts for this visit.
+      }
+      return !m;
+    });
+  return [mini, toggle];
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const me = useMe();
   const router = useRouter();
@@ -113,6 +137,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const badgeLabel = (href: string) =>
     href === "/moderation" ? "open reports" : href === "/requests" ? "waiting for you" : "unread";
   const [moreOpen, setMoreOpen] = useState(false);
+  const [mini, toggleMini] = useMiniNav();
   // The page a nav link was just clicked for. Highlights move there at once instead of after the
   // next page arrives (a server round trip, plus a compile on first visit in development). Once
   // the path changes, the real path takes over again.
@@ -121,7 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // True between a nav click and the new page arriving: the current page steps back at once, so
   // the content answers the click together with the highlight instead of sitting there unchanged.
   const leaving = at !== pathname;
-  const side = useNavPill([at, me.data, moderation?.can_moderate]);
+  const side = useNavPill([at, me.data, moderation?.can_moderate, mini]);
   // Fetch every page in the menus ahead of time, once the app is idle, so a click only has to
   // swap the page in. (Production builds also prefetch links as they scroll into view.)
   useEffect(() => {
@@ -168,9 +193,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         e.preventDefault();
         router.push("/search");
       }
+      // Ctrl/Cmd+\ shrinks the sidebar to icons, or opens it again.
+      if (e.key === "\\" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        toggleMini();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   useEffect(() => {
@@ -273,11 +304,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav
         ref={side.ref}
         aria-label="Main"
-        className="side sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r border-side-line px-3.5 py-5 md:flex"
+        className={`side sticky top-0 hidden h-screen shrink-0 flex-col gap-4 overflow-x-hidden overflow-y-auto border-r border-side-line py-5 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:flex motion-reduce:transition-none ${
+          mini ? "w-[76px] px-3" : "w-64 px-3.5"
+        }`}
       >
         <span
           aria-hidden="true"
-          className={`nav-pill pointer-events-none absolute inset-x-3.5 top-0 rounded-control bg-side-active ${
+          className={`nav-pill pointer-events-none absolute top-0 rounded-control bg-side-active ${mini ? "inset-x-3" : "inset-x-3.5"} ${
             side.pill ? "" : "opacity-0"
           }`}
           style={{
@@ -286,26 +319,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             transition: side.pill?.slide ? undefined : "none",
           }}
         />
-        <div className="flex items-center gap-3 border-b border-side-line px-1.5 pb-4">
-          <LogoMark className="size-9" />
-          <span className="min-w-0">
-            <span className="block text-headline font-bold text-side-strong">CampusVerse</span>
-            <span className="block truncate text-caption text-side-muted">
-              {user.institution?.name ?? "No institution"}
+        <div
+          className={`flex border-b border-side-line pb-4 ${mini ? "flex-col items-center gap-3" : "items-center gap-3 px-1.5"}`}
+        >
+          <LogoMark className="size-9 shrink-0" />
+          {!mini && (
+            <span className="min-w-0 flex-1">
+              <span className="block text-headline font-bold text-side-strong">CampusVerse</span>
+              <span className="block truncate text-caption text-side-muted">
+                {user.institution?.name ?? "No institution"}
+              </span>
             </span>
-          </span>
+          )}
+          <button
+            type="button"
+            onClick={toggleMini}
+            aria-expanded={!mini}
+            aria-label={mini ? "Show the full sidebar" : "Shrink the sidebar to icons"}
+            title={`${mini ? "Show the full sidebar" : "Shrink the sidebar to icons"} (${modKey} \\)`}
+            className="press grid size-9 shrink-0 place-items-center rounded-control text-side-muted transition-colors hover:bg-side-hover hover:text-side-strong"
+          >
+            <SidebarIcon className="size-5" />
+          </button>
         </div>
 
         <Link
           href="/search"
           aria-label={`Search (${modKey} K)`}
-          className="flex h-10 items-center gap-2.5 rounded-control border border-white/10 bg-white/[0.06] px-3 text-footnote text-side-muted transition-colors hover:bg-white/[0.12] hover:text-side-strong"
+          title={mini ? `Search (${modKey} K)` : undefined}
+          className={`flex h-10 shrink-0 items-center gap-2.5 rounded-control border border-white/10 bg-white/[0.06] text-footnote text-side-muted transition-colors hover:bg-white/[0.12] hover:text-side-strong ${
+            mini ? "justify-center" : "px-3"
+          }`}
         >
-          <SearchIcon className="size-[18px]" />
-          <span className="flex-1">Search</span>
-          <kbd className="rounded-md border border-white/15 bg-white/10 px-1.5 py-px font-sans text-caption font-semibold text-side-ink">
-            {modKey} K
-          </kbd>
+          <SearchIcon className="size-[18px] shrink-0" />
+          {!mini && (
+            <>
+              <span className="flex-1">Search</span>
+              <kbd className="rounded-md border border-white/15 bg-white/10 px-1.5 py-px font-sans text-caption font-semibold text-side-ink">
+                {modKey} K
+              </kbd>
+            </>
+          )}
         </Link>
 
         {NAV_GROUPS.map((group) => {
@@ -313,7 +367,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           if (!items.length) return null;
           return (
             <div key={group}>
-              <p className="px-3 pb-1.5 text-caption font-semibold text-side-muted">{group}</p>
+              {mini ? (
+                <p className="sr-only">{group}</p>
+              ) : (
+                <p className="px-3 pb-1.5 text-caption font-semibold text-side-muted">{group}</p>
+              )}
               <ul className="flex flex-col gap-0.5">
                 {items.map(({ href, label, Icon }) => {
                   const active = isActive(href);
@@ -323,16 +381,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         href={href}
                         onClick={goTo(href)}
                         aria-current={active ? "page" : undefined}
-                        className={`press group relative flex h-10 items-center gap-3 rounded-control px-3 text-footnote font-semibold transition-colors ${
-                          active ? "text-on-active" : "text-side-ink hover:bg-side-hover hover:text-side-strong"
-                        }`}
+                        title={mini ? label : undefined}
+                        className={`press group relative flex h-10 items-center gap-3 rounded-control text-footnote font-semibold transition-colors ${
+                          mini ? "justify-center" : "px-3"
+                        } ${active ? "text-on-active" : "text-side-ink hover:bg-side-hover hover:text-side-strong"}`}
                       >
-                        <Icon className={`size-[18px] ${active ? "text-on-active" : "text-side-icon group-hover:text-side-strong"}`} />
-                        <span className="flex-1">{label}</span>
+                        <Icon className={`size-[18px] shrink-0 ${active ? "text-on-active" : "text-side-icon group-hover:text-side-strong"}`} />
+                        <span className={mini ? "sr-only" : "flex-1"}>{label}</span>
                         <UnreadBadge
                           count={badgeFor(href)}
                           label={badgeLabel(href)}
-                          className={active ? "bg-on-active text-side-active" : "bg-side-active text-on-active"}
+                          className={`${mini ? "absolute -top-0.5 right-0.5 !h-4 !min-w-4 !px-1 !text-[10px]" : ""} ${
+                            active ? "bg-on-active text-side-active" : "bg-side-active text-on-active"
+                          }`}
                         />
                       </Link>
                     </li>
@@ -343,7 +404,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           );
         })}
 
-        {courses.length > 0 && (
+        {courses.length > 0 && !mini && (
           <div>
             <p className="px-3 pb-1.5 text-caption font-semibold text-side-muted">Your courses</p>
             <ul className="flex flex-col gap-0.5">
@@ -358,20 +419,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <div className="mt-auto flex items-center gap-1 border-t border-side-line pt-3">
+        <div
+          className={`mt-auto flex border-t border-side-line pt-3 ${mini ? "flex-col items-center gap-1" : "items-center gap-1"}`}
+        >
           <Link
             href="/profile"
             aria-current={isActive("/profile") ? "page" : undefined}
+            aria-label={mini ? `Your profile, ${user.full_name}` : undefined}
             title="Your profile"
-            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-control p-1.5 transition-colors hover:bg-side-hover"
+            className={`flex min-w-0 items-center gap-2.5 rounded-control p-1.5 transition-colors hover:bg-side-hover ${mini ? "" : "flex-1"}`}
           >
             <span className="grid size-9 shrink-0 place-items-center rounded-full border border-side-active bg-side-avatar text-footnote font-bold text-side-avatar-ink">
               {initials.toUpperCase()}
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-footnote font-semibold text-side-strong">{user.full_name}</span>
-              <span className="block truncate text-caption capitalize text-side-muted">{user.kind}</span>
-            </span>
+            {!mini && (
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-footnote font-semibold text-side-strong">{user.full_name}</span>
+                <span className="block truncate text-caption capitalize text-side-muted">{user.kind}</span>
+              </span>
+            )}
           </Link>
           <AppearanceToggle className="grid size-9 place-items-center rounded-control text-side-muted transition-colors hover:bg-side-hover hover:text-side-strong" />
           <button

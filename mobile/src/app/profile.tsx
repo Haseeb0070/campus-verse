@@ -15,7 +15,9 @@ import { initials } from "@/lib/format";
 import { type NotificationPreference, useNotificationPreferences } from "@/lib/notifications";
 import { useMe } from "@/lib/queries";
 import { useModerationSummary } from "@/lib/feed";
+import { registerForPush } from "@/lib/push";
 import { useRepsMine } from "@/lib/reps";
+import { useSoundOn } from "@/lib/sound";
 import type { Me } from "@/lib/types";
 import { useTheme } from "@/theme";
 
@@ -100,6 +102,7 @@ export default function Profile() {
 
           <Group title="Notifications">
             <Preferences />
+            <SoundRow />
           </Group>
 
           <Group title="Privacy">
@@ -124,6 +127,12 @@ export default function Profile() {
                   <Divider inset={52} />
                 </>
               ) : null}
+              {m.institution?.attendance_enabled && (m.sections.some((s) => s.teaching) || Object.keys(reps?.sections ?? {}).length > 0) ? (
+                <>
+                  <Row icon="check" label="Take attendance" onPress={() => router.push("/attendance")} />
+                  <Divider inset={52} />
+                </>
+              ) : null}
               <Row icon="chart" label="Marks and attendance" onPress={() => router.push("/progress")} />
               {showRequests ? (
                 <>
@@ -142,13 +151,20 @@ export default function Profile() {
                   <Divider inset={52} />
                 </>
               ) : null}
+              {m.roles.includes("institution_admin") || m.roles.includes("department_coordinator") ? (
+                <>
+                  <Row
+                    icon="arch"
+                    label={m.roles.includes("institution_admin") ? "Manage" : "Department"}
+                    onPress={() => router.push("/manage")}
+                  />
+                  <Divider inset={52} />
+                </>
+              ) : null}
               <Row icon="bell" label="Notifications" onPress={() => router.push("/notifications")} />
               <Divider inset={52} />
               <Row icon="user" label="Account and security" onPress={() => router.push("/security")} />
             </Card>
-            <T variant="callout" tone="ink3" style={{ paddingHorizontal: 4, marginTop: 8 }}>
-              Managing sections, people and CRs lives on the CampusVerse website.
-            </T>
           </Group>
 
           <Button label="Sign out" icon="logout" variant="danger" onPress={confirmSignOut} />
@@ -341,6 +357,29 @@ function Preferences() {
           </View>
         </View>
       ))}
+    </Card>
+  );
+}
+
+/** The notification sound, on this phone. Off: notifications still arrive, silently. */
+function SoundRow() {
+  const [on, setOn] = useSoundOn();
+  return (
+    <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <View style={{ flex: 1 }}>
+        <T variant="bodyStrong">Play a sound</T>
+        <T variant="callout" tone="ink3">
+          The phone's notification sound when something arrives, on this phone.
+        </T>
+      </View>
+      <Toggle
+        label="Play a sound for notifications"
+        value={on}
+        onChange={(v) => {
+          setOn(v);
+          registerForPush(); // tell the server, so pushes come silently when it's off
+        }}
+      />
     </Card>
   );
 }

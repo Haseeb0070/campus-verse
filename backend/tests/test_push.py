@@ -151,3 +151,26 @@ def test_no_push_when_the_app_channel_is_off(campus):
             dedupe_key="push-test-4",
         )
     post.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_phone_with_sound_off_gets_silent_pushes(ayesha_client, campus):
+    body = json.dumps({"token": TOKEN, "platform": "android", "sound": False})
+    assert ayesha_client.post("/api/notifications/devices", body, content_type="application/json").status_code == 204
+    assert PushDevice.objects.get(token=TOKEN).sound is False
+    # Registering again without saying keeps the choice.
+    body = json.dumps({"token": TOKEN, "platform": "android"})
+    ayesha_client.post("/api/notifications/devices", body, content_type="application/json")
+    assert PushDevice.objects.get(token=TOKEN).sound is False
+    with mock.patch("apps.notifications.push._post", return_value=tickets("ok")) as post:
+        notify(
+            [campus.ayesha.pk],
+            kind=Notification.Kind.NOTICE,
+            institution_id=campus.inst.pk,
+            title="Quiet",
+            body="No chime",
+            link="/notices",
+            dedupe_key="push-sound-off",
+        )
+    sent = post.call_args.args[0][0]
+    assert "sound" not in sent and sent["channelId"] == "quiet"

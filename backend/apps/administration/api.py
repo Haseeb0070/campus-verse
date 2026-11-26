@@ -530,6 +530,7 @@ class ThemeIO(Schema):
     guide_tassel: str = ""
     helper_enabled: bool = True
     card_borders: bool = True
+    card_borders_dark: bool = True
     card_shadows: bool = True
     corners: str = "round"
     custom: dict = {}

@@ -112,6 +112,8 @@ export interface SiteTheme {
   guide_cap?: string;
   guide_tassel?: string;
   card_borders?: boolean;
+  /** Dark mode's own border switch; missing means it follows card_borders. */
+  card_borders_dark?: boolean;
   card_shadows?: boolean;
   corners?: "round" | "medium" | "sharp";
 }
@@ -193,7 +195,7 @@ export function buildPalette(mode: Mode, site?: SiteTheme | null): Palette {
     success: light ? "#2f6b3f" : "#8fd19e",
     shadow: light ? "#4a341c" : "#000000",
     cards: {
-      border: site?.card_borders !== false,
+      border: light ? site?.card_borders !== false : (site?.card_borders_dark ?? site?.card_borders) !== false,
       shadow: site?.card_shadows !== false,
       radius: site?.corners === "sharp" ? 6 : site?.corners === "medium" ? 12 : 18,
     },
