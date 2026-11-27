@@ -155,7 +155,7 @@ def set_rep(user, cohort: Cohort, term, student, role: str | None, *,
     if role not in ClassRep.Role.values:
         raise ValidationError("Choose CR or GR.")
     # Locks the section's roles, so two people naming a CR at once can't both win.
-    holders = list(ClassRep.objects.select_for_update().filter(
+    holders = list(ClassRep.objects.select_for_update(of=("self",)).filter(
         term=term, cohort=cohort, role=role
     ).exclude(student=student).select_related("student", "assigned_by", "cohort"))
     if holders and not replace:
