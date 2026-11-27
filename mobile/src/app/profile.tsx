@@ -14,9 +14,7 @@ import { API_URL } from "@/lib/config";
 import { initials } from "@/lib/format";
 import { type NotificationPreference, useNotificationPreferences } from "@/lib/notifications";
 import { useMe } from "@/lib/queries";
-import { useModerationSummary } from "@/lib/feed";
 import { registerForPush } from "@/lib/push";
-import { useRepsMine } from "@/lib/reps";
 import { useSoundOn } from "@/lib/sound";
 import type { Me } from "@/lib/types";
 import { useTheme } from "@/theme";
@@ -27,10 +25,6 @@ export default function Profile() {
   const me = useMe();
   const auth = useAuth();
   const m = me.data;
-  const reps = useRepsMine(!!m && m.kind !== "staff").data;
-  // Teachers approve CR/GR changes there; a CR or GR follows what they asked for.
-  const showRequests = !!m && (m.sections.some((s) => s.teaching) || Object.keys(reps?.sections ?? {}).length > 0);
-  const moderation = useModerationSummary().data;
 
   function confirmSignOut() {
     if (Platform.OS === "web") {
@@ -119,50 +113,8 @@ export default function Profile() {
             <Corrections />
           </Group>
 
-          <Group title="More">
+          <Group title="Account">
             <Card padded={false}>
-              {m.sections.some((s) => s.teaching) ? (
-                <>
-                  <Row icon="people" label="Your subjects" onPress={() => router.push("/subjects")} />
-                  <Divider inset={52} />
-                </>
-              ) : null}
-              {m.institution?.attendance_enabled && (m.sections.some((s) => s.teaching) || Object.keys(reps?.sections ?? {}).length > 0) ? (
-                <>
-                  <Row icon="check" label="Take attendance" onPress={() => router.push("/attendance")} />
-                  <Divider inset={52} />
-                </>
-              ) : null}
-              <Row icon="chart" label="Marks and attendance" onPress={() => router.push("/progress")} />
-              {showRequests ? (
-                <>
-                  <Divider inset={52} />
-                  <Row icon="swap" label="Class requests" onPress={() => router.push("/requests")} />
-                </>
-              ) : null}
-              <Divider inset={52} />
-              {moderation?.can_moderate ? (
-                <>
-                  <Row
-                    icon="flag"
-                    label={moderation.open ? `Moderation (${moderation.open} open)` : "Moderation"}
-                    onPress={() => router.push("/moderation")}
-                  />
-                  <Divider inset={52} />
-                </>
-              ) : null}
-              {m.roles.includes("institution_admin") || m.roles.includes("department_coordinator") ? (
-                <>
-                  <Row
-                    icon="arch"
-                    label={m.roles.includes("institution_admin") ? "Manage" : "Department"}
-                    onPress={() => router.push("/manage")}
-                  />
-                  <Divider inset={52} />
-                </>
-              ) : null}
-              <Row icon="bell" label="Notifications" onPress={() => router.push("/notifications")} />
-              <Divider inset={52} />
               <Row icon="user" label="Account and security" onPress={() => router.push("/security")} />
             </Card>
           </Group>
@@ -369,7 +321,7 @@ function SoundRow() {
       <View style={{ flex: 1 }}>
         <T variant="bodyStrong">Play a sound</T>
         <T variant="callout" tone="ink3">
-          The phone's notification sound when something arrives, on this phone.
+          The phone&apos;s notification sound when something arrives, on this phone.
         </T>
       </View>
       <Toggle

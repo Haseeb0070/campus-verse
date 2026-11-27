@@ -258,13 +258,18 @@ export function Field({
 }: TextInputProps & { label: string; error?: string | null; ref?: Ref<ComponentRef<typeof TextInput>> }) {
   const p = useTheme();
   const [focused, setFocused] = useState(false);
+  // A password field gets an eye button to show or hide what was typed.
+  const secret = Boolean(input.secureTextEntry);
+  const [revealed, setRevealed] = useState(false);
   return (
     <View style={{ gap: 6 }}>
       <T variant="calloutStrong" tone="ink2">
         {label}
       </T>
+      <View>
       <TextInput
         {...input}
+        secureTextEntry={secret && !revealed}
         accessibilityLabel={label}
         placeholderTextColor={p.ink3}
         onFocus={(e) => {
@@ -283,6 +288,7 @@ export function Field({
             borderColor: error ? p.danger : focused ? p.accent : p.line,
             backgroundColor: p.surface,
             paddingHorizontal: focused ? 15 : 16,
+            paddingRight: secret ? 52 : focused ? 15 : 16,
             fontFamily: font.regular,
             fontSize: 16,
             color: p.ink,
@@ -290,6 +296,18 @@ export function Field({
           style,
         ]}
       />
+      {secret ? (
+        <Pressable
+          onPress={() => setRevealed((r) => !r)}
+          accessibilityRole="button"
+          accessibilityLabel={revealed ? "Hide password" : "Show password"}
+          hitSlop={8}
+          style={{ position: "absolute", right: 6, top: 0, bottom: 0, width: 44, alignItems: "center", justifyContent: "center" }}
+        >
+          <Icon name={revealed ? "eyeOff" : "eye"} size={20} color={p.ink2} />
+        </Pressable>
+      ) : null}
+      </View>
       {error ? (
         <T variant="callout" tone="danger" accessibilityLiveRegion="polite">
           {error}

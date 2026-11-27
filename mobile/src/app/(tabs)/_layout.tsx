@@ -6,7 +6,9 @@ import Animated, { ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
 import { useUnreadTotal } from "@/lib/chat";
+import { useModerationSummary } from "@/lib/feed";
 import { useMe } from "@/lib/queries";
+import { useRepRequests } from "@/lib/reps";
 import { font, useTheme } from "@/theme";
 
 const TABS: { name: string; label: string; icon: IconName }[] = [
@@ -15,6 +17,8 @@ const TABS: { name: string; label: string; icon: IconName }[] = [
   { name: "chat", label: "Chat", icon: "chat" },
   { name: "notices", label: "Notices", icon: "pin" },
   { name: "work", label: "Work", icon: "clipboard" },
+  // Everything else (notices, feed, calendar, resources, progress, requests, Manage, settings).
+  { name: "more", label: "More", icon: "more" },
 ];
 
 export default function TabsLayout() {
@@ -36,6 +40,9 @@ function TabBar({ state, navigateToTab }: BottomTabBarProps) {
   // don't get tabs that could only ever be empty.
   const me = useMe().data;
   const hasClasses = !me || me.kind !== "staff" || me.sections.length > 0;
+  // More shows a badge when something in it waits for this person.
+  const waiting = (useRepRequests().data ?? []).filter((r) => r.can_decide || r.can_reply).length;
+  const moreBadge = waiting + (useModerationSummary().data?.open ?? 0);
 
   return (
     <View
@@ -53,9 +60,12 @@ function TabBar({ state, navigateToTab }: BottomTabBarProps) {
     >
       {state.routes.map((route, index) => {
         const tab = TABS.find((t) => t.name === route.name);
-        if (!tab || (!hasClasses && (tab.name === "timetable" || tab.name === "work"))) return null;
+        if (!tab) return null;
+        // With classes: Today, Timetable, Chat, Work, More (Notices sits in More). Without (an
+        // admin who doesn't teach): Today, Chat, Notices, More.
+        if (hasClasses ? tab.name === "notices" : tab.name === "timetable" || tab.name === "work") return null;
         const focused = state.index === index;
-        const badge = tab.name === "chat" && unread > 0 ? unread : 0;
+        const badge = tab.name === "chat" && unread > 0 ? unread : tab.name === "more" ? moreBadge : 0;
         return (
           <Pressable
             key={route.key}
