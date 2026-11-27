@@ -43,11 +43,11 @@ type Stop = { id: string | null; state: string; line: string };
 /** Each section of the page, top to bottom, with what Verse does and says there. */
 const STOPS: Stop[] = [
   { id: null, state: "happy", line: "Salaam! I’m {name}. Scroll and I’ll show you around CampusVerse." },
-  { id: "week", state: "reading", line: "This is BS CS G1+G2’s week. Tap a day to see its classes and rooms." },
+  { id: "week", state: "reading", line: "This is what a week looks like. Tap a day to see its classes and rooms." },
   { id: "menu", state: "proud", line: "Students, teachers and the college office each get their own tools." },
   { id: "questions", state: "curious", line: "New here? Start with “How do I sign in?”." },
   { id: "signin", state: "excited", line: "Ready? Use your roll number @gcslahore.edu.pk." },
-  { id: "end", state: "celebrate", line: "See you in R-127!" },
+  { id: "end", state: "celebrate", line: "See you in class!" },
 ];
 
 /** What Verse must never cover: the page's cards (marked data-solid) and anything with content. */

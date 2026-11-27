@@ -15,7 +15,7 @@ const Guide = dynamic(() => import("./guide"), { ssr: false });
 
 /*
  * The landing page is built as the college's own printed timetable sheet: a paper card on the
- * evergreen ground, the week as paper slips (one per day, the real BS CS G1+G2 classes), the features
+ * evergreen ground, the week as paper slips (one per day, a sample class's subjects), the features
  * as a printed menu, sign-in as a reply card and the footer as the back of the card.
  */
 
@@ -254,18 +254,19 @@ function Hero() {
 
 /* ---------- The week: one paper slip per day ---------- */
 
-type Lecture = { title: string; code: string; teacher: string; room: string; colour: string };
+type Lecture = { title: string; time: string; room: string; colour: string };
 
+// A sample week, not any one class's: every class sees its own timetable once signed in.
 const MON_WED: Lecture[] = [
-  { title: "Artificial Intelligence", code: "CC-310", teacher: "Nabeel", room: "R-127", colour: "#8e5fb0" },
-  { title: "Theory of Automata", code: "CC-320", teacher: "Sadaf", room: "R-127", colour: "#2a8c88" },
-  { title: "Design and Analysis of Algorithms", code: "CC-313", teacher: "Nabeel", room: "R-127", colour: "#d9782d" },
+  { title: "Mathematics", time: "8:30", room: "Room 12", colour: "#8e5fb0" },
+  { title: "English", time: "9:30", room: "Room 12", colour: "#2a8c88" },
+  { title: "Computer Science", time: "10:30", room: "Lab 2", colour: "#d9782d" },
 ];
 const THU_SAT: Lecture[] = [
-  { title: "Web Development", code: "EC-330", teacher: "Nabeel", room: "R-127", colour: "#4a7fb5" },
-  { title: "Translation of the Holy Quran", code: "HQ-005", teacher: "Mati ur Rehman", room: "R-27", colour: "#b8902f" },
-  { title: "Computer Architecture", code: "DC-322", teacher: "Rawa", room: "R-127", colour: "#6e685e" },
-  { title: "Human-Computer Interaction", code: "DC-321", teacher: "Rawa", room: "R-127", colour: "#c9506d" },
+  { title: "Physics", time: "8:30", room: "Room 12", colour: "#4a7fb5" },
+  { title: "Islamic Studies", time: "9:30", room: "Room 4", colour: "#b8902f" },
+  { title: "Statistics", time: "10:30", room: "Room 12", colour: "#6e685e" },
+  { title: "Physics practical", time: "11:30", room: "Physics lab", colour: "#c9506d" },
 ];
 const WEEK = [
   { day: "Monday", short: "Mon", classes: MON_WED },
@@ -295,11 +296,11 @@ function Week() {
     <section ref={ref} id="week" className={s.week} aria-labelledby="week-title">
       <div className={s.weekText}>
         <h2 id="week-title" className={s.title} data-rise>
-          This week in R-127
+          Your week, day by day
         </h2>
         <p className={s.weekLead} data-rise>
-          BS CS, 5th semester, G1 and G2 as one class. Monday to Wednesday has three classes and
-          Thursday to Saturday four, all in R-127 except the Quran translation class in R-27.
+          Every class with its time and room, for your own class and section. When a class moves,
+          is cancelled or changes room, your timetable updates straight away. Here&apos;s a sample week.
         </p>
         <div className={s.dayPicker} role="group" aria-label="Pick a day" data-rise>
           {WEEK.map((d, i) => (
@@ -332,12 +333,12 @@ function Week() {
                 - - - - - - - - - - - - - - -
               </span>
               {d.classes.map((c) => (
-                <span key={c.code} className={s.slipClass}>
+                <span key={c.title} className={s.slipClass}>
                   <span className={s.slipDot} style={{ background: c.colour }} aria-hidden="true" />
                   <span>
                     <b>{c.title}</b>
                     <span className={s.slipMeta}>
-                      {c.code} · {c.teacher} · {c.room}
+                      {c.time} · {c.room}
                     </span>
                   </span>
                 </span>
@@ -415,7 +416,7 @@ function Menu() {
             sizes="(max-width: 860px) 92vw, 48vw"
             alt="The notices board: Project groups due Friday pinned at the top, then Lab notes uploaded and Quiz moved to Thursday."
           />
-          <figcaption>Notices from Nabeel and Rawa, the important one pinned.</figcaption>
+          <figcaption>Notices from your teachers, the important one pinned.</figcaption>
         </figure>
         <figure data-rise>
           <Image
@@ -423,9 +424,9 @@ function Menu() {
             width={2880}
             height={1800}
             sizes="(max-width: 860px) 92vw, 48vw"
-            alt="The EC-330 Web Development section chat: Zainab asks about React, Nabeel answers."
+            alt="A subject's class chat: a student asks a question and the teacher answers."
           />
-          <figcaption>The EC-330 section chat, with Nabeel in it.</figcaption>
+          <figcaption>A chat for every subject, with the teacher in it.</figcaption>
         </figure>
       </div>
     </section>
@@ -503,7 +504,7 @@ function Questions() {
           height={1688}
           sizes="(max-width: 860px) 70vw, 30vw"
           className={s.faqPhone}
-          alt="CampusVerse on a phone: Today with tomorrow's Artificial Intelligence class in R-127."
+          alt="CampusVerse on a phone: the Today screen with the next class and its room."
         />
       </div>
     </section>
@@ -547,10 +548,10 @@ function Footer() {
           ))}
         </div>
         <div className={s.backMessage}>
-          <p className={s.title}>See you in R-127.</p>
+          <p className={s.title}>See you in class.</p>
           <p>
-            CampusVerse is the class app for BS CS (G1+G2) at Govt. Graduate College of Science. Built
-            for the college&apos;s students, teachers and office.
+            CampusVerse is the class app of Govt. Graduate College of Science, built for its students,
+            teachers and office.
           </p>
         </div>
         <div className={s.backAddress}>
