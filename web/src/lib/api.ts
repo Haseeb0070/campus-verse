@@ -63,6 +63,7 @@ export function errorDetail(err: unknown, fallback: string) {
   return fallback;
 }
 
-export async function ensureCsrfCookie() {
-  if (!csrfToken()) await apiFetch("/api/csrf");
+/** Makes sure the CSRF cookie is there (or, with refresh, fetches a new one). */
+export async function ensureCsrfCookie(refresh = false) {
+  if (refresh || !csrfToken()) await apiFetch("/api/csrf");
 }

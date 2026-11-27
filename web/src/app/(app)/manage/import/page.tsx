@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { PasswordInput } from "@/components/password-input";
 import { useState } from "react";
 import { Select } from "@/components/select";
 import { Switch } from "@/components/switch";
@@ -372,7 +373,7 @@ function SourceForm({ initial, onDone }: { initial?: SyncSource; onDone: () => v
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className={label}>Authorization header (optional)
-          <input type="password" autoComplete="off" value={auth} onChange={(e) => setAuth(e.target.value)}
+          <PasswordInput autoComplete="off" value={auth} onChange={(e) => setAuth(e.target.value)}
             placeholder={initial?.has_auth ? "Saved. Type to replace it." : "Bearer …"} className={field} />
         </label>
         <label className={label}>How often

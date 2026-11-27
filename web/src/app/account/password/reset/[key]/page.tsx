@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/password-input";
 import { useEffect, useState } from "react";
 import { LogoMark } from "@/components/icons";
 import { ApiError, apiFetch, ensureCsrfCookie } from "@/lib/api";
@@ -80,13 +81,13 @@ export default function SetPasswordPage() {
             <input type="email" value={email} autoComplete="username" readOnly hidden />
             <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
               New password
-              <input type="password" value={password} autoComplete="new-password"
+              <PasswordInput value={password} autoComplete="new-password"
                 onChange={(e) => setPassword(e.target.value)} className={field} />
               <span className="font-normal text-ink-3">At least 10 characters. A short phrase works well.</span>
             </label>
             <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
               Type it again
-              <input type="password" value={confirm} autoComplete="new-password"
+              <PasswordInput value={confirm} autoComplete="new-password"
                 onChange={(e) => setConfirm(e.target.value)} className={field} />
             </label>
             {error && <p role="alert" className="text-footnote text-danger-ink">{error}</p>}

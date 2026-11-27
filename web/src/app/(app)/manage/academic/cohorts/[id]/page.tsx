@@ -239,20 +239,6 @@ function CohortPage() {
                 </span>
               </div>
             )}
-            {pending && (
-              <div role="alertdialog" aria-labelledby="replace-h" className="flex flex-wrap items-center gap-3 rounded-row bg-warning/15 p-3">
-                <p id="replace-h" className="min-w-0 flex-1 text-footnote">
-                  {pending.message} Make {pending.name} the {pending.role.toUpperCase()} instead? Both are told.
-                </p>
-                <span className="flex gap-2">
-                  <button className="press h-9 rounded-full px-3.5 text-footnote font-semibold hover:bg-fill-strong" onClick={() => setPending(null)}>Keep</button>
-                  <button className="press h-9 rounded-full bg-accent px-3.5 text-footnote font-semibold text-on-accent" disabled={busy}
-                    onClick={() => setRole(pending.studentId, pending.name, pending.role, true)}>
-                    Replace
-                  </button>
-                </span>
-              </div>
-            )}
             {active.length === 0 && <p className="text-body text-ink-2">No students yet. Adding one enrolls them in all of this section&apos;s subjects.</p>}
             <ul>
               {active.map((m) => (
@@ -274,6 +260,21 @@ function CohortPage() {
                       onClick={() => call("DELETE", `/students/${m.id}`)}>
                       Remove
                     </button>
+                  )}
+                  {pending?.studentId === m.id && (
+                    <div role="alertdialog" aria-labelledby="replace-h" ref={(el) => el?.scrollIntoView({ block: "nearest", behavior: "smooth" })}
+                      className="flex w-full basis-full flex-wrap items-center gap-3 rounded-row bg-warning/15 p-3">
+                      <p id="replace-h" className="min-w-0 flex-1 text-footnote">
+                        {pending!.message} Make {pending!.name} the {pending!.role.toUpperCase()} instead? Both are told.
+                      </p>
+                      <span className="flex gap-2">
+                        <button className="press h-9 rounded-full px-3.5 text-footnote font-semibold hover:bg-fill-strong" onClick={() => setPending(null)}>Keep</button>
+                        <button className="press h-9 rounded-full bg-accent px-3.5 text-footnote font-semibold text-on-accent" disabled={busy}
+                          onClick={() => setRole(pending!.studentId, pending!.name, pending!.role, true)}>
+                          Replace
+                        </button>
+                      </span>
+                    </div>
                   )}
                 </li>
               ))}

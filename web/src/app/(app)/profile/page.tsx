@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { PasswordInput } from "@/components/password-input";
 import { useEffect, useState } from "react";
 import { Select } from "@/components/select";
 import { Switch } from "@/components/switch";
@@ -184,17 +185,17 @@ function PasswordCard() {
       >
         <label className={label}>
           Current password
-          <input type="password" autoComplete="current-password" value={current}
+          <PasswordInput autoComplete="current-password" value={current}
             onChange={(e) => setCurrent(e.target.value)} className={field} />
         </label>
         <label className={label}>
           New password
-          <input type="password" autoComplete="new-password" value={next}
+          <PasswordInput autoComplete="new-password" value={next}
             onChange={(e) => setNext(e.target.value)} className={field} />
         </label>
         <label className={label}>
           Confirm new password
-          <input type="password" autoComplete="new-password" value={confirm}
+          <PasswordInput autoComplete="new-password" value={confirm}
             onChange={(e) => setConfirm(e.target.value)} className={field} />
         </label>
         <div className="flex items-center justify-end gap-3 sm:col-span-3">

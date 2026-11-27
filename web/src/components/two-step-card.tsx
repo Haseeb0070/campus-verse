@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { PasswordInput } from "@/components/password-input";
 import { useState } from "react";
 import { encode } from "uqr";
 import { ApiError } from "@/lib/api";
@@ -170,7 +171,7 @@ export function TwoStepCard({ on }: { on: boolean }) {
           className="flex flex-col gap-3 rounded-row bg-fill p-4">
           <label className="flex flex-col gap-1.5 text-footnote font-semibold text-ink-2">
             For your security, confirm your password first
-            <input type="password" autoComplete="current-password" autoFocus value={password}
+            <PasswordInput autoComplete="current-password" autoFocus value={password}
               onChange={(e) => setPassword(e.target.value)} className={field} />
           </label>
           <div className="flex justify-end gap-2">

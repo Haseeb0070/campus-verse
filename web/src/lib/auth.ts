@@ -22,7 +22,7 @@ function firstMessage(err: unknown, fallback: string) {
 export type SignInResult = { ok: true } | { ok: false; error: string } | { ok: false; needsCode: true };
 
 /** Signs in through allauth's headless API. With two-step sign-in on, a code is needed next. */
-export async function signIn(email: string, password: string): Promise<SignInResult> {
+export async function signIn(email: string, password: string, retried = false): Promise<SignInResult> {
   await ensureCsrfCookie();
   try {
     await apiFetch(`${BASE}/auth/login`, {
@@ -51,8 +51,12 @@ export async function signIn(email: string, password: string): Promise<SignInRes
       // 401 here means signed in but another step (like email verification) is pending.
       return { ok: false, error: "Your account needs another step before you can sign in. Contact your admin." };
     }
-    // 409: this browser is already signed in (another tab, or the back button), so carry on.
-    if (err instanceof ApiError && err.status === 409) return { ok: true };
+    // 409: this browser is still signed in (a sign-out that didn't go through, another tab).
+    // Never carry on as that account: sign it out and sign in as the person who typed now.
+    if (err instanceof ApiError && err.status === 409 && !retried) {
+      await signOut().catch(() => undefined);
+      return signIn(email, password, true);
+    }
     return { ok: false, error: "Couldn't reach CampusVerse. Check your connection and try again." };
   }
 }
@@ -71,13 +75,19 @@ export async function verifyCode(code: string): Promise<string | null> {
   }
 }
 
+/** Ends the session on the server. Tries twice (with a fresh security token the second time),
+ *  because a sign-out that silently fails leaves the next person signed in as this one. */
 export async function signOut() {
-  await ensureCsrfCookie();
-  try {
-    await apiFetch(SESSION, { method: "DELETE" });
-  } catch (err) {
-    // allauth answers a successful sign-out with 401 (no session left).
-    if (!(err instanceof ApiError && err.status === 401)) throw err;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await ensureCsrfCookie(attempt > 0);
+    try {
+      await apiFetch(SESSION, { method: "DELETE" });
+      return;
+    } catch (err) {
+      // allauth answers a successful sign-out with 401 (no session left).
+      if (err instanceof ApiError && err.status === 401) return;
+      if (attempt === 1) throw err;
+    }
   }
 }
 

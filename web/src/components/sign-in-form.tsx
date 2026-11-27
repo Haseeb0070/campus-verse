@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { PasswordInput } from "@/components/password-input";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { requestPasswordReset, signIn, signOut, verifyCode } from "@/lib/auth";
@@ -35,7 +36,8 @@ export function SignInForm({ initialEmail = "", next }: { initialEmail?: string;
   const [recovery, setRecovery] = useState(false);
 
   async function finish() {
-    await queryClient.invalidateQueries();
+    // A new account starts from nothing: no data from whoever used this browser before.
+    queryClient.clear();
     router.replace(safeNext(next));
   }
 
@@ -255,9 +257,8 @@ export function SignInForm({ initialEmail = "", next }: { initialEmail?: string;
         <label htmlFor="signin-password" className="text-footnote font-semibold text-ink-2">
           Password
         </label>
-        <input
+        <PasswordInput
           id="signin-password"
-          type="password"
           autoComplete="current-password"
           autoFocus={Boolean(initialEmail)}
           value={password}

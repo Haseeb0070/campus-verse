@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
+import { reportError } from "@/lib/errors";
 import { AppearanceToggle } from "@/components/appearance-toggle";
 import dynamic from "next/dynamic";
 
@@ -215,11 +216,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setSigningOut(true);
     try {
       await signOut();
-    } finally {
-      disconnectRealtime();
-      queryClient.clear();
-      router.replace("/");
+    } catch {
+      setSigningOut(false);
+      reportError("Couldn't sign you out. Check your connection and try again.");
+      return;
     }
+    disconnectRealtime();
+    queryClient.clear();
+    // A full page load: nothing of this account stays in the page's memory for the next person.
+    window.location.replace("/");
   }
 
   if (me.isPending || unauthorized) {
