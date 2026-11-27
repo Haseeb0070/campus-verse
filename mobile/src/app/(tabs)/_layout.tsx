@@ -1,5 +1,6 @@
 import type { BottomTabBarProps } from "expo-router/tabs";
-import { Tabs } from "expo-router";
+import { router, Tabs } from "expo-router";
+import { Fragment } from "react";
 import * as Haptics from "expo-haptics";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
@@ -43,6 +44,10 @@ function TabBar({ state, navigateToTab }: BottomTabBarProps) {
   // More shows a badge when something in it waits for this person.
   const waiting = (useRepRequests().data ?? []).filter((r) => r.can_decide || r.can_reply).length;
   const moreBadge = waiting + (useModerationSummary().data?.open ?? 0);
+  // Admins and coordinators without classes get Manage as their fifth tab (it opens the Manage
+  // screens, which sit outside the tabs).
+  const manageLabel = me?.roles.includes("institution_admin") ? "Manage" : me?.roles.includes("department_coordinator") ? "Department" : null;
+  const showManage = !hasClasses && manageLabel !== null;
 
   return (
     <View
@@ -62,13 +67,29 @@ function TabBar({ state, navigateToTab }: BottomTabBarProps) {
         const tab = TABS.find((t) => t.name === route.name);
         if (!tab) return null;
         // With classes: Today, Timetable, Chat, Work, More (Notices sits in More). Without (an
-        // admin who doesn't teach): Today, Chat, Notices, More.
+        // admin who doesn't teach): Today, Chat, Notices, Manage, More.
         if (hasClasses ? tab.name === "notices" : tab.name === "timetable" || tab.name === "work") return null;
         const focused = state.index === index;
         const badge = tab.name === "chat" && unread > 0 ? unread : tab.name === "more" ? moreBadge : 0;
         return (
+          <Fragment key={route.key}>
+          {tab.name === "more" && showManage ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={manageLabel!}
+              onPress={() => {
+                if (Platform.OS !== "web") Haptics.selectionAsync().catch(() => {});
+                router.push("/manage");
+              }}
+              style={{ flex: 1, alignItems: "center", gap: 4, paddingTop: 8, paddingBottom: 4, minHeight: 52 }}
+            >
+              <View style={{ width: 56, height: 32, alignItems: "center", justifyContent: "center" }}>
+                <Icon name="arch" color={p.onSideMuted} />
+              </View>
+              <Text style={{ fontFamily: font.medium, fontSize: 11, color: p.onSideMuted }}>{manageLabel}</Text>
+            </Pressable>
+          ) : null}
           <Pressable
-            key={route.key}
             accessibilityRole="tab"
             accessibilityState={{ selected: focused }}
             accessibilityLabel={badge ? `${tab.label}, ${badge} unread` : tab.label}
@@ -123,6 +144,7 @@ function TabBar({ state, navigateToTab }: BottomTabBarProps) {
               {tab.label}
             </Text>
           </Pressable>
+          </Fragment>
         );
       })}
     </View>
