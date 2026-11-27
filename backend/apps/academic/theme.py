@@ -43,7 +43,8 @@ DEFAULT_THEME = {
     "helper_enabled": True,
     # The look of cards across the site: a hairline border, a soft shadow, how round corners are.
     "card_borders": True,
-    # The border in dark mode, set on its own: a line that suits light paper can be too loud on dark.
+    # The border in dark mode, set on its own: a line that suits light paper can be too loud
+    # on dark.
     "card_borders_dark": True,
     "card_shadows": True,
     "corners": "round",

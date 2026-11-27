@@ -9,6 +9,8 @@ export interface SheetRow {
   initials: string;
   status: Mark | null;
   note: string;
+  college_roll: string;
+  university_roll: string;
 }
 
 export interface Sheet {

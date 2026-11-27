@@ -6,14 +6,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DownloadRow } from "@/components/files";
 import { ChoiceField, DateTimeField } from "@/components/form";
 import { StackHeader } from "@/components/StackHeader";
-import { Avatar, Button, Card, Empty, Failed, Skeleton, T } from "@/components/ui";
+import { Avatar, Button, Card, Empty, Failed, Field, Skeleton, T } from "@/components/ui";
 import { errorDetail } from "@/lib/api";
-import { dayToDate, isoDay, useReport } from "@/lib/attendance";
+import { dayToDate, isoDay, matchStudents, useReport } from "@/lib/attendance";
 import { useTeaching } from "@/lib/coursework";
 import { formatDateTime, formatDay, formatTime, todayIn } from "@/lib/format";
 import { useMe, useTimetable } from "@/lib/queries";
 import { useRepsMine } from "@/lib/reps";
-import { type Mark, useSaveSheet, useSheet } from "@/lib/teaching";
+import { type Mark, type SheetRow, useSaveSheet, useSheet } from "@/lib/teaching";
 import { font, radius, useTheme } from "@/theme";
 
 const MARKS: { key: Mark; short: string; label: string }[] = [
@@ -87,6 +87,17 @@ export default function Attendance() {
   function set(id: number, mark: Mark) {
     setSaved(false);
     setEdits((all) => ({ ...all, [id]: mark }));
+  }
+
+  /** Quick marking: the matched students get `mark`; with `restTo`, everyone else gets that. */
+  function applyMany(ids: number[], mark: Mark, restTo?: Mark) {
+    if (!s) return;
+    setSaved(false);
+    setEdits((all) => {
+      const next = restTo ? Object.fromEntries(s.marks.map((m) => [m.student_id, restTo])) : { ...all };
+      for (const id of ids) next[id] = mark;
+      return next;
+    });
   }
 
   function everyonePresent() {
@@ -192,6 +203,32 @@ export default function Attendance() {
               <Button label="Everyone present" variant="secondary" style={{ minHeight: 36 }} onPress={everyonePresent} />
             ) : null}
           </View>
+          {!frozen && s.marks.length ? <QuickMark rows={s.marks} onApply={applyMany} /> : null}
+          {sectionId !== null && (s.saved || student || s.can_correct) ? (
+            <Card style={{ gap: 4 }}>
+              <T variant="calloutStrong" tone="ink2">
+                Share as Excel
+              </T>
+              {s.saved ? (
+                <DownloadRow
+                  label="This subject's register"
+                  icon="file"
+                  contentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  path={`/api/attendance/sections/${sectionId}/day.xlsx?day=${day}`}
+                  name={`${s.title} attendance ${day}.xlsx`}
+                />
+              ) : null}
+              {student || s.can_correct ? (
+                <DownloadRow
+                  label="The whole day, every subject"
+                  icon="calendar"
+                  contentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  path={`/api/attendance/sections/${sectionId}/class-day.xlsx?day=${day}`}
+                  name={`Class attendance ${day}.xlsx`}
+                />
+              ) : null}
+            </Card>
+          ) : null}
         </>
       ) : null}
     </View>
@@ -239,9 +276,18 @@ export default function Attendance() {
                 }}
               >
                 <Avatar text={item.initials} color="sky" size={36} />
-                <T variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>
-                  {item.name}
-                </T>
+                <View style={{ flex: 1 }}>
+                  <T variant="bodyStrong" numberOfLines={1}>
+                    {item.name}
+                  </T>
+                  {item.college_roll || item.university_roll ? (
+                    <T variant="caption" tone="ink2" numberOfLines={1} style={{ fontWeight: "400", fontVariant: ["tabular-nums"] }}>
+                      {[item.college_roll && `Roll ${item.college_roll}`, item.university_roll && `Uni ${item.university_roll}`]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </T>
+                  ) : null}
+                </View>
                 <View accessibilityRole="radiogroup" accessibilityLabel={`${item.name}'s attendance`} style={{ flexDirection: "row", gap: 4 }}>
                   {MARKS.map((m) => {
                     const on = marks[item.student_id] === m.key;
@@ -313,6 +359,74 @@ export default function Attendance() {
         </>
       )}
     </View>
+  );
+}
+
+/**
+ * Marks many students at once from what's typed: college rolls, university rolls or names (the
+ * usual way: everyone present, then type the absentees). Nothing is saved until Save.
+ */
+function QuickMark({ rows, onApply }: { rows: SheetRow[]; onApply: (ids: number[], mark: Mark, restTo?: Mark) => void }) {
+  const [text, setText] = useState("");
+  const [result, setResult] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  function apply(mark: Mark, onlyThese = false) {
+    const found = matchStudents(text, rows);
+    const issues = [
+      found.notFound.length ? `Not found: ${found.notFound.join(", ")}` : "",
+      found.ambiguous.length ? `More than one student fits: ${found.ambiguous.join(", ")} (use the roll number)` : "",
+    ]
+      .filter(Boolean)
+      .join(". ");
+    setProblem(issues || null);
+    if (found.ids.length === 0) {
+      setResult(null);
+      if (!issues) setProblem("Type roll numbers or names first.");
+      return;
+    }
+    onApply(found.ids, mark, onlyThese ? "absent" : undefined);
+    const picked = rows.filter((r) => found.ids.includes(r.student_id));
+    setResult(
+      onlyThese
+        ? `${picked.length} present, the other ${rows.length - picked.length} absent.`
+        : `${picked.length} marked ${mark}: ${picked.map((r) => r.college_roll || r.name).join(", ")}.`,
+    );
+    if (!issues) setText("");
+  }
+
+  return (
+    <Card style={{ gap: 10 }}>
+      <Field
+        label="Quick mark by college roll, university roll or name"
+        value={text}
+        onChangeText={setText}
+        placeholder="503 507 512, or 126201, or Ali Raza"
+        autoCapitalize="words"
+        autoCorrect={false}
+        returnKeyType="done"
+        onSubmitEditing={() => apply("absent")}
+      />
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <Button label="Absent" variant="secondary" style={{ minHeight: 36 }} onPress={() => apply("absent")} />
+        <Button label="Late" variant="secondary" style={{ minHeight: 36 }} onPress={() => apply("late")} />
+        <Button label="Present" variant="secondary" style={{ minHeight: 36 }} onPress={() => apply("present")} />
+        <Button label="Only these present" variant="secondary" style={{ minHeight: 36 }} onPress={() => apply("present", true)} />
+      </View>
+      {result ? (
+        <T variant="callout" tone="ink2" accessibilityLiveRegion="polite">
+          {result}
+        </T>
+      ) : null}
+      {problem ? (
+        <T variant="callout" tone="danger" accessibilityLiveRegion="polite">
+          {problem}
+        </T>
+      ) : null}
+      <T variant="caption" tone="ink3" style={{ fontWeight: "400" }}>
+        Separate with spaces or commas; 503-520 marks a range of college rolls. Nothing is saved until you press Save.
+      </T>
+    </Card>
   );
 }
 

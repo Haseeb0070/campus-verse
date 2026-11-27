@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { DatePicker, todayIso } from "@/components/date-picker";
 import { Select } from "@/components/select";
 import { apiFetch, errorDetail } from "@/lib/api";
-import { markLabels, useReport, useSheet } from "@/lib/attendance";
+import { markLabels, matchStudents, useReport, useSheet } from "@/lib/attendance";
 import type { Mark, Sheet } from "@/lib/attendance";
 import { formatDay, formatTime, relativeTime } from "@/lib/format";
 import { useMe, useTeaching, useTimetable } from "@/lib/queries";
@@ -78,7 +78,14 @@ function Roster({ sheet, onSaved, onOpenOther }: {
         {sheet.marks.map((m) => (
           <li key={m.student_id} className="flex flex-wrap items-center gap-3 rounded-row p-2">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-fill-strong text-caption font-semibold">{m.initials}</span>
-            <span className="min-w-0 flex-1 truncate text-body font-semibold">{m.name}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-body font-semibold">{m.name}</span>
+              {(m.college_roll || m.university_roll) && (
+                <span className="block text-footnote text-ink-2 tabular-nums">
+                  {[m.college_roll && `Roll ${m.college_roll}`, m.university_roll && `Uni ${m.university_roll}`].filter(Boolean).join(" · ")}
+                </span>
+              )}
+            </span>
             <span role="radiogroup" aria-label={`${m.name}`} className="flex rounded-full bg-fill p-0.5">
               {MARKS.map((mark) => {
                 const on = marks[m.student_id] === mark;
@@ -95,6 +102,12 @@ function Roster({ sheet, onSaved, onOpenOther }: {
           </li>
         ))}
       </ul>
+      {!frozen && <QuickMark sheet={sheet} onApply={(ids, mark, restTo) => setMarks((x) => {
+        const next = { ...x };
+        if (restTo) for (const m of sheet.marks) next[m.student_id] = restTo;
+        for (const id of ids) next[id] = mark;
+        return next;
+      })} />}
       {error && <p role="alert" className="px-1 text-footnote text-danger-ink">{error}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-divider px-1 pt-3">
         <p className="text-footnote text-ink-2">
@@ -134,6 +147,67 @@ function Roster({ sheet, onSaved, onOpenOther }: {
         ))}
       </div>
     </section>
+  );
+}
+
+/**
+ * Marks many students at once from what's typed: college rolls, university rolls or names. The usual
+ * way a register is called: everyone present, then type the absentees (or call out who's here).
+ */
+function QuickMark({ sheet, onApply }: {
+  sheet: Sheet; onApply: (ids: number[], mark: Mark, restTo?: Mark) => void;
+}) {
+  const [text, setText] = useState("");
+  const [result, setResult] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  function apply(mark: Mark, onlyThese = false) {
+    const found = matchStudents(text, sheet.marks);
+    const issues = [
+      found.notFound.length ? `Not found: ${found.notFound.join(", ")}` : "",
+      found.ambiguous.length ? `More than one student fits: ${found.ambiguous.join(", ")} (use the roll number)` : "",
+    ].filter(Boolean).join(". ");
+    setProblem(issues || null);
+    if (found.ids.length === 0) {
+      setResult(null);
+      if (!issues) setProblem("Type roll numbers or names first.");
+      return;
+    }
+    onApply(found.ids, mark, onlyThese ? "absent" : undefined);
+    const picked = sheet.marks.filter((m) => found.ids.includes(m.student_id));
+    setResult(onlyThese
+      ? `${picked.length} present, the other ${sheet.marks.length - picked.length} absent.`
+      : `${picked.length} marked ${markLabels[mark].toLowerCase()}: ${picked.map((m) => m.college_roll || m.name).join(", ")}.`);
+    if (!issues) setText("");
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-row bg-fill p-3">
+      <label htmlFor="quick-mark" className="text-footnote font-semibold text-ink-2">
+        Quick mark by college roll, university roll or name
+      </label>
+      <input id="quick-mark" value={text} onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); apply("absent"); } }}
+        placeholder="503 507 512, or 126201, or Ali Raza, Hamza"
+        className="h-11 w-full rounded-control border border-divider bg-transparent px-3 text-body outline-none focus:border-accent" />
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => apply("absent")} className="press h-9 rounded-full bg-danger/12 px-3.5 text-footnote font-semibold text-danger-ink">
+          Mark absent
+        </button>
+        <button onClick={() => apply("late")} className="press h-9 rounded-full bg-warning/18 px-3.5 text-footnote font-semibold">
+          Mark late
+        </button>
+        <button onClick={() => apply("present")} className="press h-9 rounded-full bg-success/15 px-3.5 text-footnote font-semibold text-success-ink">
+          Mark present
+        </button>
+        <button onClick={() => apply("present", true)} className="press h-9 rounded-full bg-fill-strong px-3.5 text-footnote font-semibold">
+          Only these present, rest absent
+        </button>
+      </div>
+      {result && <p aria-live="polite" className="text-footnote text-ink-2">{result}</p>}
+      {problem && <p role="alert" className="text-footnote text-danger-ink">{problem}</p>}
+      <p className="text-caption text-ink-3">Separate with spaces or commas. A range like 503-520 works for college rolls. Enter marks absent. Nothing is saved until you press Save.</p>
+    </div>
   );
 }
 
@@ -217,10 +291,24 @@ function AttendanceInner() {
           <p className="text-body font-semibold text-ink-2">{formatDay(day, { weekday: "long", day: "numeric", month: "long" })}</p>
           <PageTitle className="mt-1 text-large-title font-bold" text="Attendance" />
         </div>
-        {me?.kind !== "student" && <button onClick={() => setShowReport((r) => !r)} aria-expanded={showReport}
-          className="press h-10 rounded-full bg-fill-strong px-4 text-footnote font-semibold">
-          {showReport ? "Hide term summary" : "Term summary"}
-        </button>}
+        <div className="flex flex-wrap gap-2">
+          {sectionId && sheet.data?.saved && (
+            <a href={`/api/attendance/sections/${sectionId}/day.xlsx?day=${day}`} download
+              className="press inline-flex h-10 items-center rounded-full bg-fill-strong px-4 text-footnote font-semibold">
+              This subject (Excel)
+            </a>
+          )}
+          {sectionId && (me?.kind === "student" || sheet.data?.can_correct) && (
+            <a href={`/api/attendance/sections/${sectionId}/class-day.xlsx?day=${day}`} download
+              className="press inline-flex h-10 items-center rounded-full bg-fill-strong px-4 text-footnote font-semibold">
+              Whole day (Excel)
+            </a>
+          )}
+          {me?.kind !== "student" && <button onClick={() => setShowReport((r) => !r)} aria-expanded={showReport}
+            className="press h-10 rounded-full bg-fill-strong px-4 text-footnote font-semibold">
+            {showReport ? "Hide term summary" : "Term summary"}
+          </button>}
+        </div>
       </header>
 
       <div className="glass grid gap-3 rounded-card p-4 sm:grid-cols-3">

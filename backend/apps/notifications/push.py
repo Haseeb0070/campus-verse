@@ -61,7 +61,11 @@ def send(user_ids: list[int], *, title: str, body: str, link: str, kind: str) ->
                 "body": body[:300],
                 "data": {"link": link, "kind": kind},
                 # A phone with sound turned off gets it silently (Android: the app's quiet channel).
-                **({"sound": "default", "channelId": "default"} if devices[t] else {"channelId": "quiet"}),
+                **(
+                    {"sound": "default", "channelId": "default"}
+                    if devices[t]
+                    else {"channelId": "quiet"}
+                ),
             }
             for t in batch
         ]

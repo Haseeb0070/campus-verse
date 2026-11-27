@@ -65,7 +65,9 @@ export function FileRow({
 }
 
 /** A spreadsheet download (CSV that opens in Excel): fetched with the token, then shared. */
-export function DownloadRow({ label, path, name, icon = "download" }: { label: string; path: string; name: string; icon?: IconName }) {
+export function DownloadRow({ label, path, name, icon = "download", contentType = "text/csv" }: {
+  label: string; path: string; name: string; icon?: IconName; contentType?: string;
+}) {
   const p = useTheme();
   const [busy, setBusy] = useState(false);
   return (
@@ -76,7 +78,7 @@ export function DownloadRow({ label, path, name, icon = "download" }: { label: s
       onPress={async () => {
         setBusy(true);
         try {
-          await openFile(path, name, "text/csv");
+          await openFile(path, name, contentType);
         } catch {
           Alert.alert("Couldn't download it", "Check your connection and try again.");
         } finally {

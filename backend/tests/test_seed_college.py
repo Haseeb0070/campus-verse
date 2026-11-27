@@ -68,10 +68,10 @@ def test_replaces_the_demo_and_builds_the_bscs_timetable(campus):
 def test_every_student_is_enrolled_in_all_seven_subjects():
     call_command("seed_college", domain="gcslahore.edu.pk")
     students = User.objects.filter(kind="student")
-    assert students.count() == 66
-    assert SectionEnrollment.objects.count() == 66 * 7
+    assert students.count() == 56
+    assert SectionEnrollment.objects.count() == 56 * 7
     assert all(s.enrollments.count() == 7 for s in students)
-    assert CohortMember.objects.filter(cohort__code="BSCS24", status="active").count() == 66
+    assert CohortMember.objects.filter(cohort__code="BSCS24", status="active").count() == 56
 
     haseeb = User.objects.get(email="126139@gcslahore.edu.pk")  # college roll 550
     assert (haseeb.first_name, haseeb.last_name) == ("Muhammad", "Haseeb")
@@ -92,7 +92,7 @@ def test_a_rerun_adds_missing_students_and_fixes_titles():
     User.objects.filter(email="126179@gcslahore.edu.pk").update(last_name="Ikhter")
     call_command("seed_college", domain="gcslahore.edu.pk")
     assert User.objects.filter(email="126139@gcslahore.edu.pk").exists()
-    assert SectionEnrollment.objects.count() == 66 * 7
+    assert SectionEnrollment.objects.count() == 56 * 7
     assert Course.objects.get(code="EC-330").title == "Web Development"
     assert User.objects.get(email="126179@gcslahore.edu.pk").last_name == "Akhtar"
 

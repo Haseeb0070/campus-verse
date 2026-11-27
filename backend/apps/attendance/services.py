@@ -67,9 +67,16 @@ def _closed(session_date: date, institution) -> bool:
 
 
 def roster(section: Section) -> list:
-    return [e.student for e in SectionEnrollment.objects.filter(
+    """The section's students in college roll order, the way the class list and registers are."""
+    return sorted((e.student for e in SectionEnrollment.objects.filter(
         section=section, status=SectionEnrollment.Status.ACTIVE
-    ).select_related("student").order_by("student__first_name", "student__last_name")]
+    ).select_related("student")), key=_roll_order)
+
+
+def _roll_order(student):
+    """College roll order (numbers as numbers), then anyone without one by name."""
+    roll = student.college_roll
+    return (0, int(roll), "") if roll.isdigit() else (1, 0, student.get_full_name().lower())
 
 
 class AlreadyTaken(ValidationError):

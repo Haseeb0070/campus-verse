@@ -31,6 +31,8 @@ class SummaryOut(Schema):
 class MarkOut(Schema):
     student_id: int
     name: str
+    college_roll: str
+    university_roll: str
     initials: str
     status: str | None
     note: str
@@ -157,6 +159,7 @@ def _sheet_out(request, section, day, meeting_id) -> dict:
         } if other else None,
         "marks": [
             {"student_id": s.pk, "name": s.get_full_name() or s.email, "initials": initials(s),
+             "college_roll": s.college_roll, "university_roll": s.external_id,
              "status": data["saved"][s.pk].status if s.pk in data["saved"] else None,
              "note": data["saved"][s.pk].note if s.pk in data["saved"] else ""}
             for s in data["students"]
@@ -242,3 +245,44 @@ def report_csv(request, section_id: int):
     name = f"{section.offering.course.code} {section.code} attendance.csv"
     return csv_response(name, ["College ID", "Name", "Classes", "Present", "Late", "Absent",
                                "Excused", "Attendance"], rows)
+
+
+def _workbook_section(request, section_id: int) -> Section:
+    section = Section.objects.filter(
+        pk=section_id, institution_id=request.user.institution_id
+    ).select_related("offering__course", "offering__term", "cohort__program", "institution").first()
+    if section is None:
+        raise HttpError(404, "Section not found")
+    try:
+        services.require_enabled(request.user.institution)
+    except PermissionDenied as err:
+        raise HttpError(403, str(err)) from None
+    return section
+
+
+@router.get("/sections/{section_id}/day.xlsx", response={200: None, 403: ErrorOut, 404: ErrorOut})
+def subject_day_xlsx(request, section_id: int, day: date):
+    """One subject's attendance for a day, as an Excel file: its teachers, the class's CR/GR,
+    coordinators and admins."""
+    from .workbook import subject_day, xlsx_response
+
+    section = _workbook_section(request, section_id)
+    if not services.can_take(request.user, section):
+        raise HttpError(403, "Only this subject's teachers, the class's CR/GR and admins can.")
+    name = f"{section.offering.course.code} {section.code} attendance {day:%Y-%m-%d}.xlsx"
+    return xlsx_response(subject_day(section, day), name)
+
+
+@router.get("/sections/{section_id}/class-day.xlsx",
+            response={200: None, 403: ErrorOut, 404: ErrorOut})
+def class_day_xlsx(request, section_id: int, day: date):
+    """The whole class's attendance for a day, every subject, as an Excel file: the class's
+    CR/GR, coordinators and admins."""
+    from .workbook import class_day, xlsx_response
+
+    section = _workbook_section(request, section_id)
+    if not (services.is_rep(request.user, section) or services.can_correct(request.user, section)):
+        raise HttpError(403, "Only the class's CR/GR, coordinators and admins can download the "
+                             "whole day.")
+    name = f"{section.code} attendance {day:%Y-%m-%d}.xlsx"
+    return xlsx_response(class_day(section, day), name)

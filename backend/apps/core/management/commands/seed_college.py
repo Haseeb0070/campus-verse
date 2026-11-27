@@ -146,7 +146,7 @@ class Command(BaseCommand):
             )
         )
         created = enrolled = 0
-        for _college_roll, uni_roll, name in STUDENTS:
+        for college_roll, uni_roll, name in STUDENTS:
             email = f"{uni_roll}@{STUDENT_EMAIL_DOMAIN}"
             first, last = split_name(name)
             student = User.objects.filter(email=email).first()
@@ -154,10 +154,14 @@ class Command(BaseCommand):
                 # The class list is the source of truth for names (spelling fixes reach everyone).
                 student.first_name, student.last_name = first, last
                 student.save(update_fields=["first_name", "last_name"])
+            if student is not None and student.college_roll != str(college_roll):
+                student.college_roll = str(college_roll)
+                student.save(update_fields=["college_roll"])
             if student is None:
                 student = User.objects.create_user(
                     email=email, password=password, first_name=first, last_name=last,
                     kind=User.Kind.STUDENT, institution=inst, external_id=str(uni_roll),
+                    college_roll=str(college_roll),
                 )
                 EmailAddress.objects.create(user=student, email=email, verified=True, primary=True)
                 created += 1

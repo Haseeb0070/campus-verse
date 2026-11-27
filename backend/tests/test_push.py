@@ -156,7 +156,8 @@ def test_no_push_when_the_app_channel_is_off(campus):
 @pytest.mark.django_db(transaction=True)
 def test_a_phone_with_sound_off_gets_silent_pushes(ayesha_client, campus):
     body = json.dumps({"token": TOKEN, "platform": "android", "sound": False})
-    assert ayesha_client.post("/api/notifications/devices", body, content_type="application/json").status_code == 204
+    r = ayesha_client.post("/api/notifications/devices", body, content_type="application/json")
+    assert r.status_code == 204
     assert PushDevice.objects.get(token=TOKEN).sound is False
     # Registering again without saying keeps the choice.
     body = json.dumps({"token": TOKEN, "platform": "android"})

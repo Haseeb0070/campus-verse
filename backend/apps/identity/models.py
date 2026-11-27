@@ -48,6 +48,9 @@ class User(AbstractUser):
     external_id = models.CharField(
         max_length=64, blank=True, help_text="ID in the institution's own system"
     )
+    # Students: the college roll number (the class list's order), next to the university roll
+    # number kept in external_id.
+    college_roll = models.CharField(max_length=16, blank=True)
     # The one name people choose themselves (FR-AUTH-07); legal names come from the institution.
     preferred_name = models.CharField(
         max_length=60, blank=True, help_text="Shown instead of the first name"

@@ -125,10 +125,12 @@ def test_card_look_defaults_and_checks():
     assert (out["card_borders"], out["card_shadows"], out["corners"]) == (False, False, "sharp")
     import pytest
 
-    out = clean_theme({"preset": "campus", "guide_name": "Verse", "card_borders": True, "card_borders_dark": False})
+    out = clean_theme({"preset": "campus", "guide_name": "Verse", "card_borders": True,
+                       "card_borders_dark": False})
     assert (out["card_borders"], out["card_borders_dark"]) == (True, False)
     # An older save with one switch: dark follows it.
-    assert clean_theme({"preset": "campus", "guide_name": "Verse", "card_borders": False})["card_borders_dark"] is False
+    one = clean_theme({"preset": "campus", "guide_name": "Verse", "card_borders": False})
+    assert one["card_borders_dark"] is False
 
     with pytest.raises(ValidationError, match="corners"):
         clean_theme({"preset": "campus", "guide_name": "Verse", "corners": "wavy"})
